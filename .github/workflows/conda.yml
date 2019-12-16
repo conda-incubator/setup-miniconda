@@ -46,7 +46,7 @@ jobs:
     name: Example Windows
     runs-on: 'windows-latest'
     steps:
-      - uses: goanpeca/action-conda@test
+      - uses: goanpeca/action-setup-conda@master
       - name: Base environment
         run: |
           conda info
