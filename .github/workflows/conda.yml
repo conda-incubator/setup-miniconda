@@ -16,7 +16,7 @@ jobs:
       matrix:
         os: ['ubuntu-latest', 'macos-latest']
     steps:
-      - uses: spyder-ide/action-conda@test
+      - uses: goanpeca/action-setup-conda@master
         with:
           conda-version: 4.8
           conda-build-version: 3.17
@@ -46,7 +46,7 @@ jobs:
     name: Example Windows
     runs-on: 'windows-latest'
     steps:
-      - uses: spyder-ide/action-conda@test
+      - uses: goanpeca/action-conda@test
       - name: Base environment
         run: |
           conda info
