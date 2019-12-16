@@ -1,4 +1,4 @@
-# action-setup-conda
+# Setup Conda Action
 
 This action sets up a Conda installation and creates a test environment by installing Miniconda3 on unix systems and locating the bundled Miniconda on windows systems.
 
