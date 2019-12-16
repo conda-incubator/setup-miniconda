@@ -1,0 +1,15 @@
+name: 'Setup Conda'
+description: 'Set up Conda package manager with Miniconda'
+inputs: 
+  conda-version:
+    description: 'Version of conda to install. Default is the latest 4.7'
+    required: false
+  conda-build-version:
+    description: 'Version of conda build to install. If not provided conda-build is not installed'
+    required: false
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
+branding:
+  icon: 'code'
+  color: 'green'

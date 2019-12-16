@@ -1,0 +1,46 @@
+{
+  "name": "action-setup-conda",
+  "version": "0.1.0",
+  "description": "GitHub action for setting up conda",
+  "main": "lib/main.js",
+  "scripts": {
+    "build": "tsc",
+    "format": "prettier --write **/*.ts",
+    "pack": "ncc build lib/main.js",
+    "run": "dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/goanpeca/action-setup-conda.git"
+  },
+  "keywords": [
+    "action",
+    "conda",
+    "environment",
+    "miniconda",
+    "python",
+    "starter"
+  ],
+  "author": "Gonzalo Peña-Castellanos",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/goanpeca/action-setup-conda"
+  },
+  "homepage": "https://github.com/goanpeca/action-setup-conda#readme",
+  "dependencies": {
+    "@actions/core": "^1.0.0",
+    "@actions/tool-cache": "^1.1.2",
+    "axios": "^0.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^12.0.4",
+    "husky": "^3.1.0",
+    "prettier": "^1.17.1",
+    "typescript": "^3.5.1"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run build && npm run format && npm run pack && git add ."
+    }
+  }
+}
