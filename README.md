@@ -26,14 +26,12 @@ steps:
     conda activate test
     conda info
     conda list
-    printenv | sort
 - name: Using sh
   shell: sh -l {0}  # IMPORTANT!
   run: |
     conda activate test
     conda info
     conda list
-    printenv | sort
 ```
 
 ### IMPORTANT
@@ -56,28 +54,24 @@ steps:
     conda activate test
     conda info
     conda list
-    gci env:* | sort-object name
 - name: Using PowerShell Core
   shell: pwsh
   run: |
     conda activate test
     conda info
     conda list
-    gci env:* | sort-object name
 - name: Using bash
   shell: bash -l {0}  # IMPORTANT!
   run: |
     conda activate test
     conda info
     conda list
-    printenv | sort
 - name: Using cmd.exe
   shell: cmd
   run: >-  # IMPORTANT!
     "%CONDA_BAT%" activate test &&
     conda info &&
     conda list &&
-    SET
 ```
 
 ### IMPORTANT
