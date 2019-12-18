@@ -1,10 +1,12 @@
 # Setup Conda Action
 
-This action sets up a Conda installation and creates a test environment by installing Miniconda3 on unix systems and locating the bundled Miniconda on windows systems.
+This action sets up a Conda installation and creates a test environment by installing Miniconda3 on unix systems and windows (x86) systems and locating the bundled Miniconda on windows systems (could be overiden if a clean install is desired).
 
 Miniconda `condabin/`, `bin/` and `scripts/` folders are added to PATH and conda is initialized across platforms.
 
 The default `conda` version used is 4.7.
+
+This action correctly handles activation of conda environments. See the **Important** notes.
 
 # Usage
 
@@ -17,8 +19,10 @@ steps:
 - uses: actions/checkout@v1
 - uses: goanpeca/action-setup-conda@master
   with:
-    conda-version: '4.8'         # optional. Version of conda to use for base evironment.
-    conda-build-version: '3.17'  # optional. If not provided conda build is not installed.
+    miniconda-version: '4.7.12'          # optional. Version of miniconda installer to use.
+    conda-build-version: '3.17'          # optional. If not provided conda build is not installed.
+    environment-file: 'environment.yml'  # optional. Version of miniconda installer to use.
+    activate-environment: 'base'         # optional. Version of miniconda installer to use.
 - run: conda create --name test python=3.6
 - name: Using bash
   shell: bash -l {0}  # IMPORTANT!
@@ -36,7 +40,7 @@ steps:
 
 ### IMPORTANT
 
-- Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be explicitely declared as `shell: bash -l {0}` on steps using `conda activate` commands. This is because bash shells are executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash profile files made by `conda init bash`. See [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
+- Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be explicitely declared as `shell: bash -l {0}` on steps using `conda activate` commands. This is because bash shells are executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash profile files made by `conda init bash`. See [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell) and [thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).
 - Sh shells do not use `~/.profile` or `~/.bashrc` so these shells need to be explicitely declared as `shell: sh -l {0}` on steps using `conda activate` commands. This is because sh shells are executed with `sh -e {0}` thus ignoring updated on bash profile files made by `conda init bash`. See [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
 
 ## Windows systems:

@@ -1,227 +1,346 @@
 import * as fs from "fs";
 import * as os from "os";
-import * as util from "util";
+import * as path from "path";
 
-import axios from "axios";
 import * as core from "@actions/core";
+import * as exec from "@actions/exec";
+import * as io from "@actions/io";
 import * as tc from "@actions/tool-cache";
+import * as yaml from "js-yaml";
+import getHrefs from "get-hrefs";
 
-const appendFile = util.promisify(fs.appendFile);
-const writeFile = util.promisify(fs.writeFile);
-const exec = util.promisify(require("child_process").exec);
+interface SucceedResult {
+  ok: boolean;
+  data: string | undefined;
+}
+interface FailedResult {
+  ok: boolean;
+  error: Error;
+}
+type Result = SucceedResult | FailedResult;
 
-const IS_WINDOWS = process.platform === "win32";
-const IS_MAC = process.platform === "darwin";
-const IS_LINUX = process.platform === "linux";
-const IS_UNIX = IS_MAC || IS_LINUX;
-let minicondaBaseUrl: string = "https://repo.continuum.io/miniconda/";
+const IS_WINDOWS: boolean = process.platform === "win32";
+const IS_MAC: boolean = process.platform === "darwin";
+const IS_LINUX: boolean = process.platform === "linux";
+const IS_UNIX: boolean = IS_MAC || IS_LINUX;
+const MINICONDA_BASE_URL: string = "https://repo.continuum.io/miniconda/";
+const ARCHITECTURES = {
+  x64: "x86_64",
+  x86: "x86",
+  ARM64: "aarch64", // To be supported by github runners
+  ARM32: "armv7l" // To be supported by github runners
+};
+const OS_NAMES = {
+  win32: "Windows",
+  darwin: "MacOSX",
+  linux: "Linux"
+};
 
 /**
+ * Pretty print section messages
  *
+ * @param args
  */
-function minicondaInstallerPath() {
-  let osName: string;
-  let extension: string;
-
-  if (IS_LINUX) {
-    osName = "Linux";
-    extension = "sh";
-  } else if (IS_MAC) {
-    osName = "MacOSX";
-    extension = "sh";
-  } else {
-    osName = "Windows";
-    extension = "exe";
+function consoleLog(...args: string[]): void {
+  for (let arg of args) {
+    core.info("\n# " + arg);
+    core.info("#".repeat(arg.length + 2) + "\n");
   }
-
-  return `~/miniconda.${extension}`.replace("~", os.homedir);
 }
 
 /**
- *
+ * Provide current location of miniconda or location where it will be installed
  */
-function condaExecutable() {
-  let condaExe;
-  if (IS_UNIX) {
-    condaExe = "~/miniconda/condabin/conda";
-  } else {
-    condaExe = "C:\\Miniconda\\condabin\\conda.bat";
-  }
-  return condaExe.replace("~", os.homedir);
-}
-
-function condaDirPath() {
-  let condaPath;
-  if (IS_UNIX) {
-    condaPath = "~/miniconda";
-  } else {
-    condaPath = "C:\\Miniconda";
-  }
-  return condaPath.replace("~", os.homedir);
-}
-
-/**
- *
- * @param url
- * @param dest
- */
-async function download(url: string, dest: string) {
-  let result: string = "";
-  try {
-    const response = await axios.get(url, { responseType: "arraybuffer" });
-    if (response.status === 200) {
-      await writeFile(dest, response.data);
-      result = dest;
-      console.log(`Saving to "${dest}"`);
+function minicondaPath(useBundled: boolean = true): string {
+  let condaPath: string = process.env["CONDA"] || "";
+  if (!useBundled) {
+    if (IS_MAC) {
+      condaPath = "/Users/runner/miniconda3";
+    } else {
+      condaPath += "3";
     }
-  } catch (error) {
-    console.error(`Error: ${error}`);
   }
-  return result;
+  return condaPath;
+}
+
+/**
+ * Provide cross platform location of conda executable
+ */
+function condaExecutable(useBundled: boolean): string {
+  const dir: string = minicondaPath(useBundled);
+  let condaExe: string;
+  condaExe = IS_UNIX ? `${dir}/condabin/conda` : `${dir}\\condabin\\conda.bat`;
+  return condaExe;
+}
+
+/**
+ * Check if a given conda environment exists
+ */
+function environmentExists(name: string, useBundled: boolean): boolean {
+  const condaMetaPath: string = path.join(
+    minicondaPath(useBundled),
+    "envs",
+    name,
+    "conda-meta"
+  );
+  return fs.existsSync(condaMetaPath);
+}
+
+/**
+ * List available Miniconda versions
+ */
+async function minicondaVersions(): Promise<string[]> {
+  try {
+    let extension: string = IS_UNIX ? "sh" : "exe";
+    const downloadPath: string = await tc.downloadTool(MINICONDA_BASE_URL);
+    const content: string = fs.readFileSync(downloadPath, "utf8");
+    let hrefs: string[] = getHrefs(content);
+    hrefs = hrefs.filter((item: string) => item.startsWith("/Miniconda3"));
+    hrefs = hrefs.filter((item: string) =>
+      item.endsWith(`x86_64.${extension}`)
+    );
+    hrefs = hrefs.map((item: string) => item.substring(1));
+    return hrefs;
+  } catch (err) {
+    core.warning(err);
+    return [];
+  }
+}
+
+/**
+ * Run exec.exec with error handling
+ */
+async function execute(command: string): Promise<Result> {
+  let options = { listeners: {} };
+  let stringData: string;
+  options.listeners = {
+    stdout: (data: Buffer) => {
+      // core.info(data.toString());
+    },
+    stderr: (data: Buffer) => {
+      stringData = data.toString();
+      // These warnings are appearing on win install, we can swallow them
+      if (
+        !stringData.includes("menuinst_win32") &&
+        !stringData.includes("Unable to register environment") &&
+        !stringData.includes("0%|")
+      ) {
+        core.warning(stringData);
+      }
+    }
+  };
+
+  try {
+    await exec.exec(command, [], options);
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+
+  return { ok: true, data: undefined };
 }
 
 /**
  *
  * @param pythonMajorVersion
  * @param minicondaVersion
- * @param arch
+ * @param architecture
  */
 async function downloadMiniconda(
   pythonMajorVersion: number,
   minicondaVersion: string,
-  arch: string
-) {
-  let result;
-  let extension: string;
-  let minicondaInstallerName: string;
+  architecture: string
+): Promise<Result> {
+  let downloadPath: string;
   let url: string;
-  let osName: string;
 
   // Check valid arch
-  const archs = ["ppc64le", "x86_64", "x86"];
-
-  if (IS_LINUX) {
-    osName = "Linux";
-    extension = "sh";
-  } else if (IS_MAC) {
-    osName = "MacOSX";
-    extension = "sh";
-  } else {
-    osName = "Windows";
-    extension = "exe";
+  const arch: string = ARCHITECTURES[architecture];
+  if (!arch) {
+    return { ok: false, error: new Error(`Invalid arch "${architecture}"!`) };
   }
-  minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
+
+  let extension: string = IS_UNIX ? "sh" : "exe";
+  let osName: string = OS_NAMES[process.platform];
+  const minicondaInstallerName: string = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
+  core.info(minicondaInstallerName);
+
+  // Check version name
+  let versions: string[] = await minicondaVersions();
+  if (versions) {
+    if (!versions.includes(minicondaInstallerName)) {
+      return {
+        ok: false,
+        error: new Error(
+          `Invalid miniconda version!\n\nMust be among ${versions.toString()}`
+        )
+      };
+    }
+  }
 
   // Look for cache to use
-  const cachedMinicondaPath = tc.find(
+  const cachedMinicondaInstallerPath = tc.find(
     `Miniconda${pythonMajorVersion}`,
     minicondaVersion,
     arch
   );
-  if (cachedMinicondaPath) {
-    console.log(`Found cache at ${cachedMinicondaPath}`);
-    result = cachedMinicondaPath;
-  } else {
-    const downloadPath = minicondaInstallerPath();
 
-    url = minicondaBaseUrl + minicondaInstallerName;
-    result = await download(url, downloadPath);
-    console.log(`Saving cache...`);
-    await tc.cacheFile(
-      downloadPath,
-      minicondaInstallerName,
-      `Miniconda${pythonMajorVersion}`,
-      minicondaVersion,
-      arch
-    );
+  if (cachedMinicondaInstallerPath) {
+    core.info(`Found cache at ${cachedMinicondaInstallerPath}`);
+    downloadPath = cachedMinicondaInstallerPath;
+  } else {
+    url = MINICONDA_BASE_URL + minicondaInstallerName;
+    try {
+      downloadPath = await tc.downloadTool(url);
+      const options = { recursive: true, force: false };
+
+      // Add extension to dowload
+      await io.mv(downloadPath, downloadPath + `.${extension}`, options);
+      downloadPath = downloadPath + `.${extension}`;
+
+      core.info(`Saving cache...`);
+      await tc.cacheFile(
+        downloadPath,
+        minicondaInstallerName,
+        `Miniconda${pythonMajorVersion}`,
+        minicondaVersion,
+        arch
+      );
+    } catch (err) {
+      return { ok: false, error: err };
+    }
   }
-  return result;
+  return { ok: true, data: downloadPath };
 }
 
 /**
  * Install Miniconda
  *
- * @param file
+ * @param installerPath
  */
-async function installMiniconda(installerPath: string) {
+async function installMiniconda(
+  installerPath: string,
+  useBundled: boolean
+): Promise<Result> {
+  const outputPath: string = minicondaPath(useBundled);
+  let command: string;
+
+  // See: https://docs.anaconda.com/anaconda/install/silent-mode/
   if (IS_WINDOWS) {
-    // Conda comes with the VM so we skip for now
-    return "";
+    command = `${installerPath} /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`;
   } else {
-    const outputPath: string = "~/miniconda".replace("~", os.homedir);
-    const command: string = `bash "${installerPath}" -b -p ${outputPath}`;
-    console.log(command);
-    const { stdout, stderr } = await exec(command);
-    console.log("\nstdout:\n", stdout);
-    console.error("\nstderr:\n", stderr);
+    command = `bash "${installerPath}" -b -p ${outputPath}`;
   }
+
+  let result: Result;
+  try {
+    result = await execute(command);
+  } catch (err) {
+    core.error(err);
+    return { ok: false, error: err };
+  }
+
+  return { ok: true, data: result["data"] };
+}
+
+/**
+ * Run conda command
+ */
+async function condaCommand(cmd: string, useBundled): Promise<Result> {
+  const command = `${condaExecutable(useBundled)} ${cmd}`;
+  return await execute(command);
+}
+
+/**
+ * Add conda executable to PATH
+ */
+async function setVariables(useBundled: boolean): Promise<Result> {
+  try {
+    // Set environment variables
+    const condaBin: string = path.join(minicondaPath(useBundled), "condabin");
+    core.info(`Add "${condaBin}" to PATH`);
+    core.addPath(condaBin);
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+  return { ok: true, data: undefined };
 }
 
 /**
  *
  */
-async function setVariables() {
-  let condaBin: string;
-  let minicondaBin: string;
+async function createTestEnvironment(
+  activateEnvironment: string,
+  useBundled: boolean
+): Promise<Result> {
+  let result: Result;
+  if (
+    activateEnvironment !== "root" &&
+    activateEnvironment !== "base" &&
+    activateEnvironment !== ""
+  ) {
+    if (!environmentExists(activateEnvironment, useBundled)) {
+      consoleLog("Create test environment...");
+      result = await condaCommand(
+        `create --name ${activateEnvironment}`,
+        useBundled
+      );
+      if (!result["ok"]) return result;
+    }
+  } else {
+    return {
+      ok: false,
+      error: new Error(
+        'To activate "base" environment use the "auto-activate-base" action input!'
+      )
+    };
+  }
+  return { ok: true, data: undefined };
+}
+
+/**
+ *
+ */
+async function condaInit(
+  activateEnvironment: string,
+  useBundled: boolean,
+  condaConfig: any
+): Promise<Result> {
+  let result: Result;
+
+  if (IS_MAC && useBundled) {
+    core.info("Fixing conda folder ownership");
+    try {
+      const userName: string = process.env.USER as string;
+      await execute(
+        `sudo chown -R ${userName}:staff ${minicondaPath(useBundled)}`
+      );
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  }
+
+  // Remove any profile files
+  for (let rc of ["~/.bashrc", "~/.profile", "~/.bash_profile"]) {
+    try {
+      await io.rmRF(rc.replace("~", os.homedir()));
+    } catch (err) {
+      core.warning(err);
+    }
+  }
 
   if (IS_UNIX) {
-    minicondaBin = "~/miniconda/bin";
-    condaBin = "~/miniconda/condabin";
-  } else {
-    minicondaBin = "C:\\Miniconda\\Scripts";
-    condaBin = "C:\\Miniconda\\condabin";
-  }
+    const bashrc = "~/.profile".replace("~", os.homedir());
+    const condaFolderPath = minicondaPath(useBundled);
+    let bashInitText = `
+##############################################################################
+# Basic configuration
+set -e o pipefail
 
-  // Set environment variables
-  console.log(`Add "${condaBin}" to PATH`);
-  core.addPath(condaBin);
-  console.log(`Add "${minicondaBin}" to PATH`);
-  core.addPath(minicondaBin);
-
-  if (IS_WINDOWS) {
-    const condaBat = condaExecutable();
-    console.log(`Add CONDA_BAT="${condaBat}"`);
-    core.exportVariable("CONDA_BAT", condaBat);
-  }
-}
-
-/**
- *
- */
-async function setConfiguration() {
-  const command = `${condaExecutable()} config --set always_yes yes --set changeps1 no`;
-  console.log(command);
-  const { stdout, stderr } = await exec(command);
-  console.log(stdout);
-  // console.error("\nstderr:\n", stderr);
-}
-
-/**
- *
- */
-async function condaInstall(ref) {
-  const command = `${condaExecutable()} install -q ${ref}`;
-  console.log(command);
-  const { stdout, stderr } = await exec(command);
-  console.log(stdout);
-  // console.error("\nstderr:\n", stderr);
-}
-
-/**
- *
- */
-async function condaInit() {
-  // const command = 'eval "$(conda shell.bash hook)"';
-  // const command = 'echo "$(conda shell.bash hook)" >> ~/.bashrc';
-
-  if (IS_UNIX) {
-    const shrc = "~/.bashrc".replace("~", os.homedir);
-    const bashrc = "~/.profile".replace("~", os.homedir);
-    const condaFolderPath = condaDirPath();
-    const bashInitText = `
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('${condaExecutable()}' 'shell.bash' 'hook' 2> /dev/null)"
+__conda_setup="$('${condaExecutable(
+      useBundled
+    )}' 'shell.bash' 'hook' 2> /dev/null)"
 if [ $? -eq 0 ]; then
     eval "$__conda_setup"
 else
@@ -234,504 +353,340 @@ fi
 unset __conda_setup
 # <<< conda initialize <<<
 `;
-    console.log(`Append to ${bashrc}:\n\n ${bashInitText} \n\n`);
-    await appendFile(bashrc, bashInitText);
-    console.log(`Append to ${shrc}:\n\n ${bashInitText} \n\n`);
-    await appendFile(shrc, bashInitText);
-  } else {
-    for (let cmd of ["powershell", "cmd.exe"]) {
-      const command = `${condaExecutable()} init ${cmd}`;
-      console.log(command);
-      const { stdout, stderr } = await exec(command);
-      console.log(stdout);
+    if (
+      activateEnvironment !== "base" &&
+      activateEnvironment !== "root" &&
+      activateEnvironment !== ""
+    ) {
+      bashInitText += `
+# >>> conda custom initialize >>>
+# !! Contents within this block were included by this github action !!
+# Activate environment
+conda activate ${activateEnvironment}
+# <<< conda custom initialize <<<
+`;
     }
+    bashInitText += `
+##############################################################################`;
+
+    await execute(`${condaExecutable(useBundled)} config --show-sources`);
+    core.info(`Append to "${bashrc}":\n ${bashInitText} \n`);
+    fs.appendFileSync(bashrc, bashInitText);
+  } else {
+    /**
+     * Windows
+     */
+    if (useBundled) {
+      result = await execute(`takeown /f ${minicondaPath(useBundled)} /r /d y`);
+    }
+
+    // Run conda init
+    for (let cmd of ["--all"]) {
+      const command = `${condaExecutable(useBundled)} init ${cmd}`;
+      core.info(command);
+      await execute(command);
+    }
+
+    // Create empty conda configuration file
+    fs.writeFileSync(path.join(os.homedir(), ".condarc"), "# Empty condarc");
+
+    // Append custom test environment activation when using powershell
+    const bashProfilePS11S = path.join(
+      os.homedir(),
+      "Documents",
+      "WindowsPowerShell",
+      "profile.ps11s"
+    );
+    const bashProfilePS1 = path.join(
+      os.homedir(),
+      "Documents",
+      "PowerShell",
+      "profile.ps1"
+    );
+    let ps1ExtraText: string = "";
+    if (
+      activateEnvironment !== "" &&
+      activateEnvironment !== "root" &&
+      activateEnvironment !== "base"
+    ) {
+      ps1ExtraText += `
+## >>> conda custom initialize >>>
+## !! Contents within this block were included by this github action !!
+## Deactivate base
+conda activate ${activateEnvironment}
+`;
+    }
+    core.info(
+      `Append to "${bashProfilePS11S}" and "${bashProfilePS1}":\n ${ps1ExtraText} \n`
+    );
+    fs.appendFileSync(bashProfilePS11S, ps1ExtraText);
+    fs.appendFileSync(bashProfilePS1, ps1ExtraText);
+
+    // Append custom test enviornment activation to bash on windows
+    const bashProfileRC = "~\\.bash_profile".replace("~", os.homedir());
+    let bashExtraText: string = "";
+    if (
+      activateEnvironment !== "" &&
+      activateEnvironment !== "root" &&
+      activateEnvironment !== "base"
+    ) {
+      bashExtraText += `
+# >>> conda custom initialize >>>
+# !! Contents within this block were included by this github action !!
+conda activate ${activateEnvironment}
+# <<< conda custom initialize <<<
+`;
+    }
+    core.info(`Append to "${bashProfileRC}":\n ${bashExtraText} \n`);
+    fs.appendFileSync(bashProfileRC, bashExtraText);
+
+    // Append base enviornment activation if on config.
+    // On windows cmd.exe this is not working so we enforce it
+    let batExtraText: string = "";
+    if (condaConfig["auto_activate_base"] === "true") {
+      batExtraText += `
+:: >>> conda custom initialize >>>
+:: !! Contents within this block were included by this github action !!
+:: Activate environment
+@CALL "%CONDA_BAT%" activate base
+:: <<< conda custom initialize <<<`;
+    }
+
+    if (
+      activateEnvironment !== "base" &&
+      activateEnvironment !== "root" &&
+      activateEnvironment !== ""
+    ) {
+      batExtraText += `
+:: >>> conda custom initialize >>>
+:: !! Contents within this block were included by this github action !!
+:: Activate environment
+@CALL "%CONDA_BAT%" activate ${activateEnvironment}
+:: <<< conda custom initialize <<<`;
+    }
+    batExtraText += `
+:: >>> conda custom initialize >>>
+:: !! Contents within this block were included by this github action !!
+:: This sets the cmd.exe to act with github defaults
+@SETLOCAL EnableExtensions
+@SETLOCAL DisableDelayedExpansion
+:: <<< conda custom initialize <<<`;
+    const batchCondaHook: string = path.join(
+      minicondaPath(useBundled),
+      "condabin",
+      "conda_hook.bat"
+    );
+    core.info(`Append to "${batchCondaHook}":\n ${batExtraText} \n`);
+    fs.appendFileSync(batchCondaHook, batExtraText);
   }
+  return { ok: true, data: undefined };
 }
 
 /**
- *
+ * Setup python environments
  */
-async function setupMiniconda(condaVersion, condaBuildVersion) {
-  if (IS_UNIX) {
-    console.log("\n# Downloading Miniconda...\n");
-    let dest: string = await downloadMiniconda(3, "latest", "x86_64");
-
-    console.log("\n# Installing Miniconda...\n");
-    await installMiniconda(dest);
-  }
-
-  console.log("\n# Setup environment variables...\n");
-  await setVariables();
-
-  console.log("\n# Setup Conda configuration...\n");
-  await setConfiguration();
-
-  if (condaBuildVersion) {
-    console.log("\n# Installing Conda...\n");
-    await condaInstall(`conda=${condaVersion}`);
-  }
-
-  if (condaBuildVersion) {
-    console.log("\n# Installing Conda Build...\n");
-    await condaInstall(`conda-build=${condaBuildVersion}`);
-  }
-
-  console.log("\n# Initialize Conda...\n");
-  await condaInit();
+async function setupPython(
+  activateEnvironment: string,
+  pythonVersion: string,
+  useBundled: boolean
+): Promise<Result> {
+  return await condaCommand(
+    `install --name ${activateEnvironment} python=${pythonVersion} --quiet`,
+    useBundled
+  );
 }
 
-/* Miniconda Versions
-Miniconda2-4.7.12.1-Linux-ppc64le.sh
-Miniconda2-4.7.12.1-Linux-x86_64.sh
-Miniconda2-4.7.12.1-MacOSX-x86_64.pkg
-Miniconda2-4.7.12.1-MacOSX-x86_64.sh
-Miniconda2-4.7.12.1-Windows-x86.exe
-Miniconda2-4.7.12.1-Windows-x86_64.exe
-Miniconda2-latest-Linux-ppc64le.sh
-Miniconda2-latest-Linux-x86_64.sh
-Miniconda2-latest-MacOSX-x86_64.pkg
-Miniconda2-latest-MacOSX-x86_64.sh
-Miniconda2-latest-Windows-x86.exe
-Miniconda2-latest-Windows-x86_64.exe
-Miniconda3-4.7.12.1-Linux-ppc64le.sh
-Miniconda3-4.7.12.1-Linux-x86_64.sh
-Miniconda3-4.7.12.1-MacOSX-x86_64.pkg
-Miniconda3-4.7.12.1-MacOSX-x86_64.sh
-Miniconda3-4.7.12.1-Windows-x86.exe
-Miniconda3-4.7.12.1-Windows-x86_64.exe
-Miniconda3-latest-Linux-ppc64le.sh
-Miniconda3-latest-Linux-x86_64.sh
-Miniconda3-latest-MacOSX-x86_64.pkg
-Miniconda3-latest-MacOSX-x86_64.sh
-Miniconda3-latest-Windows-x86.exe
-Miniconda3-latest-Windows-x86_64.exe
-Miniconda2-4.7.12-Linux-ppc64le.sh
-Miniconda2-4.7.12-Linux-x86_64.sh
-Miniconda2-4.7.12-MacOSX-x86_64.pkg
-Miniconda2-4.7.12-MacOSX-x86_64.sh
-Miniconda2-4.7.12-Windows-x86.exe
-Miniconda2-4.7.12-Windows-x86_64.exe
-Miniconda3-4.7.12-Linux-ppc64le.sh
-Miniconda3-4.7.12-Linux-x86_64.sh
-Miniconda3-4.7.12-MacOSX-x86_64.pkg
-Miniconda3-4.7.12-MacOSX-x86_64.sh
-Miniconda3-4.7.12-Windows-x86.exe
-Miniconda3-4.7.12-Windows-x86_64.exe
-Miniconda2-4.7.10-Linux-ppc64le.sh
-Miniconda2-4.7.10-Linux-x86_64.sh
-Miniconda2-4.7.10-MacOSX-x86_64.pkg
-Miniconda2-4.7.10-MacOSX-x86_64.sh
-Miniconda2-4.7.10-Windows-x86.exe
-Miniconda2-4.7.10-Windows-x86_64.exe
-Miniconda3-4.7.10-Linux-ppc64le.sh
-Miniconda3-4.7.10-Linux-x86_64.sh
-Miniconda3-4.7.10-MacOSX-x86_64.pkg
-Miniconda3-4.7.10-MacOSX-x86_64.sh
-Miniconda3-4.7.10-Windows-x86.exe
-Miniconda3-4.7.10-Windows-x86_64.exe
-Miniconda2-4.6.14-Linux-x86_64.sh
-Miniconda2-4.6.14-MacOSX-x86_64.pkg
-Miniconda2-4.6.14-MacOSX-x86_64.sh
-Miniconda2-4.6.14-Windows-x86.exe
-Miniconda2-4.6.14-Windows-x86_64.exe
-Miniconda3-4.6.14-Linux-ppc64le.sh
-Miniconda3-4.6.14-Linux-x86_64.sh
-Miniconda3-4.6.14-MacOSX-x86_64.pkg
-Miniconda3-4.6.14-MacOSX-x86_64.sh
-Miniconda3-4.6.14-Windows-x86.exe
-Miniconda3-4.6.14-Windows-x86_64.exe
-Miniconda2-4.6.14-Linux-ppc64le.sh
-Miniconda2-4.5.12-Linux-ppc64le.sh
-Miniconda2-4.5.12-Linux-x86.sh
-Miniconda2-4.5.12-Linux-x86_64.sh
-Miniconda2-4.5.12-MacOSX-x86_64.pkg
-Miniconda2-4.5.12-MacOSX-x86_64.sh
-Miniconda2-4.5.12-Windows-x86.exe
-Miniconda2-4.5.12-Windows-x86_64.exe
-Miniconda2-latest-Linux-x86.sh
-Miniconda3-4.5.12-Linux-x86.sh
-Miniconda3-4.5.12-Linux-x86_64.sh
-Miniconda3-4.5.12-MacOSX-x86_64.pkg
-Miniconda3-4.5.12-MacOSX-x86_64.sh
-Miniconda3-4.5.12-Windows-x86.exe
-Miniconda3-4.5.12-Windows-x86_64.exe
-Miniconda3-latest-Linux-x86.sh
-Miniconda2-4.5.11-Linux-ppc64le.sh
-Miniconda2-4.5.11-Linux-x86.sh
-Miniconda2-4.5.11-Linux-x86_64.sh
-Miniconda2-4.5.11-MacOSX-x86_64.pkg
-Miniconda2-4.5.11-MacOSX-x86_64.sh
-Miniconda2-4.5.11-Windows-x86.exe
-Miniconda2-4.5.11-Windows-x86_64.exe
-Miniconda3-4.5.11-Linux-ppc64le.sh
-Miniconda3-4.5.11-Linux-x86.sh
-Miniconda3-4.5.11-Linux-x86_64.sh
-Miniconda3-4.5.11-MacOSX-x86_64.pkg
-Miniconda3-4.5.11-MacOSX-x86_64.sh
-Miniconda3-4.5.11-Windows-x86.exe
-Miniconda3-4.5.11-Windows-x86_64.exe
-Miniconda2-4.5.4-Linux-ppc64le.sh
-Miniconda2-4.5.4-Linux-x86.sh
-Miniconda2-4.5.4-Linux-x86_64.sh
-Miniconda2-4.5.4-MacOSX-x86_64.pkg
-Miniconda2-4.5.4-MacOSX-x86_64.sh
-Miniconda2-4.5.4-Windows-x86.exe
-Miniconda2-4.5.4-Windows-x86_64.exe
-Miniconda3-4.5.4-Linux-ppc64le.sh
-Miniconda3-4.5.4-Linux-x86.sh
-Miniconda3-4.5.4-Linux-x86_64.sh
-Miniconda3-4.5.4-MacOSX-x86_64.pkg
-Miniconda3-4.5.4-MacOSX-x86_64.sh
-Miniconda3-4.5.4-Windows-x86.exe
-Miniconda3-4.5.4-Windows-x86_64.exe
-Miniconda2-4.5.1-Linux-ppc64le.sh
-Miniconda2-4.5.1-Linux-x86.sh
-Miniconda2-4.5.1-Linux-x86_64.sh
-Miniconda2-4.5.1-MacOSX-x86_64.pkg
-Miniconda2-4.5.1-MacOSX-x86_64.sh
-Miniconda2-4.5.1-Windows-x86.exe
-Miniconda2-4.5.1-Windows-x86_64.exe
-Miniconda3-4.5.1-Linux-ppc64le.sh
-Miniconda3-4.5.1-Linux-x86.sh
-Miniconda3-4.5.1-Linux-x86_64.sh
-Miniconda3-4.5.1-MacOSX-x86_64.pkg
-Miniconda3-4.5.1-MacOSX-x86_64.sh
-Miniconda3-4.5.1-Windows-x86.exe
-Miniconda3-4.5.1-Windows-x86_64.exe
-Miniconda2-4.4.10-Linux-ppc64le.sh
-Miniconda2-4.4.10-Linux-x86.sh
-Miniconda2-4.4.10-Linux-x86_64.sh
-Miniconda2-4.4.10-MacOSX-x86_64.pkg
-Miniconda2-4.4.10-MacOSX-x86_64.sh
-Miniconda2-4.4.10-Windows-x86.exe
-Miniconda2-4.4.10-Windows-x86_64.exe
-Miniconda3-4.4.10-Linux-ppc64le.sh
-Miniconda3-4.4.10-Linux-x86.sh
-Miniconda3-4.4.10-Linux-x86_64.sh
-Miniconda3-4.4.10-MacOSX-x86_64.pkg
-Miniconda3-4.4.10-MacOSX-x86_64.sh
-Miniconda3-4.4.10-Windows-x86.exe
-Miniconda3-4.4.10-Windows-x86_64.exe
-Miniconda2-4.3.31-Linux-x86.sh
-Miniconda2-4.3.31-Linux-x86_64.sh
-Miniconda2-4.3.31-MacOSX-x86_64.pkg
-Miniconda2-4.3.31-MacOSX-x86_64.sh
-Miniconda2-4.3.31-Windows-x86.exe
-Miniconda2-4.3.31-Windows-x86_64.exe
-Miniconda3-4.3.31-Linux-x86.sh
-Miniconda3-4.3.31-Linux-x86_64.sh
-Miniconda3-4.3.31-MacOSX-x86_64.pkg
-Miniconda3-4.3.31-MacOSX-x86_64.sh
-Miniconda3-4.3.31-Windows-x86.exe
-Miniconda3-4.3.31-Windows-x86_64.exe
-Miniconda2-4.3.30.2-Windows-x86.exe
-Miniconda2-4.3.30.2-Windows-x86_64.exe
-Miniconda3-4.3.30.2-Windows-x86.exe
-Miniconda3-4.3.30.2-Windows-x86_64.exe
-Miniconda2-4.3.30.1-MacOSX-x86_64.pkg
-Miniconda2-4.3.30.1-MacOSX-x86_64.sh
-Miniconda3-4.3.30.1-MacOSX-x86_64.pkg
-Miniconda3-4.3.30.1-MacOSX-x86_64.sh
-Miniconda2-4.3.30-Linux-x86.sh
-Miniconda2-4.3.30-Linux-x86_64.sh
-Miniconda2-4.3.30-MacOSX-x86_64.pkg
-Miniconda2-4.3.30-MacOSX-x86_64.sh
-Miniconda2-4.3.30-Windows-x86.exe
-Miniconda2-4.3.30-Windows-x86_64.exe
-Miniconda3-4.3.30-Linux-x86.sh
-Miniconda3-4.3.30-Linux-x86_64.sh
-Miniconda3-4.3.30-MacOSX-x86_64.pkg
-Miniconda3-4.3.30-MacOSX-x86_64.sh
-Miniconda3-4.3.30-Windows-x86.exe
-Miniconda3-4.3.30-Windows-x86_64.exe
-Miniconda2-4.3.27.1-Linux-x86_64.sh
-Miniconda3-4.3.27.1-Linux-x86_64.sh
-Miniconda2-4.3.27.1-Linux-x86.sh
-Miniconda3-4.3.27.1-Linux-x86.sh
-Miniconda2-4.3.27-Linux-ppc64le.sh
-Miniconda3-4.3.27-Linux-ppc64le.sh
-Miniconda2-4.3.27-Linux-x86.sh
-Miniconda2-4.3.27-Linux-x86_64.sh
-Miniconda2-4.3.27-MacOSX-x86_64.pkg
-Miniconda2-4.3.27-MacOSX-x86_64.sh
-Miniconda2-4.3.27-Windows-x86.exe
-Miniconda2-4.3.27-Windows-x86_64.exe
-Miniconda3-4.3.27-Linux-x86.sh
-Miniconda3-4.3.27-Linux-x86_64.sh
-Miniconda3-4.3.27-MacOSX-x86_64.pkg
-Miniconda3-4.3.27-MacOSX-x86_64.sh
-Miniconda3-4.3.27-Windows-x86.exe
-Miniconda3-4.3.27-Windows-x86_64.exe
-Miniconda2-4.3.21-Linux-x86.sh
-Miniconda2-4.3.21-Linux-x86_64.sh
-Miniconda2-4.3.21-MacOSX-x86_64.sh
-Miniconda2-4.3.21-Windows-x86.exe
-Miniconda2-4.3.21-Windows-x86_64.exe
-Miniconda3-4.3.21-Linux-x86.sh
-Miniconda3-4.3.21-Linux-x86_64.sh
-Miniconda3-4.3.21-MacOSX-x86_64.sh
-Miniconda3-4.3.21-Windows-x86.exe
-Miniconda3-4.3.21-Windows-x86_64.exe
-Miniconda2-4.3.14-Linux-x86.sh
-Miniconda2-4.3.14-Linux-x86_64.sh
-Miniconda2-4.3.14-MacOSX-x86_64.sh
-Miniconda2-4.3.14-Windows-x86.exe
-Miniconda2-4.3.14-Windows-x86_64.exe
-Miniconda3-4.3.14-Linux-x86.sh
-Miniconda3-4.3.14-Linux-x86_64.sh
-Miniconda3-4.3.14-MacOSX-x86_64.sh
-Miniconda3-4.3.14-Windows-x86.exe
-Miniconda3-4.3.14-Windows-x86_64.exe
-Miniconda2-4.3.14-Linux-ppc64le.sh
-Miniconda3-4.3.14-Linux-ppc64le.sh
-Miniconda2-4.3.11-Linux-x86.sh
-Miniconda2-4.3.11-Linux-x86_64.sh
-Miniconda2-4.3.11-MacOSX-x86_64.sh
-Miniconda2-4.3.11-Windows-x86.exe
-Miniconda2-4.3.11-Windows-x86_64.exe
-Miniconda3-4.3.11-Linux-x86.sh
-Miniconda3-4.3.11-Linux-x86_64.sh
-Miniconda3-4.3.11-MacOSX-x86_64.sh
-Miniconda3-4.3.11-Windows-x86.exe
-Miniconda3-4.3.11-Windows-x86_64.exe
-Miniconda2-4.2.15-MacOSX-x86_64.sh
-Miniconda2-4.2.12-Linux-ppc64le.sh
-Miniconda3-4.2.12-Linux-ppc64le.sh
-Miniconda2-4.2.12-Linux-x86.sh
-Miniconda2-4.2.12-Linux-x86_64.sh
-Miniconda2-4.2.12-MacOSX-x86_64.sh
-Miniconda2-4.2.12-Windows-x86.exe
-Miniconda2-4.2.12-Windows-x86_64.exe
-Miniconda3-4.2.12-Linux-x86.sh
-Miniconda3-4.2.12-Linux-x86_64.sh
-Miniconda3-4.2.12-MacOSX-x86_64.sh
-Miniconda3-4.2.12-Windows-x86.exe
-Miniconda3-4.2.12-Windows-x86_64.exe
-Miniconda2-4.2.11-Windows-x86.exe
-Miniconda2-4.2.11-Windows-x86_64.exe
-Miniconda3-4.2.11-Windows-x86.exe
-Miniconda3-4.2.11-Windows-x86_64.exe
-Miniconda2-4.2.11-Linux-x86.sh
-Miniconda2-4.2.11-Linux-x86_64.sh
-Miniconda2-4.2.11-MacOSX-x86_64.sh
-Miniconda3-4.2.11-Linux-x86.sh
-Miniconda3-4.2.11-Linux-x86_64.sh
-Miniconda3-4.2.11-MacOSX-x86_64.sh
-Miniconda2-4.1.11-Linux-x86.sh
-Miniconda2-4.1.11-Linux-x86_64.sh
-Miniconda2-4.1.11-MacOSX-x86_64.sh
-Miniconda2-4.1.11-Windows-x86.exe
-Miniconda2-4.1.11-Windows-x86_64.exe
-Miniconda3-4.1.11-Linux-x86.sh
-Miniconda3-4.1.11-Linux-x86_64.sh
-Miniconda3-4.1.11-MacOSX-x86_64.sh
-Miniconda3-4.1.11-Windows-x86.exe
-Miniconda3-4.1.11-Windows-x86_64.exe
-Miniconda2-4.0.5-Linux-x86.sh
-Miniconda2-4.0.5-Linux-x86_64.sh
-Miniconda2-4.0.5-MacOSX-x86_64.sh
-Miniconda2-4.0.5-Windows-x86.exe
-Miniconda2-4.0.5-Windows-x86_64.exe
-Miniconda3-4.0.5-Linux-x86.sh
-Miniconda3-4.0.5-Linux-x86_64.sh
-Miniconda3-4.0.5-MacOSX-x86_64.sh
-Miniconda3-4.0.5-Windows-x86.exe
-Miniconda3-4.0.5-Windows-x86_64.exe
-Miniconda2-3.19.0-Linux-x86.sh
-Miniconda2-3.19.0-Linux-x86_64.sh
-Miniconda2-3.19.0-MacOSX-x86_64.sh
-Miniconda2-3.19.0-Windows-x86.exe
-Miniconda2-3.19.0-Windows-x86_64.exe
-Miniconda3-3.19.0-Linux-x86.sh
-Miniconda3-3.19.0-Linux-x86_64.sh
-Miniconda3-3.19.0-MacOSX-x86_64.sh
-Miniconda3-3.19.0-Windows-x86.exe
-Miniconda3-3.19.0-Windows-x86_64.exe
-Miniconda2-3.18.8-MacOSX-x86_64.sh
-Miniconda2-3.18.9-Linux-x86.sh
-Miniconda2-3.18.9-Linux-x86_64.sh
-Miniconda2-3.18.9-Windows-x86.exe
-Miniconda2-3.18.9-Windows-x86_64.exe
-Miniconda3-3.18.8-MacOSX-x86_64.sh
-Miniconda3-3.18.9-Linux-x86.sh
-Miniconda3-3.18.9-Linux-x86_64.sh
-Miniconda3-3.18.9-Windows-x86.exe
-Miniconda3-3.18.9-Windows-x86_64.exe
-Miniconda2-3.18.3-Linux-x86.sh
-Miniconda2-3.18.3-Linux-x86_64.sh
-Miniconda2-3.18.3-MacOSX-x86_64.sh
-Miniconda2-3.18.3-Windows-x86.exe
-Miniconda2-3.18.3-Windows-x86_64.exe
-Miniconda3-3.18.3-Linux-x86.sh
-Miniconda3-3.18.3-Linux-x86_64.sh
-Miniconda3-3.18.3-MacOSX-x86_64.sh
-Miniconda3-3.18.3-Windows-x86.exe
-Miniconda3-3.18.3-Windows-x86_64.exe
-Miniconda-3.16.0-Linux-armv7l.sh
-Miniconda-3.16.0-Linux-ppc64le.sh
-Miniconda-3.16.0-Linux-x86.sh
-Miniconda-3.16.0-Linux-x86_64.sh
-Miniconda-3.16.0-MacOSX-x86.sh
-Miniconda-3.16.0-MacOSX-x86_64.sh
-Miniconda-3.16.0-Windows-x86.exe
-Miniconda-3.16.0-Windows-x86_64.exe
-Miniconda-latest-Linux-armv7l.sh
-Miniconda3-3.16.0-Linux-armv7l.sh
-Miniconda3-3.16.0-Linux-ppc64le.sh
-Miniconda3-3.16.0-Linux-x86.sh
-Miniconda3-3.16.0-Linux-x86_64.sh
-Miniconda3-3.16.0-MacOSX-x86.sh
-Miniconda3-3.16.0-MacOSX-x86_64.sh
-Miniconda3-3.16.0-Windows-x86.exe
-Miniconda3-3.16.0-Windows-x86_64.exe
-Miniconda3-latest-Linux-armv7l.sh
-Miniconda3-latest-MacOSX-x86.sh
-Miniconda-3.10.1-Linux-x86.sh
-Miniconda-3.10.1-Linux-x86_64.sh
-Miniconda-3.10.1-MacOSX-x86_64.sh
-Miniconda-3.10.1-Windows-x86.exe
-Miniconda-3.10.1-Windows-x86_64.exe
-Miniconda3-3.10.1-Linux-x86.sh
-Miniconda3-3.10.1-Linux-x86_64.sh
-Miniconda3-3.10.1-MacOSX-x86_64.sh
-Miniconda3-3.10.1-Windows-x86.exe
-Miniconda3-3.10.1-Windows-x86_64.exe
-Miniconda-3.9.1-Linux-x86.sh
-Miniconda-3.9.1-Linux-x86_64.sh
-Miniconda-3.9.1-MacOSX-x86_64.sh
-Miniconda-3.9.1-Windows-x86.exe
-Miniconda-3.9.1-Windows-x86_64.exe
-Miniconda3-3.9.1-Linux-x86.sh
-Miniconda3-3.9.1-Linux-x86_64.sh
-Miniconda3-3.9.1-MacOSX-x86_64.sh
-Miniconda3-3.9.1-Windows-x86.exe
-Miniconda3-3.9.1-Windows-x86_64.exe
-Miniconda-3.8.3-Linux-x86.sh
-Miniconda-3.8.3-Linux-x86_64.sh
-Miniconda-3.8.3-MacOSX-x86_64.sh
-Miniconda-3.8.3-Windows-x86.exe
-Miniconda-3.8.3-Windows-x86_64.exe
-Miniconda3-3.8.3-Linux-x86.sh
-Miniconda3-3.8.3-Linux-x86_64.sh
-Miniconda3-3.8.3-MacOSX-x86_64.sh
-Miniconda3-3.8.3-Windows-x86.exe
-Miniconda3-3.8.3-Windows-x86_64.exe
-Miniconda-3.7.3-Linux-x86.sh
-Miniconda-3.7.3-Linux-x86_64.sh
-Miniconda-3.7.3-MacOSX-x86_64.sh
-Miniconda-3.7.3-Windows-x86.exe
-Miniconda-3.7.3-Windows-x86_64.exe
-Miniconda3-3.7.3-Linux-x86.sh
-Miniconda3-3.7.3-Linux-x86_64.sh
-Miniconda3-3.7.3-MacOSX-x86_64.sh
-Miniconda3-3.7.3-Windows-x86.exe
-Miniconda3-3.7.3-Windows-x86_64.exe
-Miniconda-3.7.0-Linux-x86.sh
-Miniconda-3.7.0-Linux-x86_64.sh
-Miniconda-3.7.0-MacOSX-x86_64.sh
-Miniconda-3.7.0-Windows-x86.exe
-Miniconda-3.7.0-Windows-x86_64.exe
-Miniconda3-3.7.0-Linux-x86.sh
-Miniconda3-3.7.0-Linux-x86_64.sh
-Miniconda3-3.7.0-MacOSX-x86_64.sh
-Miniconda3-3.7.0-Windows-x86.exe
-Miniconda3-3.7.0-Windows-x86_64.exe
-Miniconda-3.6.0-Linux-x86.sh
-Miniconda-3.6.0-Linux-x86_64.sh
-Miniconda-3.6.0-MacOSX-x86_64.sh
-Miniconda-3.6.0-Windows-x86.exe
-Miniconda-3.6.0-Windows-x86_64.exe
-Miniconda3-3.6.0-Linux-x86.sh
-Miniconda3-3.6.0-Linux-x86_64.sh
-Miniconda3-3.6.0-MacOSX-x86_64.sh
-Miniconda3-3.6.0-Windows-x86.exe
-Miniconda3-3.6.0-Windows-x86_64.exe
-Miniconda-3.5.5-Windows-x86.exe
-Miniconda-3.5.5-Windows-x86_64.exe
-Miniconda3-3.5.5-Windows-x86.exe
-Miniconda3-3.5.5-Windows-x86_64.exe
-Miniconda-3.5.5-Linux-armv6l.sh
-Miniconda-3.5.5-Linux-x86.sh
-Miniconda-3.5.5-Linux-x86_64.sh
-Miniconda-3.5.5-MacOSX-x86_64.sh
-Miniconda3-3.5.5-Linux-x86.sh
-Miniconda3-3.5.5-Linux-x86_64.sh
-Miniconda3-3.5.5-MacOSX-x86_64.sh
-Miniconda-3.5.2-Linux-x86.sh
-Miniconda-3.5.2-Linux-x86_64.sh
-Miniconda-3.5.2-MacOSX-x86_64.sh
-Miniconda-3.5.2-Windows-x86.exe
-Miniconda-3.5.2-Windows-x86_64.exe
-Miniconda3-3.5.2-Linux-x86.sh
-Miniconda3-3.5.2-Linux-x86_64.sh
-Miniconda3-3.5.2-MacOSX-x86_64.sh
-Miniconda3-3.5.2-Windows-x86.exe
-Miniconda3-3.5.2-Windows-x86_64.exe
-Miniconda-3.4.2-Linux-x86.sh
-Miniconda-3.4.2-Linux-x86_64.sh
-Miniconda-3.4.2-MacOSX-x86_64.sh
-Miniconda-3.4.2-Windows-x86.exe
-Miniconda-3.4.2-Windows-x86_64.exe
-Miniconda3-3.4.2-Linux-x86.sh
-Miniconda3-3.4.2-Linux-x86_64.sh
-Miniconda3-3.4.2-MacOSX-x86_64.sh
-Miniconda3-3.4.2-Windows-x86.exe
-Miniconda3-3.4.2-Windows-x86_64.exe
-Miniconda-3.3.0-Linux-x86.sh
-Miniconda-3.3.0-Linux-x86_64.sh
-Miniconda-3.3.0-MacOSX-x86_64.sh
-Miniconda-3.3.0-Windows-x86.exe
-Miniconda-3.3.0-Windows-x86_64.exe
-Miniconda3-3.3.0-Linux-x86.sh
-Miniconda3-3.3.0-Linux-x86_64.sh
-Miniconda3-3.3.0-MacOSX-x86_64.sh
-Miniconda3-3.3.0-Windows-x86.exe
-Miniconda3-3.3.0-Windows-x86_64.exe
-Miniconda-3.0.5-Linux-x86.sh
-Miniconda-3.0.5-Linux-x86_64.sh
-Miniconda-3.0.5-MacOSX-x86_64.sh
-Miniconda-3.0.5-Windows-x86.exe
-Miniconda-3.0.5-Windows-x86_64.exe
-Miniconda3-3.0.5-Linux-x86.sh
-Miniconda3-3.0.5-Linux-x86_64.sh
-Miniconda3-3.0.5-MacOSX-x86_64.sh
-Miniconda3-3.0.5-Windows-x86.exe
-Miniconda3-3.0.5-Windows-x86_64.exe
-Miniconda-3.0.4-Linux-x86.sh
-Miniconda-3.0.4-Linux-x86_64.sh
-Miniconda-3.0.4-MacOSX-x86_64.sh
-Miniconda-3.0.4-Windows-x86.exe
-Miniconda-3.0.4-Windows-x86_64.exe
-Miniconda3-3.0.4-Linux-x86.sh
-Miniconda3-3.0.4-Linux-x86_64.sh
-Miniconda3-3.0.4-MacOSX-x86_64.sh
-Miniconda3-3.0.4-Windows-x86.exe
-Miniconda3-3.0.4-Windows-x86_64.exe
-Miniconda-3.0.0-Linux-x86.sh
-Miniconda-3.0.0-Linux-x86_64.sh
-Miniconda-3.0.0-MacOSX-x86_64.sh
-Miniconda-3.0.0-Windows-x86.exe
-Miniconda-3.0.0-Windows-x86_64.exe
-Miniconda3-3.0.0-Linux-x86.sh
-Miniconda3-3.0.0-Linux-x86_64.sh
-Miniconda3-3.0.0-MacOSX-x86_64.sh
-Miniconda3-3.0.0-Windows-x86.exe
-Miniconda3-3.0.0-Windows-x86_64.exe
-Miniconda-2.2.8-Windows-x86.exe
-Miniconda-2.2.8-Windows-x86_64.exe
-Miniconda3-2.2.8-Windows-x86.exe
-Miniconda3-2.2.8-Windows-x86_64.exe
-Miniconda-2.2.2-Linux-x86.sh
-Miniconda-2.2.2-Linux-x86_64.sh
-Miniconda-2.2.2-MacOSX-x86_64.sh
-Miniconda3-2.2.2-Linux-x86.sh
-Miniconda3-2.2.2-Linux-x86_64.sh
-Miniconda3-2.2.2-MacOSX-x86_64.sh
-Miniconda-2.0.3-MacOSX-x86.sh
-Miniconda-2.0.0-Linux-x86_64.sh
-Miniconda-1.6.2-Linux-x86_64.sh
-Miniconda-1.9.1-Linux-x86_64.sh
-Miniconda-1.6.0-Linux-x86_64.sh
-*/
+/**
+ * Setup python environments
+ */
+async function applyCondaConfiguration(
+  condaConfig: string,
+  useBundled: boolean
+): Promise<Result> {
+  let result: Result;
+  try {
+    for (const key of Object.keys(condaConfig)) {
+      result = await condaCommand(
+        `config --set ${key} ${condaConfig[key]}`,
+        useBundled
+      );
+      if (!result.ok) return result;
+    }
+
+    result = await condaCommand(`config --show-sources`, useBundled);
+    if (!result.ok) return result;
+
+    result = await condaCommand(`config --show`, useBundled);
+    if (!result.ok) return result;
+  } catch (err) {
+    return { ok: true, error: err };
+  }
+  return { ok: true, data: undefined };
+}
+
+/**
+ * Main conda setup method to handle all configuration options
+ */
+async function setupMiniconda(
+  minicondaVersion: string,
+  architecture: string,
+  condaVersion: string,
+  condaBuildVersion: string,
+  pythonVersion: string,
+  activateEnvironment: string,
+  environmentFile: string,
+  condaConfigFile: string,
+  condaConfig: any
+): Promise<Result> {
+  let result: Result;
+  let useBundled: boolean = true;
+  try {
+    // Check for consistency
+    if (condaConfig["auto_update_conda"] == "true" && condaVersion) {
+      core.warning(
+        `"conda-version=${condaVersion}" was provided but "auto-update-conda" is also enabled!`
+      );
+    }
+    if (pythonVersion && activateEnvironment === "") {
+      return {
+        ok: false,
+        error: new Error(
+          `"python-version=${pythonVersion}" was provided but "activate-environment='${activateEnvironment}'"!`
+        )
+      };
+    }
+
+    if (minicondaVersion !== "" || architecture !== "x64") {
+      consoleLog("\n# Downloading Miniconda...\n");
+      useBundled = false;
+      result = await downloadMiniconda(3, minicondaVersion, architecture);
+      if (!result["ok"]) return result;
+
+      consoleLog("Installing Miniconda...");
+      result = await installMiniconda(result["data"], useBundled);
+      if (!result["ok"]) return result;
+    } else {
+      consoleLog("Locating Miniconda...");
+      core.info(minicondaPath());
+      if (!fs.existsSync(minicondaPath())) {
+        return { ok: false, error: new Error("Bundled Miniconda not found!") };
+      }
+    }
+
+    consoleLog("Setup environment variables...");
+    result = await setVariables(useBundled);
+    if (!result["ok"]) return result;
+
+    consoleLog("Initialize Conda...");
+    result = await condaInit(activateEnvironment, useBundled, condaConfig);
+    if (!result["ok"]) return result;
+
+    if (condaConfigFile) {
+      consoleLog("Copying condarc file...");
+      const destinationPath: string = path.join(os.homedir(), ".condarc");
+      const sourcePath: string = path.join(
+        process.env["GITHUB_WORKSPACE"] || "",
+        condaConfigFile
+      );
+      core.info(`"${sourcePath}" to "${destinationPath}"`);
+      try {
+        await io.cp(sourcePath, destinationPath);
+      } catch (err) {
+        return { ok: false, error: err };
+      }
+    }
+
+    consoleLog("Setup Conda basic configuration...");
+    result = await condaCommand(
+      "config --set always_yes yes --set changeps1 no",
+      useBundled
+    );
+    if (!result["ok"]) return result;
+
+    if (condaVersion) {
+      consoleLog("Installing Conda...");
+      result = await condaCommand(
+        `install --name base conda=${condaVersion} --quiet`,
+        useBundled
+      );
+      if (!result["ok"]) return result;
+    }
+
+    if (condaBuildVersion) {
+      consoleLog("Installing Conda Build...");
+      result = await condaCommand(
+        `install --name base conda-build=${condaBuildVersion} --quiet`,
+        useBundled
+      );
+      if (!result["ok"]) return result;
+    }
+
+    if (activateEnvironment) {
+      result = await createTestEnvironment(activateEnvironment, useBundled);
+      if (!result["ok"]) return result;
+    }
+
+    if (pythonVersion && activateEnvironment) {
+      consoleLog(
+        `Installing Python="${pythonVersion}" on "${activateEnvironment}" environment...`
+      );
+      result = await setupPython(
+        activateEnvironment,
+        pythonVersion,
+        useBundled
+      );
+      if (!result["ok"]) return result;
+    }
+
+    if (environmentFile) {
+      let environmentYaml: any;
+      let condaAction: string;
+      try {
+        const sourceEnvironmentPath: string = path.join(
+          process.env["GITHUB_WORKSPACE"] || "",
+          environmentFile
+        );
+        environmentYaml = await yaml.safeLoad(
+          fs.readFileSync(sourceEnvironmentPath, "utf8")
+        );
+      } catch (err) {
+        return { ok: false, error: err };
+      }
+      if (
+        activateEnvironment &&
+        environmentYaml["name"] !== undefined &&
+        environmentYaml["name"] !== activateEnvironment
+      ) {
+        condaAction = "create";
+        consoleLog(`Creating conda environment from yaml file...`);
+        core.warning(
+          'The environment name on "environment-file" is not the same as "enviroment-activate"!'
+        );
+      } else if (
+        activateEnvironment &&
+        activateEnvironment === environmentYaml["name"]
+      ) {
+        consoleLog(`Updating conda environment from yaml file...`);
+        condaAction = "update";
+      } else {
+        condaAction = "create";
+      }
+      result = await condaCommand(
+        `env ${condaAction} -f ${environmentFile} --quiet`,
+        useBundled
+      );
+      if (!result["ok"]) return result;
+    }
+
+    if (condaConfig) {
+      consoleLog("Applying conda configuration...");
+      result = await applyCondaConfiguration(condaConfig, useBundled);
+      if (!result["ok"]) return result;
+    }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+  return { ok: true, data: undefined };
+}
 
 export { setupMiniconda };

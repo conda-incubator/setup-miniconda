@@ -1,12 +1,43 @@
 name: 'Setup Conda'
-description: 'Set up Conda package manager with Miniconda'
-inputs: 
-  conda-version:
-    description: 'Version of conda to install. Default is the latest 4.7'
+author: Gonzalo Peña-Castellanos (@goanpeca)
+description: 'Set up Conda package and environment manager.'
+inputs:
+  miniconda-version:
+    description: 'If provided, this version of miniconda will be downloaded and installed. Available versions can be found at https://repo.continuum.io/miniconda/'
     required: false
+    default: ''
+  conda-version:
+    description: 'Version of conda to install after miniconda is installed or located.'
+    required: false
+    default: ''
   conda-build-version:
     description: 'Version of conda build to install. If not provided conda-build is not installed'
     required: false
+    default: ''
+  environment-file:
+    description: 'Environment.yml to create an environment'
+    required: false
+    default: ''
+  activate-environment:
+    description: 'Environment to activate by default on all shells. Deault is "test". If an empty string is used, no environment is activated by default (not even "base"). If the environment does not exist, it will be created and activated. If "environment-file" is used, you need to explicitely provide the name of that environmet on "activate-environment". If using sh/bash/cmd.exe shells please read IMPORTANT! section on README.md! to properly activate the conda environment on these shells.'
+    required: false
+    default: 'test'
+  python-version:
+    description: 'Exact version of a Python version to use on "activate-environment".'
+    required: false
+    default: ''
+  auto-update-conda:
+    description: 'Conda configuration. When "true", conda updates itself any time a user updates or installs a package in the base environment. When "false", conda updates itself only if the user manually issues a conda update command. The default is "true".  If "conda-rc-file" is provided, this setting overrides it. See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/ for more information.'
+    required: false
+    default: 'false'
+  auto-activate-base:
+    description: 'Conda configuration. If you’d prefer that conda’s base environment not be activated on startup, set the to "false". Default is "true".  If "conda-rc-file" is provided, this setting overrides it. See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/ for more information.'
+    required: false
+    default: 'true'
+  condarc-file:
+    description: 'Conda configuration. Path to a bundled conda configuration file to use for the runner. This file will be copied to "~/.condarc". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/ for more information.'
+    required: false
+    default: ''
 runs:
   using: 'node12'
   main: 'dist/index.js'

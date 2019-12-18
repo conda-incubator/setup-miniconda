@@ -13,31 +13,34 @@ jobs:
     name: Example (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: ['ubuntu-latest', 'macos-latest']
     steps:
-      - uses: goanpeca/action-setup-conda@master
+      - uses: actions/checkout@v2
+      - uses: goanpeca/action-setup-conda@develop
         with:
-          conda-version: 4.8
-          conda-build-version: 3.17
+          miniconda-version: 'latest'
+          activate-environment: 'test'
+          environment-file: etc/example-environment.yml
+          python-version: 3.6
+          auto-activate-base: true
+          auto-update-conda: false
       - name: Base environment
         shell: bash -l {0}
         run: |
           conda info
           conda list
           printenv | sort
-      - run: conda create -n test python=2.7
       - name: Bash check
         shell: bash -l {0}
         run: |
-          conda activate test
           conda info
           conda list
           printenv | sort
       - name: Sh check
         shell: sh -l {0}
         run: |
-          conda activate test
           conda info
           conda list
           printenv | sort
@@ -46,38 +49,42 @@ jobs:
     name: Example Windows
     runs-on: 'windows-latest'
     steps:
-      - uses: goanpeca/action-setup-conda@master
+      - uses: actions/checkout@v2
+      - uses: goanpeca/action-setup-conda@develop
+        with:
+          miniconda-version: 'latest'
+          activate-environment: 'test'
+          environment-file: etc/example-environment.yml
+          python-version: 3.6
+          auto-activate-base: true
+          auto-update-conda: false
+      - run: cat C:\\Miniconda\\condabin\\conda_hook.bat
+        shell: bash -l {0}
       - name: Base environment
         run: |
           conda info
           conda list
           printenv | sort
-      - run: conda create -n test python=2.7
-        shell: bash -l {0}
       - name: PowerShell check
         run: |
-          conda activate test
           conda info
           conda list
           gci env:* | sort-object name
       - name: PowerShell Core check
         shell: pwsh
         run: |
-          conda activate test
           conda info
           conda list
           gci env:* | sort-object name
       - name: Bash check
         shell: bash -l {0}
         run: |
-          conda activate test
           conda info
           conda list
           printenv | sort
       - name: Cmd.exe check
-        shell: cmd
+        shell: cmd /S /C "CALL "{0}""
         run: >-
-          "%CONDA_BAT%" activate test &&
           conda info &&
           conda list &&
           SET
