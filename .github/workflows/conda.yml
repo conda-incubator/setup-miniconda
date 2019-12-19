@@ -20,9 +20,9 @@ jobs:
       - uses: actions/checkout@v2
       - uses: goanpeca/action-setup-conda@develop
         with:
-          miniconda-version: 'latest'
           activate-environment: 'test'
           environment-file: etc/example-environment.yml
+          condarc-file: etc/example-condarc.yml
           python-version: 3.6
           auto-activate-base: true
           auto-update-conda: false
