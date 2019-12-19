@@ -58,8 +58,6 @@ jobs:
           python-version: 3.6
           auto-activate-base: true
           auto-update-conda: false
-      - run: cat C:\\Miniconda\\condabin\\conda_hook.bat
-        shell: bash -l {0}
       - name: Base environment
         run: |
           conda info
