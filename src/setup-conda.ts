@@ -9,6 +9,9 @@ import * as tc from "@actions/tool-cache";
 import * as yaml from "js-yaml";
 import getHrefs from "get-hrefs";
 
+//-----------------------------------------------------------------------
+// Interfaces
+//-----------------------------------------------------------------------
 interface SucceedResult {
   ok: boolean;
   data: string | undefined;
@@ -19,6 +22,10 @@ interface FailedResult {
 }
 type Result = SucceedResult | FailedResult;
 
+//-----------------------------------------------------------------------
+// Constants
+//-----------------------------------------------------------------------
+const MINICONDA_DIR_PATH: string = process.env["CONDA"] || "";
 const IS_WINDOWS: boolean = process.platform === "win32";
 const IS_MAC: boolean = process.platform === "darwin";
 const IS_LINUX: boolean = process.platform === "linux";
@@ -36,6 +43,9 @@ const OS_NAMES = {
   linux: "Linux"
 };
 
+//-----------------------------------------------------------------------
+// General use
+//-----------------------------------------------------------------------
 /**
  * Pretty print section messages
  *
@@ -49,10 +59,45 @@ function consoleLog(...args: string[]): void {
 }
 
 /**
+ * Run exec.exec with error handling
+ */
+async function execute(command: string): Promise<Result> {
+  let options = { listeners: {} };
+  let stringData: string;
+  options.listeners = {
+    stdout: (data: Buffer) => {
+      // core.info(data.toString());
+    },
+    stderr: (data: Buffer) => {
+      stringData = data.toString();
+      // These warnings are appearing on win install, we can swallow them
+      if (
+        !stringData.includes("menuinst_win32") &&
+        !stringData.includes("Unable to register environment") &&
+        !stringData.includes("0%|")
+      ) {
+        core.warning(stringData);
+      }
+    }
+  };
+
+  try {
+    await exec.exec(command, [], options);
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+
+  return { ok: true, data: undefined };
+}
+
+//-----------------------------------------------------------------------
+// Conda helpers
+//-----------------------------------------------------------------------
+/**
  * Provide current location of miniconda or location where it will be installed
  */
 function minicondaPath(useBundled: boolean = true): string {
-  let condaPath: string = process.env["CONDA"] || "";
+  let condaPath: string = MINICONDA_DIR_PATH;
   if (!useBundled) {
     if (IS_MAC) {
       condaPath = "/Users/runner/miniconda3";
@@ -108,38 +153,7 @@ async function minicondaVersions(): Promise<string[]> {
 }
 
 /**
- * Run exec.exec with error handling
- */
-async function execute(command: string): Promise<Result> {
-  let options = { listeners: {} };
-  let stringData: string;
-  options.listeners = {
-    stdout: (data: Buffer) => {
-      // core.info(data.toString());
-    },
-    stderr: (data: Buffer) => {
-      stringData = data.toString();
-      // These warnings are appearing on win install, we can swallow them
-      if (
-        !stringData.includes("menuinst_win32") &&
-        !stringData.includes("Unable to register environment") &&
-        !stringData.includes("0%|")
-      ) {
-        core.warning(stringData);
-      }
-    }
-  };
-
-  try {
-    await exec.exec(command, [], options);
-  } catch (err) {
-    return { ok: false, error: err };
-  }
-
-  return { ok: true, data: undefined };
-}
-
-/**
+ * Download specific version miniconda defined by version, arch and python major version
  *
  * @param pythonMajorVersion
  * @param minicondaVersion
@@ -243,7 +257,7 @@ async function installMiniconda(
 }
 
 /**
- * Run conda command
+ * Run Conda command
  */
 async function condaCommand(cmd: string, useBundled): Promise<Result> {
   const command = `${condaExecutable(useBundled)} ${cmd}`;
@@ -251,14 +265,19 @@ async function condaCommand(cmd: string, useBundled): Promise<Result> {
 }
 
 /**
- * Add conda executable to PATH
+ * Add Conda executable to PATH
  */
 async function setVariables(useBundled: boolean): Promise<Result> {
   try {
     // Set environment variables
     const condaBin: string = path.join(minicondaPath(useBundled), "condabin");
+    const conda: string = minicondaPath(useBundled);
     core.info(`Add "${condaBin}" to PATH`);
     core.addPath(condaBin);
+    if (!useBundled) {
+      core.info(`Set 'CONDA="${conda}"'`);
+      core.exportVariable("CONDA", conda);
+    }
   } catch (err) {
     return { ok: false, error: err };
   }
@@ -266,7 +285,7 @@ async function setVariables(useBundled: boolean): Promise<Result> {
 }
 
 /**
- *
+ * Create test environment
  */
 async function createTestEnvironment(
   activateEnvironment: string,
@@ -298,194 +317,181 @@ async function createTestEnvironment(
 }
 
 /**
- *
+ * Initialize Conda
  */
 async function condaInit(
   activateEnvironment: string,
   useBundled: boolean,
-  condaConfig: any
+  condaConfig: any,
+  removeProfiles: string
 ): Promise<Result> {
   let result: Result;
+  const isValidActivate: boolean =
+    activateEnvironment !== "base" &&
+    activateEnvironment !== "root" &&
+    activateEnvironment !== "";
+  const autoActivateBase: boolean =
+    condaConfig["auto_activate_base"] === "true";
 
-  if (IS_MAC && useBundled) {
-    core.info("Fixing conda folder ownership");
-    try {
+  // Fix ownership of folders
+  if (useBundled) {
+    if (IS_MAC) {
+      core.startGroup("Fixing conda folders ownership");
       const userName: string = process.env.USER as string;
-      await execute(
+      result = await execute(
         `sudo chown -R ${userName}:staff ${minicondaPath(useBundled)}`
       );
-    } catch (err) {
-      return { ok: false, error: err };
+      core.endGroup();
+      if (!result.ok) return result;
+    } else if (IS_WINDOWS) {
+      for (let folder of [
+        "condabin",
+        "Scripts",
+        "shell",
+        "/etc/profile.d/",
+        "/Lib/site-packages/xonsh",
+        "/etc/profile.d/"
+      ]) {
+        core.startGroup(`Fixing ${folder} ownership`);
+        result = await execute(
+          `takeown /f ${path.join(
+            minicondaPath(useBundled).replace("\\", "/"),
+            folder
+          )} /r /d y`
+        );
+        core.endGroup();
+        if (!result.ok) return result;
+      }
     }
   }
 
-  // Remove any profile files
-  for (let rc of ["~/.bashrc", "~/.profile", "~/.bash_profile"]) {
-    try {
-      await io.rmRF(rc.replace("~", os.homedir()));
-    } catch (err) {
-      core.warning(err);
+  // Remove profile files
+  if (removeProfiles == "true") {
+    for (let rc of [
+      "~/.bashrc",
+      "~/.bash_profile",
+      "~/.config/fish/config.fish",
+      "~/.profile",
+      "~/.tcshrc",
+      "~/.xonshrc",
+      "~/.zshrc",
+      "~/.config/powershell/profile.ps1",
+      "~/Documents/PowerShell/profile.ps1",
+      "~/Documents/WindowsPowerShell/profile.ps1"
+    ]) {
+      try {
+        let file: string = rc.replace("~", os.homedir().replace("\\", "/"));
+        if (fs.existsSync(file)) {
+          core.info(`Removing "${file}"`);
+          await io.rmRF(file);
+        }
+      } catch (err) {
+        core.warning(err);
+      }
     }
   }
 
-  if (IS_UNIX) {
-    const bashrc = "~/.profile".replace("~", os.homedir());
-    const condaFolderPath = minicondaPath(useBundled);
-    let bashInitText = `
-##############################################################################
-# Basic configuration
-set -e o pipefail
+  // Run conda init
+  core.info("\n");
+  for (let cmd of ["--all"]) {
+    const command = `${condaExecutable(useBundled)} init ${cmd}`;
+    await execute(command);
+  }
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('${condaExecutable(
-      useBundled
-    )}' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "${condaFolderPath}/etc/profile.d/conda.sh" ]; then
-        . "${condaFolderPath}/etc/profile.d/conda.sh"
-    else
-        export PATH="${condaFolderPath}/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-# <<< conda initialize <<<
-`;
-    if (
-      activateEnvironment !== "base" &&
-      activateEnvironment !== "root" &&
-      activateEnvironment !== ""
-    ) {
-      bashInitText += `
-# >>> conda custom initialize >>>
-# !! Contents within this block were included by this github action !!
-# Activate environment
-conda activate ${activateEnvironment}
-# <<< conda custom initialize <<<
-`;
-    }
-    bashInitText += `
-##############################################################################`;
+  // Rename files
+  if (IS_LINUX) {
+    let source: string = "~/.bashrc".replace("~", os.homedir());
+    let dest: string = "~/.profile".replace("~", os.homedir());
+    core.info(`Renaming "${source}" to "${dest}"\n`);
+    await io.mv(source, dest);
+  } else if (IS_MAC) {
+    let source: string = "~/.bash_profile".replace("~", os.homedir());
+    let dest: string = "~/.profile".replace("~", os.homedir());
+    core.info(`Renaming "${source}" to "${dest}"\n`);
+    await io.mv(source, dest);
+  }
 
-    await execute(`${condaExecutable(useBundled)} config --show-sources`);
-    core.info(`Append to "${bashrc}":\n ${bashInitText} \n`);
-    fs.appendFileSync(bashrc, bashInitText);
-  } else {
-    /**
-     * Windows
-     */
-    if (useBundled) {
-      result = await execute(
-        `takeown /f ${path.join(minicondaPath(useBundled), "condabin")} /r /d y`
-      );
-    }
+  // PowerShell profiles
+  let powerExtraText = `
+# ----------------------------------------------------------------------------`;
+  if (isValidActivate) {
+    powerExtraText += `
+# Conda Setup Action: Custom activation
+conda activate ${activateEnvironment}`;
+  }
+  powerExtraText += `
+# ----------------------------------------------------------------------------`;
 
-    // Run conda init
-    for (let cmd of ["--all"]) {
-      const command = `${condaExecutable(useBundled)} init ${cmd}`;
-      core.info(command);
-      await execute(command);
-    }
+  // Bash profiles
+  let bashExtraText: string = `
+# ----------------------------------------------------------------------------
+# Conda Setup Action: Basic configuration
+set -e pipefail`;
+  if (isValidActivate) {
+    bashExtraText += `
+# Conda Setup Action: Custom activation
+conda activate ${activateEnvironment}`;
+    bashExtraText += `
+# ----------------------------------------------------------------------------`;
+  }
 
-    // Create empty conda configuration file
-    fs.writeFileSync(path.join(os.homedir(), ".condarc"), "# Empty condarc");
-
-    // Append custom test environment activation when using powershell
-    const bashProfilePS11S = path.join(
-      os.homedir(),
-      "Documents",
-      "WindowsPowerShell",
-      "profile.ps11s"
-    );
-    const bashProfilePS1 = path.join(
-      os.homedir(),
-      "Documents",
-      "PowerShell",
-      "profile.ps1"
-    );
-    let ps1ExtraText: string = "";
-    if (
-      activateEnvironment !== "" &&
-      activateEnvironment !== "root" &&
-      activateEnvironment !== "base"
-    ) {
-      ps1ExtraText += `
-## >>> conda custom initialize >>>
-## !! Contents within this block were included by this github action !!
-## Deactivate base
-conda activate ${activateEnvironment}
-`;
-    }
-    core.info(
-      `Append to "${bashProfilePS11S}" and "${bashProfilePS1}":\n ${ps1ExtraText} \n`
-    );
-    fs.appendFileSync(bashProfilePS11S, ps1ExtraText);
-    fs.appendFileSync(bashProfilePS1, ps1ExtraText);
-
-    // Append custom test enviornment activation to bash on windows
-    const bashProfileRC = "~\\.bash_profile".replace("~", os.homedir());
-    let bashExtraText: string = "";
-    if (
-      activateEnvironment !== "" &&
-      activateEnvironment !== "root" &&
-      activateEnvironment !== "base"
-    ) {
-      bashExtraText += `
-# >>> conda custom initialize >>>
-# !! Contents within this block were included by this github action !!
-conda activate ${activateEnvironment}
-# <<< conda custom initialize <<<
-`;
-    }
-    core.info(`Append to "${bashProfileRC}":\n ${bashExtraText} \n`);
-    fs.appendFileSync(bashProfileRC, bashExtraText);
-
-    // Append base enviornment activation if on config.
-    // On windows cmd.exe this is not working so we enforce it
-    let batExtraText: string = "";
-    if (condaConfig["auto_activate_base"] === "true") {
-      batExtraText += `
-:: >>> conda custom initialize >>>
-:: !! Contents within this block were included by this github action !!
-:: Activate environment
-@CALL "%CONDA_BAT%" activate base
-:: <<< conda custom initialize <<<`;
-    }
-
-    if (
-      activateEnvironment !== "base" &&
-      activateEnvironment !== "root" &&
-      activateEnvironment !== ""
-    ) {
-      batExtraText += `
-:: >>> conda custom initialize >>>
-:: !! Contents within this block were included by this github action !!
-:: Activate environment
-@CALL "%CONDA_BAT%" activate ${activateEnvironment}
-:: <<< conda custom initialize <<<`;
-    }
-    batExtraText += `
-:: >>> conda custom initialize >>>
-:: !! Contents within this block were included by this github action !!
-:: This sets the cmd.exe to act with github defaults
+  // Batch profiles
+  let batchExtraText = `
+:: ---------------------------------------------------------------------------`;
+  if (autoActivateBase) {
+    batchExtraText += `
+:: Conda Setup Action: Activate base
+@CALL "%CONDA_BAT%" activate base`;
+  }
+  if (isValidActivate) {
+    batchExtraText += `
+:: Conda Setup Action: Custom activation
+@CALL "%CONDA_BAT%" activate ${activateEnvironment}`;
+  }
+  batchExtraText += `
+:: Conda Setup Action: Basic configuration
 @SETLOCAL EnableExtensions
 @SETLOCAL DisableDelayedExpansion
-:: <<< conda custom initialize <<<`;
-    const batchCondaHook: string = path.join(
-      minicondaPath(useBundled),
-      "condabin",
-      "conda_hook.bat"
-    );
-    core.info(`Append to "${batchCondaHook}":\n ${batExtraText} \n`);
-    fs.appendFileSync(batchCondaHook, batExtraText);
+:: ---------------------------------------------------------------------------`;
+
+  let extraShells: object;
+  const shells = {
+    "~/.profile": bashExtraText,
+    "~/.zshrc": bashExtraText,
+    "~/.config/fish/config.fish": bashExtraText,
+    "~/.tcshrc": bashExtraText,
+    "~/.xonshrc": bashExtraText,
+    "~/.config/powershell/profile.ps1": powerExtraText,
+    "~/Documents/PowerShell/profile.ps1": powerExtraText,
+    "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText
+  };
+  if (useBundled) {
+    extraShells = {
+      "C:/Miniconda/etc/profile.d/conda.sh": bashExtraText,
+      "C:/Miniconda/etc/fish/conf.d/conda.fish": bashExtraText,
+      "C:/Miniconda/condabin/conda_hook.bat": batchExtraText
+    };
+  } else {
+    extraShells = {
+      "C:/Miniconda3/etc/profile.d/conda.sh": bashExtraText,
+      "C:/Miniconda3/etc/fish/conf.d/conda.fish": bashExtraText,
+      "C:/Miniconda3/condabin/conda_hook.bat": batchExtraText
+    };
   }
+  const allShells = { ...shells, ...extraShells };
+  Object.keys(allShells).forEach(key => {
+    let filePath: string = key.replace("~", os.homedir());
+    const text = allShells[key];
+    if (fs.existsSync(filePath)) {
+      core.info(`Append to "${filePath}":\n ${text} \n`);
+      fs.appendFileSync(filePath, text);
+    }
+  });
   return { ok: true, data: undefined };
 }
 
 /**
- * Setup python environments
+ * Setup python test environment
  */
 async function setupPython(
   activateEnvironment: string,
@@ -499,7 +505,7 @@ async function setupPython(
 }
 
 /**
- * Setup python environments
+ * Setup Conda configuration
  */
 async function applyCondaConfiguration(
   condaConfig: string,
@@ -538,7 +544,8 @@ async function setupMiniconda(
   activateEnvironment: string,
   environmentFile: string,
   condaConfigFile: string,
-  condaConfig: any
+  condaConfig: any,
+  removeProfiles: string
 ): Promise<Result> {
   let result: Result;
   let useBundled: boolean = true;
@@ -553,7 +560,7 @@ async function setupMiniconda(
       return {
         ok: false,
         error: new Error(
-          `"python-version=${pythonVersion}" was provided but "activate-environment='${activateEnvironment}'"!`
+          `"python-version=${pythonVersion}" was provided but "activate-environment" is not defined!`
         )
       };
     }
@@ -580,7 +587,12 @@ async function setupMiniconda(
     if (!result["ok"]) return result;
 
     consoleLog("Initialize Conda...");
-    result = await condaInit(activateEnvironment, useBundled, condaConfig);
+    result = await condaInit(
+      activateEnvironment,
+      useBundled,
+      condaConfig,
+      removeProfiles
+    );
     if (!result["ok"]) return result;
 
     if (condaConfigFile) {
@@ -605,12 +617,19 @@ async function setupMiniconda(
     );
     if (!result["ok"]) return result;
 
+    // Any conda commands run here after init and setup
     if (condaVersion) {
       consoleLog("Installing Conda...");
       result = await condaCommand(
         `install --name base conda=${condaVersion} --quiet`,
         useBundled
       );
+      if (!result["ok"]) return result;
+    }
+
+    if (condaConfig["auto_update_conda"] == "true") {
+      consoleLog("Updating conda...");
+      result = await condaCommand("update conda --quiet", useBundled);
       if (!result["ok"]) return result;
     }
 

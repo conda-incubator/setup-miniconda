@@ -14,6 +14,7 @@ async function run() {
     let autoActivateBase: string = core.getInput("auto-activate-base");
     let autoUpdateConda: string = core.getInput("auto-update-conda");
     let condaFile: string = core.getInput("condarc-file");
+    let removeProfiles: string = core.getInput("remove-profiles");
 
     const condaConfig = {
       auto_activate_base: autoActivateBase,
@@ -28,7 +29,8 @@ async function run() {
       activateEnvironment,
       environmentFile,
       condaFile,
-      condaConfig
+      condaConfig,
+      removeProfiles
     );
     if (!result["ok"]) {
       throw result["error"];
