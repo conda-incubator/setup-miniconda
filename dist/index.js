@@ -30300,7 +30300,7 @@ conda activate ${activateEnvironment}
              * Windows
              */
             if (useBundled) {
-                result = yield execute(`takeown /f ${minicondaPath(useBundled)} /r /d y`);
+                result = yield execute(`takeown /f ${path.join(minicondaPath(useBundled), 'condabin')} /r /d y`);
             }
             // Run conda init
             for (let cmd of ["--all"]) {

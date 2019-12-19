@@ -377,7 +377,9 @@ conda activate ${activateEnvironment}
      * Windows
      */
     if (useBundled) {
-      result = await execute(`takeown /f ${minicondaPath(useBundled)} /r /d y`);
+      result = await execute(
+        `takeown /f ${path.join(minicondaPath(useBundled), "condabin")} /r /d y`
+      );
     }
 
     // Run conda init
