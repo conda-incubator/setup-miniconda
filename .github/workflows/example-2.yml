@@ -13,7 +13,7 @@ jobs:
     name: Ex2 Linux
     runs-on: 'ubuntu-latest'
     steps:
-      - uses: goanpeca/action-setup-conda@develop
+      - uses: goanpeca/action-setup-conda@master
         with:
           miniconda-version: 'latest'
           activate-environment: foo
