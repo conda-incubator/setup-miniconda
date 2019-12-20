@@ -142,7 +142,7 @@ jobs:
 
 ## Example 3: Other options"
 
-This example shows how to use `[environment.yml](etc/example-environment.yml)` for easier creation of test/build environments and `[.condarc](etc/example-condarc.yml)` files for fine grained configuration management. On this example we use a custom configuration file, install an environment from a yaml file and disable autoactivating the base environment before activating the `anaconda-client-env`.
+This example shows how to use [environment.yml](etc/example-environment.yml) for easier creation of test/build environments and [.condarc](etc/example-condarc.yml) files for fine grained configuration management. On this example we use a custom configuration file, install an environment from a yaml file and disable autoactivating the base environment before activating the `anaconda-client-env`.
 
 ```yaml
 on:
