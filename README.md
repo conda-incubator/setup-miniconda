@@ -35,7 +35,7 @@ jobs:
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
         python-version: ['3.7', '2.7']
     steps:
-      - uses: goanpeca/action-setup-conda@v1
+      - uses: goanpeca/setup-miniconda@v1
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
@@ -89,7 +89,7 @@ jobs:
     name: Ex2 Mac
     runs-on: 'macos-latest'
     steps:
-      - uses: goanpeca/action-setup-conda@develop
+      - uses: goanpeca/setup-miniconda@v1
         with:
           miniconda-version: 'latest'
           activate-environment: foo
