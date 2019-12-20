@@ -13,7 +13,7 @@ jobs:
     name: Ex2 Linux
     runs-on: 'ubuntu-latest'
     steps:
-      - uses: goanpeca/action-setup-conda@master
+      - uses: goanpeca/setup-miniconda@master
         with:
           miniconda-version: 'latest'
           activate-environment: foo
@@ -37,7 +37,7 @@ jobs:
     name: Ex2 Mac
     runs-on: 'macos-latest'
     steps:
-      - uses: goanpeca/action-setup-conda@develop
+      - uses: goanpeca/setup-miniconda@master
         with:
           miniconda-version: 'latest'
           activate-environment: foo
@@ -61,7 +61,7 @@ jobs:
     name: Ex2 Windows
     runs-on: 'windows-latest'
     steps:
-      - uses: goanpeca/action-setup-conda@develop
+      - uses: goanpeca/setup-miniconda@master
         with:
           miniconda-version: 'latest'
           activate-environment: foo
