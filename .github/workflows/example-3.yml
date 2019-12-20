@@ -1,0 +1,27 @@
+name: "Example 3: Other options"
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  example-3:
+    name: Ex3 Linux
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: goanpeca/action-setup-conda@master
+        with:
+           activate-environment: anaconda-client-env
+           environment-file: etc/example-environment.yml
+           python-version: 3.5
+           condarc-file: etc/example-condarc.yml
+           auto-activate-base: false
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list

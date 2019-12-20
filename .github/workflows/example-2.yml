@@ -1,0 +1,87 @@
+name: "Example 2: Other shells"
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  example-2-linux:
+    name: Ex2 Linux
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: goanpeca/action-setup-conda@master
+        with:
+          miniconda-version: 'latest'
+          activate-environment: foo
+      - name: Sh
+        shell: sh -l {0}
+        run: |
+          conda info
+          conda list
+      - name: Bash
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - name: PowerShell Core
+        shell: pwsh
+        run: |
+          conda info
+          conda list
+
+  example-2-mac:
+    name: Ex2 Mac
+    runs-on: 'macos-latest'
+    steps:
+      - uses: goanpeca/action-setup-conda@develop
+        with:
+          miniconda-version: 'latest'
+          activate-environment: foo
+      - name: Sh
+        shell: sh -l {0}
+        run: |
+          conda info
+          conda list
+      - name: Bash
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - name: PowerShell Core
+        shell: pwsh
+        run: |
+          conda info
+          conda list
+
+  example-2-win:
+    name: Ex2 Windows
+    runs-on: 'windows-latest'
+    steps:
+      - uses: goanpeca/action-setup-conda@develop
+        with:
+          miniconda-version: 'latest'
+          activate-environment: foo
+      - name: Bash
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - name: PowerShell
+        shell: powershell
+        run: |
+          conda info
+          conda list
+      - name: PowerShell Core
+        shell: pwsh
+        run: |
+          conda info
+          conda list
+      - name: Cmd.exe
+        shell: cmd /C CALL {0}
+        run: >-
+          conda info &&
+          conda list
