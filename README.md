@@ -47,7 +47,7 @@ jobs:
         run: conda list
 ```
 
-## Example 2: Other shells"
+## Example 2: Other shells
 
 This example shows how to use all other available shells for specific operating systems. On this example we select to download the latest anaconda version available and create and activate by default an environment named `foo`
 
@@ -140,7 +140,7 @@ jobs:
 ```
 
 
-## Example 3: Other options"
+## Example 3: Other options
 
 This example shows how to use [environment.yml](etc/example-environment.yml) for easier creation of test/build environments and [.condarc](etc/example-condarc.yml) files for fine grained configuration management. On this example we use a custom configuration file, install an environment from a yaml file and disable autoactivating the base environment before activating the `anaconda-client-env`.
 
