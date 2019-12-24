@@ -1,9 +1,6 @@
 name: "Example 1: Basic usage"
 
 on:
-  push:
-    branches:
-    - '*'
   pull_request:
     branches:
     - '*'

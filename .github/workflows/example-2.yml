@@ -1,9 +1,6 @@
 name: "Example 2: Other shells"
 
 on:
-  push:
-    branches:
-    - '*'
   pull_request:
     branches:
     - '*'

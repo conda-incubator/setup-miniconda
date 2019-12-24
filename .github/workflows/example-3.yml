@@ -1,9 +1,6 @@
 name: "Example 3: Other options"
 
 on:
-  push:
-    branches:
-    - '*'
   pull_request:
     branches:
     - '*'
