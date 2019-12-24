@@ -20,10 +20,10 @@ This example shows how to set a basic python workflow with conda using the cross
 on:
   push:
     branches:
-    - master
+    - '*'
   pull_request:
     branches:
-    - master
+    - '*'
 
 jobs:
   example-1:
@@ -49,16 +49,16 @@ jobs:
 
 ## Example 2: Other shells
 
-This example shows how to use all other available shells for specific operating systems. On this example we select to download the latest anaconda version available and create and activate by default an environment named `foo`
+This example shows how to use all other available shells for specific operating systems. On this example we select to download the latest anaconda version available and create and activate by default an environment named `foo`.
 
 ```yaml
 on:
   push:
     branches:
-    - master
+    - '*'
   pull_request:
     branches:
-    - master
+    - '*'
 
 jobs:
   example-2-linux:
@@ -148,10 +148,10 @@ This example shows how to use [environment.yml](etc/example-environment.yml) for
 on:
   push:
     branches:
-    - master
+    - '*'
   pull_request:
     branches:
-    - master
+    - '*'
 
 jobs:
   example-3:

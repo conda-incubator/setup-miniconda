@@ -456,6 +456,7 @@ conda activate ${activateEnvironment}`;
 
   let extraShells: object;
   const shells = {
+    "~/.bash_profile": bashExtraText,
     "~/.profile": bashExtraText,
     "~/.zshrc": bashExtraText,
     "~/.config/fish/config.fish": bashExtraText,
