@@ -1,6 +1,6 @@
 {
   "name": "action-setup-conda",
-  "version": "1.0.0",
+  "version": "1.0.2-dev.0",
   "description": "GitHub action for setting up conda",
   "main": "lib/main.js",
   "scripts": {

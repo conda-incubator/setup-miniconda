@@ -7,7 +7,7 @@ inputs:
     required: false
     default: ''
   conda-version:
-    description: 'Sepcific version of Conda to install after miniconda is located or installed. See https://anaconda.org/anaconda/conda for available "conda" versions.'
+    description: 'Specific version of Conda to install after miniconda is located or installed. See https://anaconda.org/anaconda/conda for available "conda" versions.'
     required: false
     default: ''
   conda-build-version:
@@ -36,6 +36,10 @@ inputs:
     default: 'true'
   condarc-file:
     description: 'Conda configuration. Path to a conda configuration file to use for the runner. This file will be copied to "~/.condarc". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/ for more information.'
+    required: false
+    default: ''
+  channels:
+    description: 'Conda configuration. Comma separated list of channels to use in order of priority. See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/ for more information.'
     required: false
     default: ''
   remove-profiles:

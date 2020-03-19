@@ -1,0 +1,27 @@
+name: "Example 4: Channels"
+
+on:
+  push:
+    branches:
+    - '*'
+  pull_request:
+    branches:
+    - '*'
+
+jobs:
+  example-4:
+    name: Ex4 Linux
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: goanpeca/setup-miniconda@enh/channels
+        with:
+           activate-environment: foo
+           python-version: 3.6
+           channels: conda-forge,spyder-ide
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show

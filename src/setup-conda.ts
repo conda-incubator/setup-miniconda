@@ -515,11 +515,25 @@ async function applyCondaConfiguration(
   let result: Result;
   try {
     for (const key of Object.keys(condaConfig)) {
-      result = await condaCommand(
-        `config --set ${key} ${condaConfig[key]}`,
-        useBundled
-      );
-      if (!result.ok) return result;
+      if (key == "channels" && condaConfig[key]) {
+        // Split by comma and reverse order to preserve higher priority
+        // as listed in the option
+        let channels: Array<string> = condaConfig[key].split(",").reverse();
+        let channel: string;
+        for (channel of channels) {
+          result = await condaCommand(
+            `config --add ${key} ${channel}`,
+            useBundled
+          );
+          if (!result.ok) return result;
+        }
+      } else {
+        result = await condaCommand(
+          `config --set ${key} ${condaConfig[key]}`,
+          useBundled
+        );
+        if (!result.ok) return result;
+      }
     }
 
     result = await condaCommand(`config --show-sources`, useBundled);
@@ -587,15 +601,6 @@ async function setupMiniconda(
     result = await setVariables(useBundled);
     if (!result["ok"]) return result;
 
-    consoleLog("Initialize Conda...");
-    result = await condaInit(
-      activateEnvironment,
-      useBundled,
-      condaConfig,
-      removeProfiles
-    );
-    if (!result["ok"]) return result;
-
     if (condaConfigFile) {
       consoleLog("Copying condarc file...");
       const destinationPath: string = path.join(os.homedir(), ".condarc");
@@ -611,6 +616,12 @@ async function setupMiniconda(
       }
     }
 
+    if (condaConfig) {
+      consoleLog("Applying conda configuration...");
+      result = await applyCondaConfiguration(condaConfig, useBundled);
+      if (!result["ok"]) return result;
+    }
+
     consoleLog("Setup Conda basic configuration...");
     result = await condaCommand(
       "config --set always_yes yes --set changeps1 no",
@@ -618,7 +629,6 @@ async function setupMiniconda(
     );
     if (!result["ok"]) return result;
 
-    // Any conda commands run here after init and setup
     if (condaVersion) {
       consoleLog("Installing Conda...");
       result = await condaCommand(
@@ -634,6 +644,16 @@ async function setupMiniconda(
       if (!result["ok"]) return result;
     }
 
+    consoleLog("Initialize Conda...");
+    result = await condaInit(
+      activateEnvironment,
+      useBundled,
+      condaConfig,
+      removeProfiles
+    );
+    if (!result["ok"]) return result;
+
+    // Any conda commands run here after init and setup
     if (condaBuildVersion) {
       consoleLog("Installing Conda Build...");
       result = await condaCommand(
@@ -697,12 +717,6 @@ async function setupMiniconda(
         `env ${condaAction} -f ${environmentFile} --quiet`,
         useBundled
       );
-      if (!result["ok"]) return result;
-    }
-
-    if (condaConfig) {
-      consoleLog("Applying conda configuration...");
-      result = await applyCondaConfiguration(condaConfig, useBundled);
       if (!result["ok"]) return result;
     }
   } catch (err) {
