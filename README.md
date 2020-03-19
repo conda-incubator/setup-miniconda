@@ -172,6 +172,44 @@ jobs:
           conda list
 ```
 
+## Example 4: Conda options
+
+This example shows how to use `channels` option. The priority will be set by the order of the channels.
+In this example it will result in:
+
+- conda-forge
+- spyder-ide
+- defaults
+
+```yaml
+on:
+  push:
+    branches:
+    - '*'
+  pull_request:
+    branches:
+    - '*'
+
+jobs:
+  example-4:
+    name: Ex4 Linux
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: goanpeca/setup-miniconda@enh/channels
+        with:
+           activate-environment: foo
+           python-version: 3.6
+           channels: conda-forge,spyder-ide
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show
+
+```
+
 ## IMPORTANT
 
 - Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be explicitely declared as `shell: bash -l {0}` on steps that need to be properly activated. This is because bash shells are executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash profile files made by `conda init bash`. See [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell) and [thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).

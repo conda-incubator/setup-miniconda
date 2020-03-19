@@ -14,11 +14,13 @@ async function run() {
     let autoActivateBase: string = core.getInput("auto-activate-base");
     let autoUpdateConda: string = core.getInput("auto-update-conda");
     let condaFile: string = core.getInput("condarc-file");
+    let channels: string = core.getInput("channels");
     let removeProfiles: string = core.getInput("remove-profiles");
 
     const condaConfig = {
       auto_activate_base: autoActivateBase,
-      auto_update_conda: autoUpdateConda
+      auto_update_conda: autoUpdateConda,
+      channels: channels
     };
     const result = await conda.setupMiniconda(
       minicondaVersion,
