@@ -144,17 +144,12 @@ def update_version(version):
 # --- Activities
 # ----------------------------------------------------------------------------
 @activity
-def checkout(branch='master'):
+def checkout(branch='1.x'):
     """
     Checkout master branch.
     """
     git stash
     git checkout @(branch)
-
-    # Check that origin and remote exist
-    remotes = $(git remote -v)
-    if not ('origin' in remotes and 'upstream' in remotes):
-        raise Exception('Must have git remotes origin (pointing to fork) and upstream (pointing to repo)')
 
 
 @activity
@@ -165,34 +160,23 @@ def clean_repo():
     import pathlib
 
     # Remove python files
-    for p in pathlib.Path('.').rglob('*.py[co]'):
-        p.unlink()
-
     for p in pathlib.Path('.').rglob('*.orig'):
         p.unlink()
 
-    for p in pathlib.Path('.').rglob('__pycache__'):
-        p.rmdir()        
-
     rm -rf CHANGELOG.temp
-    rm -rf .pytest_cache/
-    rm -rf build/
-    rm -rf dist/
     rm -rf activate.xsh
-    rm -rf $MODULE.egg-info
 
     # Delete files not tracked by git?
     # git clean -xfd
 
 
 @activity
-def update_repo(branch='master'):
+def update_repo(branch='1.x'):
     """
     Stash any current changes and ensure you have the latest version from origin.
     """
     git stash
-    git pull upstream @(branch)
-    git push origin @(branch)
+    git pull origin @(branch)
 
 
 @activity
@@ -205,85 +189,29 @@ def install_deps():
     except:
         pass
 
-    conda create --name $TEMP_ENV python=3.7 --yes --quiet
+    conda create --name $TEMP_ENV nodejs=12 loghub -c conda-forge --yes --quiet
     activate($TEMP_ENV)
-    pip install -r requirements/install.txt
-    pip install -r requirements/dev.txt
-    pip install -r requirements/release.txt
-
-
-@activity
-def format_code():
-    """
-    Format code.
-    """
-    activate($TEMP_ENV)
-    try:
-        python run_checks_and_format.py
-    except Exception:
-        pass
-
-
-@activity
-def run_tests():
-    """
-    Run simple import tests before cleaning repository.
-    """
-    pytest tests --cov=$MODULE
+    npm install
+    npm i -g @zeit/ncc
 
 
 @activity
 def update_release_version():
     """
-    Update version in `__init__.py` (set release version, remove 'dev0').
-    and on the package.json file.
+    Update version in `package.json`
     """
     update_version($NEW_VERSION)
 
 
 @activity
-def create_python_distributions():
+def create_distributions():
     """
     Create distributions.
     """
     activate($TEMP_ENV)
-    python setup.py sdist bdist_wheel
-
-
-@activity
-def upload_test_distributions():
-    """
-    Upload test distributions.
-    """
-    activate($TEMP_ENV)
-    cprint("Yow will be asked to provide credentials", Colors.OKBLUE)
-    print("\n\n")
-
-    # The file might be already there
-    try:
-        python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-    except Exception as err:
-        print(err)
-
-
-@activity
-def install_test_distributions():
-    """
-    Upload test distributions.
-    """
-    activate($TEMP_ENV)
-
-    # Python package
-    pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple $PROJECT==$NEW_VERSION
-
-
-@activity
-def run_install_tests():
-    """
-    Run simple import tests before cleaning repository.
-    """
-    activate($TEMP_ENV)
-    $MODULE --help
+    npm run build
+    npm run format
+    npm run pack
 
 
 @activity
@@ -291,7 +219,7 @@ def create_changelog():
     """
     Create changelog using loghub.
     """
-    loghub $GITHUB_ORG/$GITHUB_REPO -zr @($PROJECT + ' v' + $NEW_VERSION)
+    loghub $GITHUB_ORG/$GITHUB_REPO -m @('v' + $NEW_VERSION)
 
     with open('CHANGELOG.temp', 'r') as fh:
         new_changelog_lines = fh.read().split('\n')
@@ -324,19 +252,12 @@ def add_tag():
 
 
 @activity
-def upload_python_distributions():
+def update_tag():
     """
-    Upload the distributions to pypi production environment.
+    Update major release tag.
     """
-    activate($TEMP_ENV)
-    cprint("Yow will be asked to provide credentials", Colors.OKBLUE)
-    print("\n\n")
-
-    # The file might be already there
-    try:
-        twine upload dist/*
-    except Exception as err:
-        print(err)
+    # TODO: Add check to see if tag already exists?
+    # git tag -a @('v' + $NEW_VERSION) -m @('Tag version ' + $NEW_VERSION + ' [ci skip]')
 
 
 @activity
@@ -357,14 +278,12 @@ def commit_dev_version():
 
 
 @activity
-def push(branch='master'):
+def push(branch='1.x'):
     """
     Push changes.
     """
     # Push changes
     git push origin @(branch)
-    git push upstream @(branch)
 
     # Push tags
     git push origin --tags
-    git push upstream --tags
