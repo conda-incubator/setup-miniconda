@@ -3,9 +3,11 @@
   aliases:
   - Gonzalo Pena-Castellanos
   - goanpeca
-  num_commits: 17
+  num_commits: 4
   first_commit: 2019-12-09 12:18:38
   github: goanpeca
 - name: Marcel Martin
   email: mail@marcelm.net
   github: marcelm
+  num_commits: 1
+  first_commit: 2020-02-11 10:32:48
