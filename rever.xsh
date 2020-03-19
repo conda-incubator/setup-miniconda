@@ -77,7 +77,7 @@ def get_version(version_type, module=$MODULE):
     """
     Get version info. Tuple with three items, major.minor.patch
     """
-    with open(os.path.join($HERE, "packages.json")) as fh:
+    with open(os.path.join($HERE, "package.json")) as fh:
         data = json.loads(fh.read())
 
     major, minor, patch = 'MAJOR', 'MINOR', 'PATCH'
