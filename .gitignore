@@ -2,5 +2,10 @@ lib/
 node_modules/
 .DS_Store
 *.orig
+
 # Rever
 rever/
+Activate.xsh
+
+# Loghub
+CHANGELOG.temp
