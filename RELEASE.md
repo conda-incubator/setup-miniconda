@@ -8,15 +8,18 @@ The build steps transpiles the `src/main.ts` to `lib/main.js` and then packs to 
 - Conda env
 
 ```bash
-conda create -n github-action install nodejs=12 -c conda-forge
+conda create -n github-action nodejs=12 -c conda-forge
 ```
 
 - Install NodeJS 12
 
 ```bash
+conda activate github-action
 npm install
 npm i -g @zeit/ncc
 ```
+
+- Update version in package.json
 
 - To update the code
 
