@@ -352,15 +352,17 @@ async function condaInit(
         "/Lib/site-packages/xonsh",
         "/etc/profile.d/"
       ]) {
-        core.startGroup(`Fixing ${folder} ownership`);
-        result = await execute(
-          `takeown /f ${path.join(
-            minicondaPath(useBundled).replace("\\", "/"),
-            folder
-          )} /r /d y`
-        );
-        core.endGroup();
-        if (!result.ok) return result;
+        if (fs.existsSync(folder)) {
+          core.startGroup(`Fixing ${folder} ownership`);
+          result = await execute(
+            `takeown /f ${path.join(
+              minicondaPath(useBundled).replace("\\", "/"),
+              folder
+            )} /r /d y`
+          );
+          core.endGroup();
+          if (!result.ok) return result;
+        }
       }
     }
   }
