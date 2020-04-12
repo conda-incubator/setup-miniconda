@@ -515,24 +515,27 @@ async function applyCondaConfiguration(
   let result: Result;
   try {
     for (const key of Object.keys(condaConfig)) {
-      if (key == "channels" && condaConfig[key]) {
-        // Split by comma and reverse order to preserve higher priority
-        // as listed in the option
-        let channels: Array<string> = condaConfig[key].split(",").reverse();
-        let channel: string;
-        for (channel of channels) {
+      core.info(`"${key}": "${condaConfig[key]}"`);
+      if (condaConfig[key].length !== 0) {
+        if (key === "channels") {
+          // Split by comma and reverse order to preserve higher priority
+          // as listed in the option
+          let channels: Array<string> = condaConfig[key].split(",").reverse();
+          let channel: string;
+          for (channel of channels) {
+            result = await condaCommand(
+              `config --add ${key} ${channel}`,
+              useBundled
+            );
+            if (!result.ok) return result;
+          }
+        } else {
           result = await condaCommand(
-            `config --add ${key} ${channel}`,
+            `config --set ${key} ${condaConfig[key]}`,
             useBundled
           );
           if (!result.ok) return result;
         }
-      } else {
-        result = await condaCommand(
-          `config --set ${key} ${condaConfig[key]}`,
-          useBundled
-        );
-        if (!result.ok) return result;
       }
     }
 

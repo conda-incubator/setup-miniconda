@@ -15746,21 +15746,24 @@ function applyCondaConfiguration(condaConfig, useBundled) {
         let result;
         try {
             for (const key of Object.keys(condaConfig)) {
-                if (key == "channels" && condaConfig[key]) {
-                    // Split by comma and reverse order to preserve higher priority
-                    // as listed in the option
-                    let channels = condaConfig[key].split(",").reverse();
-                    let channel;
-                    for (channel of channels) {
-                        result = yield condaCommand(`config --add ${key} ${channel}`, useBundled);
+                core.info(`"${key}": "${condaConfig[key]}"`);
+                if (condaConfig[key].length !== 0) {
+                    if (key === "channels") {
+                        // Split by comma and reverse order to preserve higher priority
+                        // as listed in the option
+                        let channels = condaConfig[key].split(",").reverse();
+                        let channel;
+                        for (channel of channels) {
+                            result = yield condaCommand(`config --add ${key} ${channel}`, useBundled);
+                            if (!result.ok)
+                                return result;
+                        }
+                    }
+                    else {
+                        result = yield condaCommand(`config --set ${key} ${condaConfig[key]}`, useBundled);
                         if (!result.ok)
                             return result;
                     }
-                }
-                else {
-                    result = yield condaCommand(`config --set ${key} ${condaConfig[key]}`, useBundled);
-                    if (!result.ok)
-                        return result;
                 }
             }
             result = yield condaCommand(`config --show-sources`, useBundled);
