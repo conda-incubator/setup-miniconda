@@ -15576,6 +15576,7 @@ function createTestEnvironment(activateEnvironment, useBundled) {
 function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles) {
     return __awaiter(this, void 0, void 0, function* () {
         let result;
+        let ownPath;
         const isValidActivate = activateEnvironment !== "base" &&
             activateEnvironment !== "root" &&
             activateEnvironment !== "";
@@ -15599,9 +15600,10 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
                     "/Lib/site-packages/xonsh",
                     "/etc/profile.d/"
                 ]) {
-                    if (fs.existsSync(folder)) {
+                    ownPath = path.join(minicondaPath(useBundled).replace("\\", "/"), folder);
+                    if (fs.existsSync(ownPath)) {
                         core.startGroup(`Fixing ${folder} ownership`);
-                        result = yield execute(`takeown /f ${path.join(minicondaPath(useBundled).replace("\\", "/"), folder)} /r /d y`);
+                        result = yield execute(`takeown /f ${ownPath} /r /d y`);
                         core.endGroup();
                         if (!result.ok)
                             return result;
@@ -15843,6 +15845,10 @@ function setupMiniconda(minicondaVersion, architecture, condaVersion, condaBuild
             result = yield condaCommand("config --set always_yes yes --set changeps1 no", useBundled);
             if (!result["ok"])
                 return result;
+            consoleLog("Initialize Conda and fix ownership...");
+            result = yield condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles);
+            if (!result["ok"])
+                return result;
             if (condaVersion) {
                 consoleLog("Installing Conda...");
                 result = yield condaCommand(`install --name base conda=${condaVersion} --quiet`, useBundled);
@@ -15855,10 +15861,6 @@ function setupMiniconda(minicondaVersion, architecture, condaVersion, condaBuild
                 if (!result["ok"])
                     return result;
             }
-            consoleLog("Initialize Conda...");
-            result = yield condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles);
-            if (!result["ok"])
-                return result;
             // Any conda commands run here after init and setup
             if (condaBuildVersion) {
                 consoleLog("Installing Conda Build...");

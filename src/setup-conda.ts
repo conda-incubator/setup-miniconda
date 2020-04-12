@@ -326,6 +326,7 @@ async function condaInit(
   removeProfiles: string
 ): Promise<Result> {
   let result: Result;
+  let ownPath: string;
   const isValidActivate: boolean =
     activateEnvironment !== "base" &&
     activateEnvironment !== "root" &&
@@ -352,14 +353,13 @@ async function condaInit(
         "/Lib/site-packages/xonsh",
         "/etc/profile.d/"
       ]) {
-        if (fs.existsSync(folder)) {
+        ownPath = path.join(
+          minicondaPath(useBundled).replace("\\", "/"),
+          folder
+        );
+        if (fs.existsSync(ownPath)) {
           core.startGroup(`Fixing ${folder} ownership`);
-          result = await execute(
-            `takeown /f ${path.join(
-              minicondaPath(useBundled).replace("\\", "/"),
-              folder
-            )} /r /d y`
-          );
+          result = await execute(`takeown /f ${ownPath} /r /d y`);
           core.endGroup();
           if (!result.ok) return result;
         }
@@ -634,6 +634,15 @@ async function setupMiniconda(
     );
     if (!result["ok"]) return result;
 
+    consoleLog("Initialize Conda and fix ownership...");
+    result = await condaInit(
+      activateEnvironment,
+      useBundled,
+      condaConfig,
+      removeProfiles
+    );
+    if (!result["ok"]) return result;
+
     if (condaVersion) {
       consoleLog("Installing Conda...");
       result = await condaCommand(
@@ -648,15 +657,6 @@ async function setupMiniconda(
       result = await condaCommand("update conda --quiet", useBundled);
       if (!result["ok"]) return result;
     }
-
-    consoleLog("Initialize Conda...");
-    result = await condaInit(
-      activateEnvironment,
-      useBundled,
-      condaConfig,
-      removeProfiles
-    );
-    if (!result["ok"]) return result;
 
     // Any conda commands run here after init and setup
     if (condaBuildVersion) {
