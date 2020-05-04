@@ -30,7 +30,7 @@ const IS_WINDOWS: boolean = process.platform === "win32";
 const IS_MAC: boolean = process.platform === "darwin";
 const IS_LINUX: boolean = process.platform === "linux";
 const IS_UNIX: boolean = IS_MAC || IS_LINUX;
-const MINICONDA_BASE_URL: string = "https://repo.continuum.io/miniconda/";
+const MINICONDA_BASE_URL: string = "https://repo.anaconda.com/miniconda/";
 const ARCHITECTURES = {
   x64: "x86_64",
   x86: "x86",
