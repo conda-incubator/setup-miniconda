@@ -1,12 +1,13 @@
 name: "Example 1: Basic usage"
 
 on:
-  push:
-    branches:
-    - '*'
   pull_request:
     branches:
     - '*'
+  push:
+    branches:
+    - '1.x'
+    - 'master'
 
 jobs:
   example-1:
@@ -18,7 +19,7 @@ jobs:
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
         python-version: ['3.7', '2.7']
     steps:
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: goanpeca/setup-miniconda@1.x
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
