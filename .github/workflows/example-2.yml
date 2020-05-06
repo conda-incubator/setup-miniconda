@@ -1,27 +1,23 @@
 name: "Example 2: Other shells"
 
 on:
-  push:
-    branches:
-    - '*'
   pull_request:
     branches:
     - '*'
+  push:
+    branches:
+    - '1.x'
+    - 'master'
 
 jobs:
   example-2-linux:
     name: Ex2 Linux
     runs-on: 'ubuntu-latest'
     steps:
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: goanpeca/setup-miniconda@1.x
         with:
           miniconda-version: 'latest'
           activate-environment: foo
-      - name: Sh
-        shell: sh -l {0}
-        run: |
-          conda info
-          conda list
       - name: Bash
         shell: bash -l {0}
         run: |
@@ -37,7 +33,7 @@ jobs:
     name: Ex2 Mac
     runs-on: 'macos-latest'
     steps:
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: goanpeca/setup-miniconda@1.x
         with:
           miniconda-version: 'latest'
           activate-environment: foo
@@ -61,7 +57,7 @@ jobs:
     name: Ex2 Windows
     runs-on: 'windows-latest'
     steps:
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: goanpeca/setup-miniconda@1.x
         with:
           miniconda-version: 'latest'
           activate-environment: foo

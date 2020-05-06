@@ -1,12 +1,13 @@
 name: "Example 4: Channels"
 
 on:
-  push:
-    branches:
-    - '*'
   pull_request:
     branches:
     - '*'
+  push:
+    branches:
+    - '1.x'
+    - 'master'
 
 jobs:
   example-4:
@@ -14,11 +15,11 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@enh/channels
+      - uses: goanpeca/setup-miniconda@1.x
         with:
-           activate-environment: foo
-           python-version: 3.6
-           channels: conda-forge,spyder-ide
+          activate-environment: foo
+          python-version: 3.6
+          channels: conda-forge,spyder-ide
       - shell: bash -l {0}
         run: |
           conda info
