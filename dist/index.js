@@ -32715,7 +32715,7 @@ conda activate ${activateEnvironment}`;
         let bashExtraText = `
 # ----------------------------------------------------------------------------
 # Conda Setup Action: Basic configuration
-set -euo pipefail`;
+set -eo pipefail`;
         if (isValidActivate) {
             bashExtraText += `
 # Conda Setup Action: Custom activation
