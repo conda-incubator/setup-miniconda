@@ -29,3 +29,6 @@ jobs:
       - name: Conda list
         shell: pwsh
         run: conda list
+      - name: Environment
+        shell: bash -l {0}
+        run: printenv | sort
