@@ -11,16 +11,32 @@ async function run() {
     let environmentFile: string = core.getInput("environment-file");
 
     // Conda configuration
+    let addAnacondaToken: string = core.getInput("add-anaconda-token");
+    let addPipAsPythonDependency: string = core.getInput(
+      "add-pip-as-python-dependency"
+    );
+    let allowSoftlinks: string = core.getInput("allow-softlinks");
     let autoActivateBase: string = core.getInput("auto-activate-base");
     let autoUpdateConda: string = core.getInput("auto-update-conda");
     let condaFile: string = core.getInput("condarc-file");
+    let channelAlias: string = core.getInput("channel-alias");
+    let channelPriority: string = core.getInput("channel-priority");
     let channels: string = core.getInput("channels");
     let removeProfiles: string = core.getInput("remove-profiles");
+    let showChannelUrls: string = core.getInput("show-channel-urls");
+    let useOnlyTarBz2: string = core.getInput("use-only-tar-bz2");
 
     const condaConfig = {
+      add_anaconda_token: addAnacondaToken,
+      add_pip_as_python_dependency: addPipAsPythonDependency,
+      allow_softlinks: allowSoftlinks,
       auto_activate_base: autoActivateBase,
       auto_update_conda: autoUpdateConda,
-      channels: channels
+      channel_alias: channelAlias,
+      channel_priority: channelPriority,
+      channels: channels,
+      show_channel_urls: showChannelUrls,
+      use_only_tar_bz2: useOnlyTarBz2
     };
     const result = await conda.setupMiniconda(
       minicondaVersion,

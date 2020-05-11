@@ -20,6 +20,10 @@ jobs:
           activate-environment: foo
           python-version: 3.6
           channels: conda-forge,spyder-ide
+          allow-softlinks: true
+          channel-priority: true
+          show-channel-urls: true
+          use-only-tar-bz2: true
       - shell: bash -l {0}
         run: |
           conda info

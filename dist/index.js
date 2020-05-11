@@ -17375,15 +17375,29 @@ function run() {
             let activateEnvironment = core.getInput("activate-environment");
             let environmentFile = core.getInput("environment-file");
             // Conda configuration
+            let addAnacondaToken = core.getInput("add-anaconda-token");
+            let addPipAsPythonDependency = core.getInput("add-pip-as-python-dependency");
+            let allowSoftlinks = core.getInput("allow-softlinks");
             let autoActivateBase = core.getInput("auto-activate-base");
             let autoUpdateConda = core.getInput("auto-update-conda");
             let condaFile = core.getInput("condarc-file");
+            let channelAlias = core.getInput("channel-alias");
+            let channelPriority = core.getInput("channel-priority");
             let channels = core.getInput("channels");
             let removeProfiles = core.getInput("remove-profiles");
+            let showChannelUrls = core.getInput("show-channel-urls");
+            let useOnlyTarBz2 = core.getInput("use-only-tar-bz2");
             const condaConfig = {
+                add_anaconda_token: addAnacondaToken,
+                add_pip_as_python_dependency: addPipAsPythonDependency,
+                allow_softlinks: allowSoftlinks,
                 auto_activate_base: autoActivateBase,
                 auto_update_conda: autoUpdateConda,
-                channels: channels
+                channel_alias: channelAlias,
+                channel_priority: channelPriority,
+                channels: channels,
+                show_channel_urls: showChannelUrls,
+                use_only_tar_bz2: useOnlyTarBz2
             };
             const result = yield conda.setupMiniconda(minicondaVersion, "x64", condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaFile, condaConfig, removeProfiles);
             if (!result["ok"]) {

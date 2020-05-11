@@ -166,11 +166,11 @@ jobs:
       - uses: actions/checkout@v2
       - uses: goanpeca/setup-miniconda@v1
         with:
-           activate-environment: anaconda-client-env
-           environment-file: etc/example-environment.yml
-           python-version: 3.5
-           condarc-file: etc/example-condarc.yml
-           auto-activate-base: false
+          activate-environment: anaconda-client-env
+          environment-file: etc/example-environment.yml
+          python-version: 3.5
+          condarc-file: etc/example-condarc.yml
+          auto-activate-base: false
       - shell: bash -l {0}
         run: |
           conda info
@@ -179,7 +179,7 @@ jobs:
 
 ## Example 4: Conda options
 
-This example shows how to use `channels` option. The priority will be set by the order of the channels.
+This example shows how to use `channels` option and other extra options. The priority will be set by the order of the channels.
 In this example it will result in:
 
 - conda-forge
@@ -201,18 +201,21 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@enh/channels
+      - uses: goanpeca/setup-miniconda@v1
         with:
-           activate-environment: foo
-           python-version: 3.6
-           channels: conda-forge,spyder-ide
+          activate-environment: foo
+          python-version: 3.6
+          channels: conda-forge,spyder-ide
+          allow-softlinks: true
+          channel-priority: flexible
+          show-channel-urls: true
+          use-only-tar-bz2: true
       - shell: bash -l {0}
         run: |
           conda info
           conda list
           conda config --show-sources
           conda config --show
-
 ```
 
 ## IMPORTANT
