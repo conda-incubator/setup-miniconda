@@ -23,11 +23,13 @@ jobs:
         run: |
           conda info
           conda list
+          printenv | sort
       - name: PowerShell Core
         shell: pwsh
         run: |
           conda info
           conda list
+          gci env:* | sort-object name
 
   example-2-mac:
     name: Ex2 Mac
@@ -42,16 +44,19 @@ jobs:
         run: |
           conda info
           conda list
+          printenv | sort
       - name: Bash
         shell: bash -l {0}
         run: |
           conda info
           conda list
+          printenv | sort
       - name: PowerShell Core
         shell: pwsh
         run: |
           conda info
           conda list
+          gci env:* | sort-object name
 
   example-2-win:
     name: Ex2 Windows
@@ -66,23 +71,28 @@ jobs:
         run: |
           conda info
           conda list
+          printenv | sort
       - name: Sh
         shell: sh -l {0}
         run: |
           conda info
           conda list
+          printenv | sort
       - name: PowerShell
         shell: powershell
         run: |
           conda info
           conda list
+          dir env: | %{"{0}={1}" -f $_.Name,$_.Value}
       - name: PowerShell Core
         shell: pwsh
         run: |
           conda info
           conda list
+          dir env: | %{"{0}={1}" -f $_.Name,$_.Value}
       - name: Cmd.exe
         shell: cmd /C CALL {0}
         run: >-
           conda info &&
-          conda list
+          conda list  &&
+          SET
