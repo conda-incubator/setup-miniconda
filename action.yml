@@ -26,20 +26,36 @@ inputs:
     description: 'Exact version of a Python version to use on "activate-environment". If provided, this will be installed before the "environment-file". See https://anaconda.org/anaconda/python for available "python" versions.'
     required: false
     default: ''
-  auto-update-conda:
-    description: 'Conda configuration. When "true", conda updates itself any time a user updates or installs a package in the base environment. When "false", conda updates itself only if the user manually issues a conda update command. The default is "true".  This setting always overrides if set to "true" or "false". If you want to use the "condarc-file" setting pass and empty string. See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/ for more information.'
+  add-pip-as-python-dependency:
+    description: 'Conda configuration. Add pip, wheel, and setuptools as dependencies of Python. This ensures that pip, wheel, and setuptools are always installed any time Python is installed. The default is "true". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#add-pip-as-python-dependency-add-pip-as-python-dependency for more information.'
     required: false
-    default: 'false'
+    default: ''
   auto-activate-base:
     description: 'Conda configuration. If you’d prefer that conda’s base environment not be activated on startup, set the to "false". Default is "true". This setting always overrides if set to "true" or "false". If you want to use the "condarc-file" setting pass and empty string. See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/ for more information.'
     required: false
     default: 'true'
+  auto-update-conda:
+    description: 'Conda configuration. When "true", conda updates itself any time a user updates or installs a package in the base environment. When "false", conda updates itself only if the user manually issues a conda update command. The default is "true".  This setting always overrides if set to "true" or "false". If you want to use the "condarc-file" setting pass and empty string. See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/ for more information.'
+    required: false
+    default: 'false'
   condarc-file:
     description: 'Conda configuration. Path to a conda configuration file to use for the runner. This file will be copied to "~/.condarc". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/ for more information.'
     required: false
     default: ''
+  channel-priority:
+    description: 'Conda configuration. Accepts values of "strict", "flexible", and "disabled". The default value is "flexible". With strict channel priority, packages in lower priority channels are not considered if a package with the same name appears in a higher priority channel. With flexible channel priority, the solver may reach into lower priority channels to fulfill dependencies, rather than raising an unsatisfiable error. With channel priority disabled, package version takes precedence, and the configured priority of channels is used only to break ties. In previous versions of conda, this parameter was configured as either "true" or "false". "true" is now an alias to "flexible". See https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-channels.html#strict-channel-priority for more information.'
+    required: false
+    default: ''
   channels:
     description: 'Conda configuration. Comma separated list of channels to use in order of priority. See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/ for more information.'
+    required: false
+    default: ''
+  show-channel-urls:
+    description: 'Conda configuration. Show channel URLs when displaying what is going to be downloaded and in conda list. The default is "false". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#show-channel-urls-show-channel-urls for more information.'
+    required: false
+    default: ''
+  use-pip:
+    description: 'Conda configuration. Use pip when listing packages with conda list. This does not affect any conda command or functionality other than the output of the command conda list. The default is "true". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#use-pip-use-pip for more information.'
     required: false
     default: ''
   remove-profiles:
