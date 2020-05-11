@@ -17375,22 +17375,32 @@ function run() {
             let activateEnvironment = core.getInput("activate-environment");
             let environmentFile = core.getInput("environment-file");
             // Conda configuration
+            let addAnacondaToken = core.getInput("add-anaconda-token");
             let addPipAsPythonDependency = core.getInput("add-pip-as-python-dependency");
+            let allowSoftlinks = core.getInput("allow-softlinks");
             let autoActivateBase = core.getInput("auto-activate-base");
             let autoUpdateConda = core.getInput("auto-update-conda");
             let condaFile = core.getInput("condarc-file");
+            let channelAlias = core.getInput("channel-alias");
             let channelPriority = core.getInput("channel-priority");
             let channels = core.getInput("channels");
             let removeProfiles = core.getInput("remove-profiles");
             let showChannelUrls = core.getInput("show-channel-urls");
+            let updateDependencies = core.getInput("update-dependencies");
+            let useOnlyTarBz2 = core.getInput("use-only-tar-bz2");
             let usePip = core.getInput("use-pip");
             const condaConfig = {
+                add_anaconda_token: addAnacondaToken,
                 add_pip_as_python_dependency: addPipAsPythonDependency,
+                allow_softlinks: allowSoftlinks,
                 auto_activate_base: autoActivateBase,
                 auto_update_conda: autoUpdateConda,
+                channel_alias: channelAlias,
                 channel_priority: channelPriority,
                 channels: channels,
                 show_channel_urls: showChannelUrls,
+                update_dependencies: updateDependencies,
+                use_only_tar_bz2: useOnlyTarBz2,
                 use_pip: usePip
             };
             const result = yield conda.setupMiniconda(minicondaVersion, "x64", condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaFile, condaConfig, removeProfiles);

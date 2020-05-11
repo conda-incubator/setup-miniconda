@@ -26,8 +26,16 @@ inputs:
     description: 'Exact version of a Python version to use on "activate-environment". If provided, this will be installed before the "environment-file". See https://anaconda.org/anaconda/python for available "python" versions.'
     required: false
     default: ''
+  add-anaconda-token:
+    description: 'Conda configuration. When the channel alias is Anaconda.org or an Anaconda Server GUI, you can set the system configuration so that users automatically see private packages. Anaconda.org was formerly known as binstar.org. This uses the Anaconda command-line client, which you can install with conda install anaconda-client, to automatically add the token to the channel URLs. The default is "true". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#add-anaconda-org-token-to-automatically-see-private-packages-add-anaconda-token for more information.'
+    required: false
+    default: ''
   add-pip-as-python-dependency:
     description: 'Conda configuration. Add pip, wheel, and setuptools as dependencies of Python. This ensures that pip, wheel, and setuptools are always installed any time Python is installed. The default is "true". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#add-pip-as-python-dependency-add-pip-as-python-dependency for more information.'
+    required: false
+    default: ''
+  allow-softlinks:
+    description: 'Conda configuration. When allow_softlinks is "true", conda uses hard-links when possible and soft-links---symlinks---when hard-links are not possible, such as when installing on a different file system than the one that the package cache is on. When allow_softlinks is "false", conda still uses hard-links when possible, but when it is not possible, conda copies files. Individual packages can override this option, specifying that certain files should never be soft-linked. The default is "true". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#disallow-soft-linking-allow-softlinks for more information.'
     required: false
     default: ''
   auto-activate-base:
@@ -42,6 +50,10 @@ inputs:
     description: 'Conda configuration. Path to a conda configuration file to use for the runner. This file will be copied to "~/.condarc". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/ for more information.'
     required: false
     default: ''
+  channel-alias:
+    description: 'Conda configuration. Whenever you use the -c or --channel flag to give conda a channel name that is not a URL, conda prepends the channel_alias to the name that it was given. The default channel_alias is https://conda.anaconda.org. See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#set-a-channel-alias-channel-alias for more information.'
+    required: false
+    default: ''
   channel-priority:
     description: 'Conda configuration. Accepts values of "strict", "flexible", and "disabled". The default value is "flexible". With strict channel priority, packages in lower priority channels are not considered if a package with the same name appears in a higher priority channel. With flexible channel priority, the solver may reach into lower priority channels to fulfill dependencies, rather than raising an unsatisfiable error. With channel priority disabled, package version takes precedence, and the configured priority of channels is used only to break ties. In previous versions of conda, this parameter was configured as either "true" or "false". "true" is now an alias to "flexible". See https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-channels.html#strict-channel-priority for more information.'
     required: false
@@ -52,6 +64,14 @@ inputs:
     default: ''
   show-channel-urls:
     description: 'Conda configuration. Show channel URLs when displaying what is going to be downloaded and in conda list. The default is "false". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#show-channel-urls-show-channel-urls for more information.'
+    required: false
+    default: ''
+  update-dependencies:
+    description: 'Conda configuration. By default, conda install updates the given package to the latest version and installs any dependencies necessary for that package. However, if dependencies that satisfy the package's requirements are already installed, conda will not update those packages to the latest version. The default is "false". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#disable-updating-of-dependencies-update-dependencies for more information.'
+    required: false
+    default: ''
+  use-only-tar-bz2:
+    description: 'Conda configuration. Conda 4.7 introduced a new .conda package file format. .conda is a more compact and faster alternative to .tar.bz2 packages. It's thus the preferred file format to use where available. Nevertheless, it's possible to force conda to only download .tar.bz2 packages by setting the use_only_tar_bz2 boolean to "true". The default is "false". See https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#force-conda-to-download-only-tar-bz2-packages-use-only-tar-bz2 for more information.'
     required: false
     default: ''
   use-pip:
