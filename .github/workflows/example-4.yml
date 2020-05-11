@@ -15,11 +15,18 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@1.x
+      - uses: goanpeca/setup-miniconda@enh/config-options
         with:
           activate-environment: foo
           python-version: 3.6
           channels: conda-forge,spyder-ide
+          allow-softlinks: true
+          channel-priority: true
+          show-channel-urls: true
+          update-dependencies: true
+          use-only-tar-bz2: true
+          use-pip: true
+
       - shell: bash -l {0}
         run: |
           conda info
