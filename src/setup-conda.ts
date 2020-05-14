@@ -502,7 +502,7 @@ async function setupPython(
   useBundled: boolean
 ): Promise<Result> {
   return await condaCommand(
-    `install --name ${activateEnvironment} python=${pythonVersion} --quiet`,
+    `install --name ${activateEnvironment} python=${pythonVersion}`,
     useBundled
   );
 }
@@ -621,6 +621,15 @@ async function setupMiniconda(
       }
     }
 
+    let cacheFolder: string = "~/conda_pkgs_dir";
+    cacheFolder = cacheFolder.replace("~", os.homedir().replace("\\", "/"));
+    result = await condaCommand(
+      `config --add pkgs_dirs ${cacheFolder}`,
+      useBundled
+    );
+    if (!result.ok) return result;
+    core.exportVariable("CONDA_PKGS_DIR", cacheFolder);
+
     if (condaConfig) {
       consoleLog("Applying conda configuration...");
       result = await applyCondaConfiguration(condaConfig, useBundled);
@@ -646,7 +655,7 @@ async function setupMiniconda(
     if (condaVersion) {
       consoleLog("Installing Conda...");
       result = await condaCommand(
-        `install --name base conda=${condaVersion} --quiet`,
+        `install --name base conda=${condaVersion}`,
         useBundled
       );
       if (!result["ok"]) return result;
@@ -654,7 +663,7 @@ async function setupMiniconda(
 
     if (condaConfig["auto_update_conda"] == "true") {
       consoleLog("Updating conda...");
-      result = await condaCommand("update conda --quiet", useBundled);
+      result = await condaCommand("update conda", useBundled);
       if (!result["ok"]) return result;
     }
 
@@ -662,7 +671,7 @@ async function setupMiniconda(
     if (condaBuildVersion) {
       consoleLog("Installing Conda Build...");
       result = await condaCommand(
-        `install --name base conda-build=${condaBuildVersion} --quiet`,
+        `install --name base conda-build=${condaBuildVersion}`,
         useBundled
       );
       if (!result["ok"]) return result;
@@ -719,10 +728,24 @@ async function setupMiniconda(
         condaAction = "create";
       }
       result = await condaCommand(
-        `env ${condaAction} -f ${environmentFile} --quiet`,
+        `env ${condaAction} -f ${environmentFile}`,
         useBundled
       );
       if (!result["ok"]) return result;
+    }
+
+    consoleLog("Removing uncompressed packages to trim down cache folder...");
+    let fullPath: string;
+    for (let folder_or_file of fs.readdirSync(cacheFolder)) {
+      fullPath = path.join(cacheFolder, folder_or_file);
+      if (
+        fs.existsSync(fullPath) &&
+        fs.lstatSync(fullPath).isDirectory() &&
+        folder_or_file != "cache"
+      ) {
+        core.info(`Removing "${fullPath}"`);
+        await io.rmRF(fullPath);
+      }
     }
   } catch (err) {
     return { ok: false, error: err };

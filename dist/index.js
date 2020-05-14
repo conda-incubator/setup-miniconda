@@ -32798,7 +32798,7 @@ conda activate ${activateEnvironment}`;
  */
 function setupPython(activateEnvironment, pythonVersion, useBundled) {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield condaCommand(`install --name ${activateEnvironment} python=${pythonVersion} --quiet`, useBundled);
+        return yield condaCommand(`install --name ${activateEnvironment} python=${pythonVersion}`, useBundled);
     });
 }
 /**
@@ -32894,6 +32894,12 @@ function setupMiniconda(minicondaVersion, architecture, condaVersion, condaBuild
                     return { ok: false, error: err };
                 }
             }
+            let cacheFolder = "~/conda_pkgs_dir";
+            cacheFolder = cacheFolder.replace("~", os.homedir().replace("\\", "/"));
+            result = yield condaCommand(`config --add pkgs_dirs ${cacheFolder}`, useBundled);
+            if (!result.ok)
+                return result;
+            core.exportVariable("CONDA_PKGS_DIR", cacheFolder);
             if (condaConfig) {
                 consoleLog("Applying conda configuration...");
                 result = yield applyCondaConfiguration(condaConfig, useBundled);
@@ -32910,20 +32916,20 @@ function setupMiniconda(minicondaVersion, architecture, condaVersion, condaBuild
                 return result;
             if (condaVersion) {
                 consoleLog("Installing Conda...");
-                result = yield condaCommand(`install --name base conda=${condaVersion} --quiet`, useBundled);
+                result = yield condaCommand(`install --name base conda=${condaVersion}`, useBundled);
                 if (!result["ok"])
                     return result;
             }
             if (condaConfig["auto_update_conda"] == "true") {
                 consoleLog("Updating conda...");
-                result = yield condaCommand("update conda --quiet", useBundled);
+                result = yield condaCommand("update conda", useBundled);
                 if (!result["ok"])
                     return result;
             }
             // Any conda commands run here after init and setup
             if (condaBuildVersion) {
                 consoleLog("Installing Conda Build...");
-                result = yield condaCommand(`install --name base conda-build=${condaBuildVersion} --quiet`, useBundled);
+                result = yield condaCommand(`install --name base conda-build=${condaBuildVersion}`, useBundled);
                 if (!result["ok"])
                     return result;
             }
@@ -32963,9 +32969,20 @@ function setupMiniconda(minicondaVersion, architecture, condaVersion, condaBuild
                 else {
                     condaAction = "create";
                 }
-                result = yield condaCommand(`env ${condaAction} -f ${environmentFile} --quiet`, useBundled);
+                result = yield condaCommand(`env ${condaAction} -f ${environmentFile}`, useBundled);
                 if (!result["ok"])
                     return result;
+            }
+            consoleLog("Removing uncompressed packages to trim down cache folder...");
+            let fullPath;
+            for (let folder_or_file of fs.readdirSync(cacheFolder)) {
+                fullPath = path.join(cacheFolder, folder_or_file);
+                if (fs.existsSync(fullPath) &&
+                    fs.lstatSync(fullPath).isDirectory() &&
+                    folder_or_file != "cache") {
+                    core.info(`Removing "${fullPath}"`);
+                    yield io.rmRF(fullPath);
+                }
             }
         }
         catch (err) {
