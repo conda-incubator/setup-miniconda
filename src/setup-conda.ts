@@ -734,17 +734,19 @@ async function setupMiniconda(
       if (!result["ok"]) return result;
     }
 
-    consoleLog("Removing uncompressed packages to trim down cache folder...");
-    let fullPath: string;
-    for (let folder_or_file of fs.readdirSync(cacheFolder)) {
-      fullPath = path.join(cacheFolder, folder_or_file);
-      if (
-        fs.existsSync(fullPath) &&
-        fs.lstatSync(fullPath).isDirectory() &&
-        folder_or_file != "cache"
-      ) {
-        core.info(`Removing "${fullPath}"`);
-        await io.rmRF(fullPath);
+    if (fs.existsSync(cacheFolder) && fs.lstatSync(cacheFolder).isDirectory()) {
+      consoleLog("Removing uncompressed packages to trim down cache folder...");
+      let fullPath: string;
+      for (let folder_or_file of fs.readdirSync(cacheFolder)) {
+        fullPath = path.join(cacheFolder, folder_or_file);
+        if (
+          fs.existsSync(fullPath) &&
+          fs.lstatSync(fullPath).isDirectory() &&
+          folder_or_file != "cache"
+        ) {
+          core.info(`Removing "${fullPath}"`);
+          await io.rmRF(fullPath);
+        }
       }
     }
   } catch (err) {
