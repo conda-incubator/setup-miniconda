@@ -619,7 +619,8 @@ async function setupMiniconda(
     if (condaConfig) {
       utils.consoleLog("Applying conda configuration...");
       result = await applyCondaConfiguration(condaConfig, useBundled);
-      if (!result["ok"]) return result;
+      // We do not fail because some options might not be available
+      // if (!result["ok"]) return result;
     }
 
     utils.consoleLog("Setup Conda basic configuration...");
@@ -651,6 +652,12 @@ async function setupMiniconda(
       utils.consoleLog("Updating conda...");
       result = await condaCommand("update conda", useBundled);
       if (!result["ok"]) return result;
+
+      if (condaConfig) {
+        utils.consoleLog("Applying conda configuration after update...");
+        result = await applyCondaConfiguration(condaConfig, useBundled);
+        if (!result["ok"]) return result;
+      }
     }
 
     // Any conda commands run here after init and setup
