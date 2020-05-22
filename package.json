@@ -4,10 +4,8 @@
   "description": "GitHub action for setting up conda",
   "main": "lib/main.js",
   "scripts": {
-    "build": "tsc",
-    "format": "prettier --write **/*.ts",
-    "pack": "ncc build lib/main.js",
-    "run": "dist/index.js"
+    "build": "ncc build -o dist/setup src/setup.ts && ncc build -o dist/delete src/delete.ts",
+    "format": "prettier --write **/*.ts"
   },
   "repository": {
     "type": "git",
@@ -44,7 +42,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "npm run build && npm run format && npm run pack && git add ."
+      "pre-commit": "npm run build && npm run format && git add ."
     }
   }
 }

@@ -76,7 +76,9 @@ inputs:
     default: 'true'
 runs:
   using: 'node12'
-  main: 'dist/index.js'
+  main: 'dist/setup/index.js'
+  post: 'dist/delete/index.js'
+  post-if: 'success()'
 branding:
   icon: 'code'
   color: 'green'
