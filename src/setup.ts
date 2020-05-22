@@ -8,6 +8,7 @@ import * as io from "@actions/io";
 import * as tc from "@actions/tool-cache";
 import * as yaml from "js-yaml";
 import getHrefs from "get-hrefs";
+import * as utils from "./utils";
 
 //-----------------------------------------------------------------------
 // Interfaces
@@ -42,21 +43,6 @@ const OS_NAMES = {
   darwin: "MacOSX",
   linux: "Linux"
 };
-
-//-----------------------------------------------------------------------
-// General use
-//-----------------------------------------------------------------------
-/**
- * Pretty print section messages
- *
- * @param args
- */
-function consoleLog(...args: string[]): void {
-  for (let arg of args) {
-    core.info("\n# " + arg);
-    core.info("#".repeat(arg.length + 2) + "\n");
-  }
-}
 
 /**
  * Run exec.exec with error handling
@@ -298,7 +284,7 @@ async function createTestEnvironment(
     activateEnvironment !== ""
   ) {
     if (!environmentExists(activateEnvironment, useBundled)) {
-      consoleLog("Create test environment...");
+      utils.consoleLog("Create test environment...");
       result = await condaCommand(
         `create --name ${activateEnvironment}`,
         useBundled
@@ -586,28 +572,28 @@ async function setupMiniconda(
     }
 
     if (minicondaVersion !== "" || architecture !== "x64") {
-      consoleLog("\n# Downloading Miniconda...\n");
+      utils.consoleLog("\n# Downloading Miniconda...\n");
       useBundled = false;
       result = await downloadMiniconda(3, minicondaVersion, architecture);
       if (!result["ok"]) return result;
 
-      consoleLog("Installing Miniconda...");
+      utils.consoleLog("Installing Miniconda...");
       result = await installMiniconda(result["data"], useBundled);
       if (!result["ok"]) return result;
     } else {
-      consoleLog("Locating Miniconda...");
+      utils.consoleLog("Locating Miniconda...");
       core.info(minicondaPath());
       if (!fs.existsSync(minicondaPath())) {
         return { ok: false, error: new Error("Bundled Miniconda not found!") };
       }
     }
 
-    consoleLog("Setup environment variables...");
+    utils.consoleLog("Setup environment variables...");
     result = await setVariables(useBundled);
     if (!result["ok"]) return result;
 
     if (condaConfigFile) {
-      consoleLog("Copying condarc file...");
+      utils.consoleLog("Copying condarc file...");
       const destinationPath: string = path.join(os.homedir(), ".condarc");
       const sourcePath: string = path.join(
         process.env["GITHUB_WORKSPACE"] || "",
@@ -631,19 +617,19 @@ async function setupMiniconda(
     core.exportVariable("CONDA_PKGS_DIR", cacheFolder);
 
     if (condaConfig) {
-      consoleLog("Applying conda configuration...");
+      utils.consoleLog("Applying conda configuration...");
       result = await applyCondaConfiguration(condaConfig, useBundled);
       if (!result["ok"]) return result;
     }
 
-    consoleLog("Setup Conda basic configuration...");
+    utils.consoleLog("Setup Conda basic configuration...");
     result = await condaCommand(
       "config --set always_yes yes --set changeps1 no",
       useBundled
     );
     if (!result["ok"]) return result;
 
-    consoleLog("Initialize Conda and fix ownership...");
+    utils.consoleLog("Initialize Conda and fix ownership...");
     result = await condaInit(
       activateEnvironment,
       useBundled,
@@ -653,7 +639,7 @@ async function setupMiniconda(
     if (!result["ok"]) return result;
 
     if (condaVersion) {
-      consoleLog("Installing Conda...");
+      utils.consoleLog("Installing Conda...");
       result = await condaCommand(
         `install --name base conda=${condaVersion}`,
         useBundled
@@ -662,14 +648,14 @@ async function setupMiniconda(
     }
 
     if (condaConfig["auto_update_conda"] == "true") {
-      consoleLog("Updating conda...");
+      utils.consoleLog("Updating conda...");
       result = await condaCommand("update conda", useBundled);
       if (!result["ok"]) return result;
     }
 
     // Any conda commands run here after init and setup
     if (condaBuildVersion) {
-      consoleLog("Installing Conda Build...");
+      utils.consoleLog("Installing Conda Build...");
       result = await condaCommand(
         `install --name base conda-build=${condaBuildVersion}`,
         useBundled
@@ -683,7 +669,7 @@ async function setupMiniconda(
     }
 
     if (pythonVersion && activateEnvironment) {
-      consoleLog(
+      utils.consoleLog(
         `Installing Python="${pythonVersion}" on "${activateEnvironment}" environment...`
       );
       result = await setupPython(
@@ -714,7 +700,7 @@ async function setupMiniconda(
         environmentYaml["name"] !== activateEnvironment
       ) {
         condaAction = "create";
-        consoleLog(`Creating conda environment from yaml file...`);
+        utils.consoleLog(`Creating conda environment from yaml file...`);
         core.warning(
           'The environment name on "environment-file" is not the same as "enviroment-activate"!'
         );
@@ -722,7 +708,7 @@ async function setupMiniconda(
         activateEnvironment &&
         activateEnvironment === environmentYaml["name"]
       ) {
-        consoleLog(`Updating conda environment from yaml file...`);
+        utils.consoleLog(`Updating conda environment from yaml file...`);
         condaAction = "update";
       } else {
         condaAction = "create";
@@ -733,26 +719,72 @@ async function setupMiniconda(
       );
       if (!result["ok"]) return result;
     }
-
-    if (fs.existsSync(cacheFolder) && fs.lstatSync(cacheFolder).isDirectory()) {
-      consoleLog("Removing uncompressed packages to trim down cache folder...");
-      let fullPath: string;
-      for (let folder_or_file of fs.readdirSync(cacheFolder)) {
-        fullPath = path.join(cacheFolder, folder_or_file);
-        if (
-          fs.existsSync(fullPath) &&
-          fs.lstatSync(fullPath).isDirectory() &&
-          folder_or_file != "cache"
-        ) {
-          core.info(`Removing "${fullPath}"`);
-          await io.rmRF(fullPath);
-        }
-      }
-    }
   } catch (err) {
     return { ok: false, error: err };
   }
   return { ok: true, data: undefined };
 }
 
-export { setupMiniconda };
+/**
+ * Run
+ */
+async function run(): Promise<void> {
+  try {
+    let minicondaVersion: string = core.getInput("miniconda-version");
+    let condaVersion: string = core.getInput("conda-version");
+    let condaBuildVersion: string = core.getInput("conda-build-version");
+    let pythonVersion: string = core.getInput("python-version");
+    let activateEnvironment: string = core.getInput("activate-environment");
+    let environmentFile: string = core.getInput("environment-file");
+
+    // Conda configuration
+    let addAnacondaToken: string = core.getInput("add-anaconda-token");
+    let addPipAsPythonDependency: string = core.getInput(
+      "add-pip-as-python-dependency"
+    );
+    let allowSoftlinks: string = core.getInput("allow-softlinks");
+    let autoActivateBase: string = core.getInput("auto-activate-base");
+    let autoUpdateConda: string = core.getInput("auto-update-conda");
+    let condaFile: string = core.getInput("condarc-file");
+    let channelAlias: string = core.getInput("channel-alias");
+    let channelPriority: string = core.getInput("channel-priority");
+    let channels: string = core.getInput("channels");
+    let removeProfiles: string = core.getInput("remove-profiles");
+    let showChannelUrls: string = core.getInput("show-channel-urls");
+    let useOnlyTarBz2: string = core.getInput("use-only-tar-bz2");
+
+    const condaConfig = {
+      add_anaconda_token: addAnacondaToken,
+      add_pip_as_python_dependency: addPipAsPythonDependency,
+      allow_softlinks: allowSoftlinks,
+      auto_activate_base: autoActivateBase,
+      auto_update_conda: autoUpdateConda,
+      channel_alias: channelAlias,
+      channel_priority: channelPriority,
+      channels: channels,
+      show_channel_urls: showChannelUrls,
+      use_only_tar_bz2: useOnlyTarBz2
+    };
+    const result = await setupMiniconda(
+      minicondaVersion,
+      "x64",
+      condaVersion,
+      condaBuildVersion,
+      pythonVersion,
+      activateEnvironment,
+      environmentFile,
+      condaFile,
+      condaConfig,
+      removeProfiles
+    );
+    if (!result["ok"]) {
+      throw result["error"];
+    }
+  } catch (err) {
+    core.setFailed(err.message);
+  }
+}
+
+run();
+
+export default run;
