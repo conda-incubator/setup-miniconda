@@ -64,8 +64,9 @@ jobs:
     steps:
       - uses: goanpeca/setup-miniconda@1.x
         with:
-          miniconda-version: 'latest'
+          auto-update-conda: true
           activate-environment: foo
+          use-only-tar-bz2: true
       - name: Bash
         shell: bash -l {0}
         run: |

@@ -30162,8 +30162,8 @@ function setupMiniconda(minicondaVersion, architecture, condaVersion, condaBuild
             if (condaConfig) {
                 utils.consoleLog("Applying conda configuration...");
                 result = yield applyCondaConfiguration(condaConfig, useBundled);
-                if (!result["ok"])
-                    return result;
+                // We do not fail because some options might not be available
+                // if (!result["ok"]) return result;
             }
             utils.consoleLog("Setup Conda basic configuration...");
             result = yield condaCommand("config --set always_yes yes --set changeps1 no", useBundled);
@@ -30184,6 +30184,12 @@ function setupMiniconda(minicondaVersion, architecture, condaVersion, condaBuild
                 result = yield condaCommand("update conda", useBundled);
                 if (!result["ok"])
                     return result;
+                if (condaConfig) {
+                    utils.consoleLog("Applying conda configuration after update...");
+                    result = yield applyCondaConfiguration(condaConfig, useBundled);
+                    if (!result["ok"])
+                        return result;
+                }
             }
             // Any conda commands run here after init and setup
             if (condaBuildVersion) {
