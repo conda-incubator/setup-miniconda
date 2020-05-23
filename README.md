@@ -1,9 +1,9 @@
 # Setup Miniconda
 
-![Example 1: Basic usage](https://github.com/goanpeca/setup-miniconda/workflows/Example%201:%20Basic%20usage/badge.svg?branch=1.x)
-![Example 2: Other shells](https://github.com/goanpeca/setup-miniconda/workflows/Example%202:%20Other%20shells/badge.svg?branch=1.x)
-![Example 3: Other options](https://github.com/goanpeca/setup-miniconda/workflows/Example%203:%20Other%20options/badge.svg?branch=1.x)
-![Example 4: Channels](https://github.com/goanpeca/setup-miniconda/workflows/Example%204:%20Channels/badge.svg?branch=1.x)
+![Example 1: Basic usage](https://github.com/goanpeca/setup-miniconda/workflows/Example%201:%20Basic%20usage/badge.svg?branch=master)
+![Example 2: Other shells](https://github.com/goanpeca/setup-miniconda/workflows/Example%202:%20Other%20shells/badge.svg?branch=master)
+![Example 3: Other options](https://github.com/goanpeca/setup-miniconda/workflows/Example%203:%20Other%20options/badge.svg?branch=master)
+![Example 4: Channels](https://github.com/goanpeca/setup-miniconda/workflows/Example%204:%20Channels/badge.svg?branch=master)
 
 This action sets up a [Miniconda](https://docs.conda.io/en/latest/miniconda.html) installation to use the [Conda](https://docs.conda.io/projects/conda/en/latest/) package and environment manager by either locating the Miniconda installation bundled with the available runners or by installing a specific Miniconda3 version. By default this action will also create a test environment.
 
@@ -212,7 +212,7 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('etc/example-environment.yml') }}
-      - uses: goanpeca/setup-miniconda@check-cache
+      - uses: goanpeca/setup-miniconda@v1
         with:
           activate-environment: anaconda-client-env
           python-version: 3.8

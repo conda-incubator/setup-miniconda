@@ -15,7 +15,7 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@1.x
+      - uses: goanpeca/setup-miniconda@master
         with:
           activate-environment: anaconda-client-env
           environment-file: etc/example-environment.yml

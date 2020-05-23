@@ -19,7 +19,7 @@ jobs:
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
         python-version: ['3.7', '2.7']
     steps:
-      - uses: goanpeca/setup-miniconda@1.x
+      - uses: goanpeca/setup-miniconda@master
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}

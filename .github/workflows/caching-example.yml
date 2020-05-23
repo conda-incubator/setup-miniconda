@@ -23,7 +23,7 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('etc/example-environment.yml') }}
-      - uses: goanpeca/setup-miniconda@1.x
+      - uses: goanpeca/setup-miniconda@master
         with:
           activate-environment: anaconda-client-env
           python-version: 3.8
