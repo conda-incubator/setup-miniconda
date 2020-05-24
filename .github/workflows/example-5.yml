@@ -11,8 +11,6 @@ on:
 jobs:
   example-5-linux:
     name: Ex5 PyPy Linux
-    needs:
-      - lint
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
@@ -31,8 +29,6 @@ jobs:
 
   example-5-mac:
     name: Ex5 PyPy MacOS
-    needs:
-    - lint
     runs-on: 'macos-latest'
     steps:
       - uses: actions/checkout@v2

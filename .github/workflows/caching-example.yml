@@ -11,8 +11,6 @@ on:
 jobs:
   caching-example:
     name: Caching
-    needs:
-      - lint
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2

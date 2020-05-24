@@ -11,8 +11,6 @@ on:
 jobs:
   example-1:
     name: Ex1 (${{ matrix.python-version }}, ${{ matrix.os }})
-    needs:
-      - lint
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

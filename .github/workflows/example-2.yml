@@ -11,8 +11,6 @@ on:
 jobs:
   example-2-linux:
     name: Ex2 Linux
-    needs:
-      - lint
     runs-on: 'ubuntu-latest'
     steps:
       - uses: ./

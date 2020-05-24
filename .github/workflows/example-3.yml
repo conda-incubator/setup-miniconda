@@ -11,8 +11,6 @@ on:
 jobs:
   example-3:
     name: Ex3 Linux
-    needs:
-      - lint
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
