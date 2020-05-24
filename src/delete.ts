@@ -34,6 +34,6 @@ async function run(): Promise<void> {
   }
 }
 
-run();
+void run();
 
 export default run;

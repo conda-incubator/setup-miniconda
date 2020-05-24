@@ -444,7 +444,7 @@ function run() {
         }
     });
 }
-run();
+void run();
 exports.default = run;
 
 

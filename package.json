@@ -5,7 +5,12 @@
   "main": "lib/main.js",
   "scripts": {
     "build": "ncc build -o dist/setup src/setup.ts && ncc build -o dist/delete src/delete.ts",
-    "format": "prettier --write **/*.ts"
+    "format": "npm run prettier:format && npm run eslint:format",
+    "check": "npm run prettier:check && npm run eslint:check",
+    "prettier:format": "prettier --write \"src/**/*.ts\" \"{.,etc,.github}/*.{md,json,yml,js}\"",
+    "prettier:check": "prettier --list-different \"src/**/*.ts\" \"{.,etc,.github}/*.{md,json,yml,js}\"",
+    "eslint:format": "eslint --ext .js,.jsx,.ts,.tsx --fix .",
+    "eslint:check": "eslint --ext .js,.jsx,.ts,.tsx ."
   },
   "repository": {
     "type": "git",
@@ -31,15 +36,24 @@
     "@actions/exec": "^1.0.2",
     "@actions/io": "^1.0.1",
     "@actions/tool-cache": "^1.1.2",
-    "@zeit/ncc": "^0.22.3",
     "get-hrefs": "^4.0.0",
     "js-yaml": "^3.13.1"
   },
   "devDependencies": {
+    "@types/js-yaml": "^3.12.4",
     "@types/node": "^12.0.4",
+    "@typescript-eslint/eslint-plugin": "^2.27.0",
+    "@typescript-eslint/parser": "^2.27.0",
+    "@zeit/ncc": "^0.22.3",
+    "eslint-config-prettier": "^6.7.0",
+    "eslint-plugin-prettier": "^3.1.1",
+    "eslint": "^6.8.0",
     "husky": "^3.1.0",
-    "prettier": "^1.17.1",
-    "typescript": "^3.5.1"
+    "lerna": "^3.19.0",
+    "lint-staged": "^9.5.0",
+    "prettier": "^1.19.1",
+    "shell-quote": "^1.7.2",
+    "typescript": "^3.7.2"
   },
   "husky": {
     "hooks": {

@@ -14,5 +14,6 @@ npm install
 
 ```bash
 npm run format
+npm run check
 npm run build
 ```

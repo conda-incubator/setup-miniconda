@@ -20686,7 +20686,7 @@ function execute(command) {
         catch (err) {
             return { ok: false, error: err };
         }
-        return { ok: true, data: undefined };
+        return { ok: true, data: "ok" };
     });
 }
 //-----------------------------------------------------------------------
@@ -20838,15 +20838,13 @@ function installMiniconda(installerPath, useBundled) {
         else {
             command = `bash "${installerPath}" -b -p ${outputPath}`;
         }
-        let result;
         try {
-            result = yield execute(command);
+            return yield execute(command);
         }
         catch (err) {
             core.error(err);
             return { ok: false, error: err };
         }
-        return { ok: true, data: result["data"] };
     });
 }
 /**
@@ -20877,7 +20875,7 @@ function setVariables(useBundled) {
         catch (err) {
             return { ok: false, error: err };
         }
-        return { ok: true, data: undefined };
+        return { ok: true, data: "ok" };
     });
 }
 /**
@@ -20892,7 +20890,7 @@ function createTestEnvironment(activateEnvironment, useBundled) {
             if (!environmentExists(activateEnvironment, useBundled)) {
                 utils.consoleLog("Create test environment...");
                 result = yield condaCommand(`create --name ${activateEnvironment}`, useBundled);
-                if (!result["ok"])
+                if (!result.ok)
                     return result;
             }
         }
@@ -20902,7 +20900,7 @@ function createTestEnvironment(activateEnvironment, useBundled) {
                 error: new Error('To activate "base" environment use the "auto-activate-base" action input!')
             };
         }
-        return { ok: true, data: undefined };
+        return { ok: true, data: "ok" };
     });
 }
 /**
@@ -21066,7 +21064,7 @@ conda activate ${activateEnvironment}`;
                 fs.appendFileSync(filePath, text);
             }
         });
-        return { ok: true, data: undefined };
+        return { ok: true, data: "ok" };
     });
 }
 /**
@@ -21113,9 +21111,9 @@ function applyCondaConfiguration(condaConfig, useBundled) {
                 return result;
         }
         catch (err) {
-            return { ok: true, error: err };
+            return { ok: false, error: err };
         }
-        return { ok: true, data: undefined };
+        return { ok: true, data: "ok" };
     });
 }
 /**
@@ -21146,18 +21144,20 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 utils.consoleLog("\n# Downloading Custom Installer...\n");
                 useBundled = false;
                 result = yield downloadInstaller(installerUrl);
+                if (!result.ok)
+                    return result;
                 utils.consoleLog("Installing Custom Installer...");
-                result = yield installMiniconda(result["data"], useBundled);
+                result = yield installMiniconda(result.data, useBundled);
             }
             else if (minicondaVersion !== "" || architecture !== "x64") {
                 utils.consoleLog("\n# Downloading Miniconda...\n");
                 useBundled = false;
                 result = yield downloadMiniconda(3, minicondaVersion, architecture);
-                if (!result["ok"])
+                if (!result.ok)
                     return result;
                 utils.consoleLog("Installing Miniconda...");
-                result = yield installMiniconda(result["data"], useBundled);
-                if (!result["ok"])
+                result = yield installMiniconda(result.data, useBundled);
+                if (!result.ok)
                     return result;
             }
             else {
@@ -21169,7 +21169,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             }
             utils.consoleLog("Setup environment variables...");
             result = yield setVariables(useBundled);
-            if (!result["ok"])
+            if (!result.ok)
                 return result;
             if (condaConfigFile) {
                 utils.consoleLog("Copying condarc file...");
@@ -21193,31 +21193,31 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 utils.consoleLog("Applying conda configuration...");
                 result = yield applyCondaConfiguration(condaConfig, useBundled);
                 // We do not fail because some options might not be available
-                // if (!result["ok"]) return result;
+                // if (!result.ok) return result;
             }
             utils.consoleLog("Setup Conda basic configuration...");
             result = yield condaCommand("config --set always_yes yes --set changeps1 no", useBundled);
-            if (!result["ok"])
+            if (!result.ok)
                 return result;
             utils.consoleLog("Initialize Conda and fix ownership...");
             result = yield condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles);
-            if (!result["ok"])
+            if (!result.ok)
                 return result;
             if (condaVersion) {
                 utils.consoleLog("Installing Conda...");
                 result = yield condaCommand(`install --name base conda=${condaVersion}`, useBundled);
-                if (!result["ok"])
+                if (!result.ok)
                     return result;
             }
             if (condaConfig["auto_update_conda"] == "true") {
                 utils.consoleLog("Updating conda...");
                 result = yield condaCommand("update conda", useBundled);
-                if (!result["ok"])
+                if (!result.ok)
                     return result;
                 if (condaConfig) {
                     utils.consoleLog("Applying conda configuration after update...");
                     result = yield applyCondaConfiguration(condaConfig, useBundled);
-                    if (!result["ok"])
+                    if (!result.ok)
                         return result;
                 }
             }
@@ -21225,18 +21225,18 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             if (condaBuildVersion) {
                 utils.consoleLog("Installing Conda Build...");
                 result = yield condaCommand(`install --name base conda-build=${condaBuildVersion}`, useBundled);
-                if (!result["ok"])
+                if (!result.ok)
                     return result;
             }
             if (activateEnvironment) {
                 result = yield createTestEnvironment(activateEnvironment, useBundled);
-                if (!result["ok"])
+                if (!result.ok)
                     return result;
             }
             if (pythonVersion && activateEnvironment) {
                 utils.consoleLog(`Installing Python="${pythonVersion}" on "${activateEnvironment}" environment...`);
                 result = yield setupPython(activateEnvironment, pythonVersion, useBundled);
-                if (!result["ok"])
+                if (!result.ok)
                     return result;
             }
             if (environmentFile) {
@@ -21265,14 +21265,14 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                     condaAction = "create";
                 }
                 result = yield condaCommand(`env ${condaAction} -f ${environmentFile}`, useBundled);
-                if (!result["ok"])
+                if (!result.ok)
                     return result;
             }
         }
         catch (err) {
             return { ok: false, error: err };
         }
-        return { ok: true, data: undefined };
+        return { ok: true, data: "ok" };
     });
 }
 /**
@@ -21315,8 +21315,8 @@ function run() {
                 use_only_tar_bz2: useOnlyTarBz2
             };
             const result = yield setupMiniconda(installerUrl, minicondaVersion, "x64", condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaFile, condaConfig, removeProfiles);
-            if (!result["ok"]) {
-                throw result["error"];
+            if (!result.ok) {
+                throw result.error;
             }
         }
         catch (err) {
@@ -21324,7 +21324,7 @@ function run() {
         }
     });
 }
-run();
+void run();
 exports.default = run;
 
 

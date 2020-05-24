@@ -1,12 +1,23 @@
 {
+  "$schema": "http://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "target": "es6",
+    "allowSyntheticDefaultImports": true,
+    "declaration": false,
+    "esModuleInterop": true,
     "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
     "outDir": "./lib",
+    "preserveWatchOutput": true,
+    "resolveJsonModule": true,
     "rootDir": "./src",
+    "sourceMap": true,
     "strict": true,
-    "noImplicitAny": false,
-    "esModuleInterop": true
+    "strictNullChecks": true,
+    "target": "es6",
+    "types": []
   },
   "exclude": ["node_modules"]
 }

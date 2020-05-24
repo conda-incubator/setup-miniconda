@@ -30,8 +30,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
-        python-version: ['3.7', '2.7']
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        python-version: ["3.7", "2.7"]
     steps:
       - uses: goanpeca/setup-miniconda@v1
         with:
@@ -53,11 +53,11 @@ This example shows how to use all other available shells for specific operating 
 jobs:
   example-2-linux:
     name: Ex2 Linux
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: goanpeca/setup-miniconda@v1
         with:
-          miniconda-version: 'latest'
+          miniconda-version: "latest"
           activate-environment: foo
       - name: Sh
         shell: sh -l {0}
@@ -77,11 +77,11 @@ jobs:
 
   example-2-mac:
     name: Ex2 Mac
-    runs-on: 'macos-latest'
+    runs-on: "macos-latest"
     steps:
       - uses: goanpeca/setup-miniconda@v1
         with:
-          miniconda-version: 'latest'
+          miniconda-version: "latest"
           activate-environment: foo
       - name: Sh
         shell: sh -l {0}
@@ -101,11 +101,11 @@ jobs:
 
   example-2-win:
     name: Ex2 Windows
-    runs-on: 'windows-latest'
+    runs-on: "windows-latest"
     steps:
       - uses: goanpeca/setup-miniconda@v1
         with:
-          miniconda-version: 'latest'
+          miniconda-version: "latest"
           activate-environment: foo
       - name: Bash
         shell: bash -l {0}
@@ -137,7 +137,7 @@ This example shows how to use [environment.yml](etc/example-environment.yml) for
 jobs:
   example-3:
     name: Ex3 Linux
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: goanpeca/setup-miniconda@v1
@@ -166,7 +166,7 @@ In this example it will result in:
 jobs:
   example-4:
     name: Ex4 Linux
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: goanpeca/setup-miniconda@v1
@@ -198,7 +198,7 @@ not yet supported by Miniconda.
 jobs:
   example-5:
     name: Ex5 Miniforge for PyPy
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: goanpeca/setup-miniconda@v1
@@ -231,7 +231,7 @@ This can be based in the contents of files like:
 jobs:
   caching-example:
     name: Caching
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
       - name: Cache conda
@@ -248,7 +248,7 @@ jobs:
           python-version: 3.8
           channel-priority: strict
           environment-file: etc/example-environment.yml
-          use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
 ```
 
 ## IMPORTANT

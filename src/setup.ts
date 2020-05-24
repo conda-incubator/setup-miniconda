@@ -11,17 +11,32 @@ import getHrefs from "get-hrefs";
 import * as utils from "./utils";
 
 //-----------------------------------------------------------------------
-// Interfaces
+// Types & Interfaces
 //-----------------------------------------------------------------------
-interface SucceedResult {
-  ok: boolean;
-  data: string | undefined;
+interface ISucceedResult {
+  ok: true;
+  data: string;
 }
-interface FailedResult {
-  ok: boolean;
+interface IFailedResult {
+  ok: false;
   error: Error;
 }
-type Result = SucceedResult | FailedResult;
+type Result = ISucceedResult | IFailedResult;
+
+export interface IArchitectures {
+  [key: string]: string;
+}
+
+export interface IOperatingSystems {
+  [key: string]: string;
+}
+
+export interface IShells {
+  [key: string]: string;
+}
+
+type TCondaConfig = any;
+type TEnvironment = any;
 
 //-----------------------------------------------------------------------
 // Constants
@@ -32,13 +47,14 @@ const IS_MAC: boolean = process.platform === "darwin";
 const IS_LINUX: boolean = process.platform === "linux";
 const IS_UNIX: boolean = IS_MAC || IS_LINUX;
 const MINICONDA_BASE_URL: string = "https://repo.anaconda.com/miniconda/";
-const ARCHITECTURES = {
+
+const ARCHITECTURES: IArchitectures = {
   x64: "x86_64",
   x86: "x86",
   ARM64: "aarch64", // To be supported by github runners
   ARM32: "armv7l" // To be supported by github runners
 };
-const OS_NAMES = {
+const OS_NAMES: IOperatingSystems = {
   win32: "Windows",
   darwin: "MacOSX",
   linux: "Linux"
@@ -73,7 +89,7 @@ async function execute(command: string): Promise<Result> {
     return { ok: false, error: err };
   }
 
-  return { ok: true, data: undefined };
+  return { ok: true, data: "ok" };
 }
 
 //-----------------------------------------------------------------------
@@ -255,21 +271,18 @@ async function installMiniconda(
     command = `bash "${installerPath}" -b -p ${outputPath}`;
   }
 
-  let result: Result;
   try {
-    result = await execute(command);
+    return await execute(command);
   } catch (err) {
     core.error(err);
     return { ok: false, error: err };
   }
-
-  return { ok: true, data: result["data"] };
 }
 
 /**
  * Run Conda command
  */
-async function condaCommand(cmd: string, useBundled): Promise<Result> {
+async function condaCommand(cmd: string, useBundled: boolean): Promise<Result> {
   const command = `${condaExecutable(useBundled)} ${cmd}`;
   return await execute(command);
 }
@@ -291,7 +304,7 @@ async function setVariables(useBundled: boolean): Promise<Result> {
   } catch (err) {
     return { ok: false, error: err };
   }
-  return { ok: true, data: undefined };
+  return { ok: true, data: "ok" };
 }
 
 /**
@@ -313,7 +326,7 @@ async function createTestEnvironment(
         `create --name ${activateEnvironment}`,
         useBundled
       );
-      if (!result["ok"]) return result;
+      if (!result.ok) return result;
     }
   } else {
     return {
@@ -323,7 +336,7 @@ async function createTestEnvironment(
       )
     };
   }
-  return { ok: true, data: undefined };
+  return { ok: true, data: "ok" };
 }
 
 /**
@@ -332,7 +345,7 @@ async function createTestEnvironment(
 async function condaInit(
   activateEnvironment: string,
   useBundled: boolean,
-  condaConfig: any,
+  condaConfig: TCondaConfig,
   removeProfiles: string
 ): Promise<Result> {
   let result: Result;
@@ -466,8 +479,8 @@ conda activate ${activateEnvironment}`;
 @SETLOCAL DisableDelayedExpansion
 :: ---------------------------------------------------------------------------`;
 
-  let extraShells: object;
-  const shells = {
+  let extraShells: IShells;
+  const shells: IShells = {
     "~/.bash_profile": bashExtraText,
     "~/.profile": bashExtraText,
     "~/.zshrc": bashExtraText,
@@ -491,7 +504,7 @@ conda activate ${activateEnvironment}`;
       "C:/Miniconda3/condabin/conda_hook.bat": batchExtraText
     };
   }
-  const allShells = { ...shells, ...extraShells };
+  const allShells: IShells = { ...shells, ...extraShells };
   Object.keys(allShells).forEach(key => {
     let filePath: string = key.replace("~", os.homedir());
     const text = allShells[key];
@@ -500,7 +513,7 @@ conda activate ${activateEnvironment}`;
       fs.appendFileSync(filePath, text);
     }
   });
-  return { ok: true, data: undefined };
+  return { ok: true, data: "ok" };
 }
 
 /**
@@ -521,7 +534,7 @@ async function setupPython(
  * Setup Conda configuration
  */
 async function applyCondaConfiguration(
-  condaConfig: string,
+  condaConfig: TCondaConfig,
   useBundled: boolean
 ): Promise<Result> {
   let result: Result;
@@ -557,9 +570,9 @@ async function applyCondaConfiguration(
     result = await condaCommand(`config --show`, useBundled);
     if (!result.ok) return result;
   } catch (err) {
-    return { ok: true, error: err };
+    return { ok: false, error: err };
   }
-  return { ok: true, data: undefined };
+  return { ok: true, data: "ok" };
 }
 
 /**
@@ -575,7 +588,7 @@ async function setupMiniconda(
   activateEnvironment: string,
   environmentFile: string,
   condaConfigFile: string,
-  condaConfig: any,
+  condaConfig: TCondaConfig,
   removeProfiles: string
 ): Promise<Result> {
   let result: Result;
@@ -608,17 +621,18 @@ async function setupMiniconda(
       utils.consoleLog("\n# Downloading Custom Installer...\n");
       useBundled = false;
       result = await downloadInstaller(installerUrl);
+      if (!result.ok) return result;
       utils.consoleLog("Installing Custom Installer...");
-      result = await installMiniconda(result["data"], useBundled);
+      result = await installMiniconda(result.data, useBundled);
     } else if (minicondaVersion !== "" || architecture !== "x64") {
       utils.consoleLog("\n# Downloading Miniconda...\n");
       useBundled = false;
       result = await downloadMiniconda(3, minicondaVersion, architecture);
-      if (!result["ok"]) return result;
+      if (!result.ok) return result;
 
       utils.consoleLog("Installing Miniconda...");
-      result = await installMiniconda(result["data"], useBundled);
-      if (!result["ok"]) return result;
+      result = await installMiniconda(result.data, useBundled);
+      if (!result.ok) return result;
     } else {
       utils.consoleLog("Locating Miniconda...");
       core.info(minicondaPath());
@@ -629,7 +643,7 @@ async function setupMiniconda(
 
     utils.consoleLog("Setup environment variables...");
     result = await setVariables(useBundled);
-    if (!result["ok"]) return result;
+    if (!result.ok) return result;
 
     if (condaConfigFile) {
       utils.consoleLog("Copying condarc file...");
@@ -659,7 +673,7 @@ async function setupMiniconda(
       utils.consoleLog("Applying conda configuration...");
       result = await applyCondaConfiguration(condaConfig, useBundled);
       // We do not fail because some options might not be available
-      // if (!result["ok"]) return result;
+      // if (!result.ok) return result;
     }
 
     utils.consoleLog("Setup Conda basic configuration...");
@@ -667,7 +681,7 @@ async function setupMiniconda(
       "config --set always_yes yes --set changeps1 no",
       useBundled
     );
-    if (!result["ok"]) return result;
+    if (!result.ok) return result;
 
     utils.consoleLog("Initialize Conda and fix ownership...");
     result = await condaInit(
@@ -676,7 +690,7 @@ async function setupMiniconda(
       condaConfig,
       removeProfiles
     );
-    if (!result["ok"]) return result;
+    if (!result.ok) return result;
 
     if (condaVersion) {
       utils.consoleLog("Installing Conda...");
@@ -684,18 +698,18 @@ async function setupMiniconda(
         `install --name base conda=${condaVersion}`,
         useBundled
       );
-      if (!result["ok"]) return result;
+      if (!result.ok) return result;
     }
 
     if (condaConfig["auto_update_conda"] == "true") {
       utils.consoleLog("Updating conda...");
       result = await condaCommand("update conda", useBundled);
-      if (!result["ok"]) return result;
+      if (!result.ok) return result;
 
       if (condaConfig) {
         utils.consoleLog("Applying conda configuration after update...");
         result = await applyCondaConfiguration(condaConfig, useBundled);
-        if (!result["ok"]) return result;
+        if (!result.ok) return result;
       }
     }
 
@@ -706,12 +720,12 @@ async function setupMiniconda(
         `install --name base conda-build=${condaBuildVersion}`,
         useBundled
       );
-      if (!result["ok"]) return result;
+      if (!result.ok) return result;
     }
 
     if (activateEnvironment) {
       result = await createTestEnvironment(activateEnvironment, useBundled);
-      if (!result["ok"]) return result;
+      if (!result.ok) return result;
     }
 
     if (pythonVersion && activateEnvironment) {
@@ -723,11 +737,11 @@ async function setupMiniconda(
         pythonVersion,
         useBundled
       );
-      if (!result["ok"]) return result;
+      if (!result.ok) return result;
     }
 
     if (environmentFile) {
-      let environmentYaml: any;
+      let environmentYaml: TEnvironment;
       let condaAction: string;
       try {
         const sourceEnvironmentPath: string = path.join(
@@ -763,12 +777,12 @@ async function setupMiniconda(
         `env ${condaAction} -f ${environmentFile}`,
         useBundled
       );
-      if (!result["ok"]) return result;
+      if (!result.ok) return result;
     }
   } catch (err) {
     return { ok: false, error: err };
   }
-  return { ok: true, data: undefined };
+  return { ok: true, data: "ok" };
 }
 
 /**
@@ -802,7 +816,7 @@ async function run(): Promise<void> {
     let showChannelUrls: string = core.getInput("show-channel-urls");
     let useOnlyTarBz2: string = core.getInput("use-only-tar-bz2");
 
-    const condaConfig = {
+    const condaConfig: TCondaConfig = {
       add_anaconda_token: addAnacondaToken,
       add_pip_as_python_dependency: addPipAsPythonDependency,
       allow_softlinks: allowSoftlinks,
@@ -827,14 +841,14 @@ async function run(): Promise<void> {
       condaConfig,
       removeProfiles
     );
-    if (!result["ok"]) {
-      throw result["error"];
+    if (!result.ok) {
+      throw result.error;
     }
   } catch (err) {
     core.setFailed(err.message);
   }
 }
 
-run();
+void run();
 
 export default run;
