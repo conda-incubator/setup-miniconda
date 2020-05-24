@@ -4,6 +4,7 @@
 ![Example 2: Other shells](https://github.com/goanpeca/setup-miniconda/workflows/Example%202:%20Other%20shells/badge.svg?branch=master)
 ![Example 3: Other options](https://github.com/goanpeca/setup-miniconda/workflows/Example%203:%20Other%20options/badge.svg?branch=master)
 ![Example 4: Channels](https://github.com/goanpeca/setup-miniconda/workflows/Example%204:%20Channels/badge.svg?branch=master)
+![Example 5: Custom installer](https://github.com/goanpeca/setup-miniconda/workflows/Example%205:%20Custom%20installer/badge.svg?branch=master)
 
 This action sets up a [Miniconda](https://docs.conda.io/en/latest/miniconda.html) installation to use the [Conda](https://docs.conda.io/projects/conda/en/latest/) package and environment manager by either locating the Miniconda installation bundled with the available runners or by installing a specific Miniconda3 version. By default this action will also create a test environment.
 
@@ -175,6 +176,36 @@ jobs:
           channels: conda-forge,spyder-ide
           allow-softlinks: true
           channel-priority: flexible
+          show-channel-urls: true
+          use-only-tar-bz2: true
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show
+```
+
+#### Example 5: Custom installer
+
+Any installer created with [constructor](https://github.com/conda/constructor)
+which includes `conda` can be used in place of Miniconda.
+For example, [conda-forge](https://conda-forge.org/) maintains additional builds
+of [miniforge](https://github.com/conda-forge/miniforge/releases) for platforms
+not yet supported by Miniconda.
+
+```yaml
+jobs:
+  example-5:
+    name: Ex5 Miniforge for PyPy
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: goanpeca/setup-miniconda@v1
+        with:
+          installer-url: |-
+            https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-Linux-x86_64.sh
+          allow-softlinks: true
           show-channel-urls: true
           use-only-tar-bz2: true
       - shell: bash -l {0}
