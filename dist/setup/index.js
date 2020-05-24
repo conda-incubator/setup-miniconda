@@ -8194,8 +8194,10 @@ function downloadMiniconda(pythonMajorVersion, minicondaVersion, architecture) {
 function downloadInstaller(url) {
     return __awaiter(this, void 0, void 0, function* () {
         let downloadPath;
+        const installerName = path.posix.basename(url);
+        core.info(installerName);
         // Look for cache to use
-        const cachedInstallerPath = tc.find(url, url);
+        const cachedInstallerPath = tc.find(installerName, url);
         if (cachedInstallerPath) {
             core.info(`Found cache at ${cachedInstallerPath}`);
             downloadPath = cachedInstallerPath;
@@ -8203,9 +8205,8 @@ function downloadInstaller(url) {
         else {
             try {
                 downloadPath = yield tc.downloadTool(url);
-                const options = { recursive: true, force: false };
                 core.info(`Saving cache...`);
-                yield tc.cacheFile(downloadPath, url, url, url);
+                yield tc.cacheFile(downloadPath, installerName, url, url);
             }
             catch (err) {
                 return { ok: false, error: err };

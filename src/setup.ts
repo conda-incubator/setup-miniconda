@@ -215,8 +215,11 @@ async function downloadMiniconda(
 async function downloadInstaller(url: string): Promise<Result> {
   let downloadPath: string;
 
+  const installerName: string = path.posix.basename(url);
+  core.info(installerName);
+
   // Look for cache to use
-  const cachedInstallerPath = tc.find(url, url);
+  const cachedInstallerPath = tc.find(installerName, url);
 
   if (cachedInstallerPath) {
     core.info(`Found cache at ${cachedInstallerPath}`);
@@ -224,10 +227,8 @@ async function downloadInstaller(url: string): Promise<Result> {
   } else {
     try {
       downloadPath = await tc.downloadTool(url);
-      const options = { recursive: true, force: false };
-
       core.info(`Saving cache...`);
-      await tc.cacheFile(downloadPath, url, url, url);
+      await tc.cacheFile(downloadPath, installerName, url, url);
     } catch (err) {
       return { ok: false, error: err };
     }
