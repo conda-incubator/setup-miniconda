@@ -212,6 +212,30 @@ async function downloadMiniconda(
   return { ok: true, data: downloadPath };
 }
 
+async function downloadInstaller(url: string): Promise<Result> {
+  let downloadPath: string;
+
+  const installerName: string = path.posix.basename(url);
+  core.info(installerName);
+
+  // Look for cache to use
+  const cachedInstallerPath = tc.find(installerName, url);
+
+  if (cachedInstallerPath) {
+    core.info(`Found cache at ${cachedInstallerPath}`);
+    downloadPath = cachedInstallerPath;
+  } else {
+    try {
+      downloadPath = await tc.downloadTool(url);
+      core.info(`Saving cache...`);
+      await tc.cacheFile(downloadPath, installerName, url, url);
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  }
+  return { ok: true, data: downloadPath };
+}
+
 /**
  * Install Miniconda
  *
@@ -542,6 +566,7 @@ async function applyCondaConfiguration(
  * Main conda setup method to handle all configuration options
  */
 async function setupMiniconda(
+  installerUrl: string,
   minicondaVersion: string,
   architecture: string,
   condaVersion: string,
@@ -571,7 +596,21 @@ async function setupMiniconda(
       };
     }
 
-    if (minicondaVersion !== "" || architecture !== "x64") {
+    if (installerUrl !== "") {
+      if (minicondaVersion !== "") {
+        return {
+          ok: false,
+          error: new Error(
+            `"installer-url" and "miniconda-version" were provided: pick one!`
+          )
+        };
+      }
+      utils.consoleLog("\n# Downloading Custom Installer...\n");
+      useBundled = false;
+      result = await downloadInstaller(installerUrl);
+      utils.consoleLog("Installing Custom Installer...");
+      result = await installMiniconda(result["data"], useBundled);
+    } else if (minicondaVersion !== "" || architecture !== "x64") {
       utils.consoleLog("\n# Downloading Miniconda...\n");
       useBundled = false;
       result = await downloadMiniconda(3, minicondaVersion, architecture);
@@ -737,10 +776,13 @@ async function setupMiniconda(
  */
 async function run(): Promise<void> {
   try {
+    let installerUrl: string = core.getInput("installer-url");
     let minicondaVersion: string = core.getInput("miniconda-version");
     let condaVersion: string = core.getInput("conda-version");
     let condaBuildVersion: string = core.getInput("conda-build-version");
     let pythonVersion: string = core.getInput("python-version");
+
+    // Environment behavior
     let activateEnvironment: string = core.getInput("activate-environment");
     let environmentFile: string = core.getInput("environment-file");
 
@@ -773,6 +815,7 @@ async function run(): Promise<void> {
       use_only_tar_bz2: useOnlyTarBz2
     };
     const result = await setupMiniconda(
+      installerUrl,
       minicondaVersion,
       "x64",
       condaVersion,

@@ -2,6 +2,10 @@ name: 'Setup Miniconda'
 author: Gonzalo Peña-Castellanos (@goanpeca)
 description: 'Set up Conda package and environment manager with Miniconda.'
 inputs:
+  installer-url:
+    description: 'If provided, this installer will be used instead of a miniconda installer. Visit https://github.com/conda/constructor for more information on creating installers'
+    required: false
+    default: ''
   miniconda-version:
     description: 'If provided, this version of miniconda will be downloaded and installed. Visit https://repo.continuum.io/miniconda/ for more information on available versions.'
     required: false
