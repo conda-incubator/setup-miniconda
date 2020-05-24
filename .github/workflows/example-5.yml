@@ -10,14 +10,32 @@ on:
     - 'master'
 
 jobs:
-  example-5:
-    name: Ex5 Miniforge for PyPy
+  example-5-linux:
+    name: Ex5 Miniforge for PyPy on Linux
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
       - uses: goanpeca/setup-miniconda@master
         with:
           installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-Linux-x86_64.sh
+          allow-softlinks: true
+          show-channel-urls: true
+          use-only-tar-bz2: true
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show
+
+  example-5-mac:
+    name: Ex5 Miniforge for PyPy on MacOS
+    runs-on: 'macos-latest'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: goanpeca/setup-miniconda@master
+        with:
+          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-MacOSX-x86_64.sh
           allow-softlinks: true
           show-channel-urls: true
           use-only-tar-bz2: true
