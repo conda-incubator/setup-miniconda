@@ -11,7 +11,7 @@ on:
 
 jobs:
   example-5-linux:
-    name: Ex5 Miniforge for PyPy on Linux
+    name: Ex5 PyPy Linux
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
@@ -29,11 +29,13 @@ jobs:
           conda config --show
 
   example-5-mac:
-    name: Ex5 Miniforge for PyPy on MacOS
+    name: Ex5 PyPy MacOS
     runs-on: 'macos-latest'
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@master
+      # TODO: restore
+      # - uses: goanpeca/setup-miniconda@master
+      - uses: bollwyvl/setup-miniconda@add-config-installer-url-mk2
         with:
           installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-MacOSX-x86_64.sh
           allow-softlinks: true
