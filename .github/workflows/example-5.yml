@@ -1,3 +1,14 @@
+name: "Example 5: Custom installer"
+
+on:
+  pull_request:
+    branches:
+    - '*'
+  push:
+    branches:
+    - '1.x'
+    - 'master'
+
 jobs:
   example-5:
     name: Ex5 Miniforge for PyPy
