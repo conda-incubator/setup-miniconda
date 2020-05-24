@@ -6,16 +6,17 @@ on:
     - '*'
   push:
     branches:
-    - '1.x'
     - 'master'
 
 jobs:
   example-5-linux:
     name: Ex5 PyPy Linux
+    needs:
+      - lint
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@master
+      - uses: ./
         with:
           installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-Linux-x86_64.sh
           allow-softlinks: true
@@ -30,10 +31,12 @@ jobs:
 
   example-5-mac:
     name: Ex5 PyPy MacOS
+    needs:
+    - lint
     runs-on: 'macos-latest'
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@master
+      - uses: ./
         with:
           installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-MacOSX-x86_64.sh
           allow-softlinks: true

@@ -6,16 +6,17 @@ on:
     - '*'
   push:
     branches:
-    - '1.x'
     - 'master'
 
 jobs:
   example-4:
     name: Ex4 Linux
+    needs:
+      - lint
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@master
+      - uses: ./
         with:
           activate-environment: foo
           python-version: 3.6

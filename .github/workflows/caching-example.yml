@@ -6,12 +6,13 @@ on:
     - '*'
   push:
     branches:
-    - '1.x'
     - 'master'
 
 jobs:
   caching-example:
     name: Caching
+    needs:
+      - lint
     runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v2
@@ -23,7 +24,7 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('etc/example-environment.yml') }}
-      - uses: goanpeca/setup-miniconda@master
+      - uses: ./
         with:
           activate-environment: anaconda-client-env
           python-version: 3.8

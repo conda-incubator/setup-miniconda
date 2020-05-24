@@ -6,12 +6,13 @@ on:
     - '*'
   push:
     branches:
-    - '1.x'
     - 'master'
 
 jobs:
   example-1:
     name: Ex1 (${{ matrix.python-version }}, ${{ matrix.os }})
+    needs:
+      - lint
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -19,7 +20,7 @@ jobs:
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
         python-version: ['3.7', '2.7']
     steps:
-      - uses: goanpeca/setup-miniconda@master
+      - uses: ./
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}

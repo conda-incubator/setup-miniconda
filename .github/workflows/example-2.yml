@@ -6,15 +6,16 @@ on:
     - '*'
   push:
     branches:
-    - '1.x'
     - 'master'
 
 jobs:
   example-2-linux:
     name: Ex2 Linux
+    needs:
+      - lint
     runs-on: 'ubuntu-latest'
     steps:
-      - uses: goanpeca/setup-miniconda@master
+      - uses: ./
         with:
           miniconda-version: 'latest'
           activate-environment: foo
@@ -35,7 +36,7 @@ jobs:
     name: Ex2 Mac
     runs-on: 'macos-latest'
     steps:
-      - uses: goanpeca/setup-miniconda@master
+      - uses: ./
         with:
           miniconda-version: 'latest'
           activate-environment: foo
@@ -62,7 +63,7 @@ jobs:
     name: Ex2 Windows
     runs-on: 'windows-latest'
     steps:
-      - uses: goanpeca/setup-miniconda@master
+      - uses: ./
         with:
           auto-update-conda: true
           activate-environment: foo
