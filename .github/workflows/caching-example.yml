@@ -7,7 +7,6 @@ on:
   push:
     branches:
     - '1.x'
-    - 'master'
 
 jobs:
   caching-example:

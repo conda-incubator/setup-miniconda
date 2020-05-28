@@ -14,7 +14,6 @@ npm i -g @zeit/ncc
 - To update the code
 
 ```bash
-npm run build
 npm run format
-npm run pack
+npm run build
 ```
