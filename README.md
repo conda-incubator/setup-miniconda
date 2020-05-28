@@ -5,6 +5,8 @@
 ![Example 3: Other options](https://github.com/goanpeca/setup-miniconda/workflows/Example%203:%20Other%20options/badge.svg?branch=master)
 ![Example 4: Channels](https://github.com/goanpeca/setup-miniconda/workflows/Example%204:%20Channels/badge.svg?branch=master)
 ![Example 5: Custom installer](https://github.com/goanpeca/setup-miniconda/workflows/Example%205:%20Custom%20installer/badge.svg?branch=master)
+![Caching Example](https://github.com/goanpeca/setup-miniconda/workflows/Caching%20Example/badge.svg?branch=master)
+![Linting](https://github.com/goanpeca/setup-miniconda/workflows/Linting/badge.svg?branch=master)
 
 This action sets up a [Miniconda](https://docs.conda.io/en/latest/miniconda.html) installation to use the [Conda](https://docs.conda.io/projects/conda/en/latest/) package and environment manager by either locating the Miniconda installation bundled with the available runners or by installing a specific Miniconda3 version. By default this action will also create a test environment.
 

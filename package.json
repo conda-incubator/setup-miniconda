@@ -1,7 +1,7 @@
 {
   "name": "action-setup-conda",
-  "version": "1.4.1",
-  "description": "GitHub action for setting up conda",
+  "version": "1.5.0",
+  "description": "GitHub action for setting up conda from default or custom installers",
   "main": "lib/main.js",
   "scripts": {
     "build": "ncc build -o dist/setup src/setup.ts && ncc build -o dist/delete src/delete.ts",
