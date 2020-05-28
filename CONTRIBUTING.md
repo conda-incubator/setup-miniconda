@@ -4,7 +4,7 @@
 
 The build steps transpiles the `src/main.ts` to `lib/main.js` and then packs to `dist/index.js`. It is handled by Typescript compiler.
 
-- Install NodeJS 12
+- Install NodeJS
 
 ```bash
 npm install

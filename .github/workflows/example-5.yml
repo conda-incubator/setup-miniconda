@@ -38,6 +38,7 @@ jobs:
           allow-softlinks: true
           show-channel-urls: true
           use-only-tar-bz2: true
+          activate-environment: ""
       - shell: bash -l {0}
         run: |
           conda info
