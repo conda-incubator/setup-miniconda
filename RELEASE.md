@@ -40,5 +40,5 @@ git tag -d v1
 git push origin :refs/tags/v1
 git tag -a v1 -m 'Release version vX.X.X'
 git push origin --tags
-git push origin 1.x
+git push origin master
 ```
