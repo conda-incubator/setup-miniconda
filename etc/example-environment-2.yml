@@ -1,0 +1,35 @@
+name: anaconda-client-env
+
+channels:
+  - conda-forge
+
+dependencies:
+  - pip
+  - python
+  - jupyterlab
+  - pandas
+  - unidecode
+  - python-dotenv
+
+  # panel apps
+  - holoviews
+  - param
+  - panel
+
+  # flask app
+  - flask
+  - oauthlib
+  - authlib
+  - requests
+
+  # database
+  - psycopg2
+  - ibis-framework
+
+  # testing/pep8
+  - pre-commit
+  - pytest
+  - pytest-cov
+  - flake8
+  - isort
+  - coverage

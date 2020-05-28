@@ -21,6 +21,7 @@ jobs:
           python-version: 3.8
           condarc-file: etc/example-condarc.yml
           auto-activate-base: false
+          auto-update-conda: true
       - shell: bash -l {0}
         run: |
           conda info

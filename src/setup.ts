@@ -660,6 +660,22 @@ async function setupMiniconda(
       }
     }
 
+    // Read the environment yaml to use channels if provided and avoid conda solver conflicts
+    let environmentYaml: any;
+    if (environmentFile) {
+      try {
+        const sourceEnvironmentPath: string = path.join(
+          process.env["GITHUB_WORKSPACE"] || "",
+          environmentFile
+        );
+        environmentYaml = await yaml.safeLoad(
+          fs.readFileSync(sourceEnvironmentPath, "utf8")
+        );
+      } catch (err) {
+        return { ok: false, error: err };
+      }
+    }
+
     let cacheFolder: string = "~/conda_pkgs_dir";
     cacheFolder = cacheFolder.replace("~", os.homedir().replace("\\", "/"));
     result = await condaCommand(
@@ -670,6 +686,18 @@ async function setupMiniconda(
     core.exportVariable("CONDA_PKGS_DIR", cacheFolder);
 
     if (condaConfig) {
+      if (environmentFile) {
+        let channels: Array<string> | undefined;
+        channels = environmentYaml["channels"];
+
+        if (condaConfig["channels"] === "" && channels !== undefined) {
+          condaConfig["channels"] = channels.join(",");
+        } else {
+          core.warning(
+            '"channels" set on the "environment-file" do not match "channels" set on the action!'
+          );
+        }
+      }
       utils.consoleLog("Applying conda configuration...");
       result = await applyCondaConfiguration(condaConfig, useBundled);
       // We do not fail because some options might not be available

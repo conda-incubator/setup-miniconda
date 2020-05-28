@@ -258,6 +258,7 @@ jobs:
 - Cmd shells do not run `Autorun` commands so these shells need to be explicitely declared as `shell: cmd /C call {0}` on steps that need to be properly activated. This is because cmd shells are executed with `%ComSpec% /D /E:ON /V:OFF /S /C "CALL "{0}""` and the `/D` flag disabled execution of `Command Processor/Autorun` windows registry keys, which is what `conda init cmd.exe` sets. See [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
 - For caching to work properly, you will need to set the `use-only-tar-bz2` option to `true`.
 - Some options (e.g. `use-only-tar-bz2`) are not available on the default conda installed on Windows VMs, be sure to use `auto-update-conda` or provide a version of conda compatible with the option.
+- If you plan to use a `environment.yaml` file to set up the environment, the action will read the `channels`listed in the key (if found). If you provide the `channels` input in the action they must not conflict with what was defined in `environment.yaml`, otherwise the conda solver might find conflicts and result in very long install times.
 
 ## License
 
