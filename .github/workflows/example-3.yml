@@ -17,7 +17,7 @@ jobs:
       - uses: goanpeca/setup-miniconda@master
         with:
           activate-environment: anaconda-client-env
-          environment-file: etc/example-environment.yml
+          environment-file: etc/example-environment-2.yml
           python-version: 3.8
           condarc-file: etc/example-condarc.yml
           auto-activate-base: false
