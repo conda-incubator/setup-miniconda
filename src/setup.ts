@@ -113,12 +113,17 @@ function minicondaPath(useBundled: boolean = true): string {
 /**
  * Provide cross platform location of conda/mamba executable
  */
-function condaExecutable(useBundled: boolean, useMamba: boolean = false): string {
+function condaExecutable(
+  useBundled: boolean,
+  useMamba: boolean = false
+): string {
   const dir: string = minicondaPath(useBundled);
   let condaExe: string;
   let commandName: string;
   commandName = useMamba ? "mamba" : "conda";
-  condaExe = IS_UNIX ? `${dir}/condabin/${commandName}` : `${dir}\\condabin\\${commandName}.bat`;
+  condaExe = IS_UNIX
+    ? `${dir}/condabin/${commandName}`
+    : `${dir}\\condabin\\${commandName}.bat`;
   return condaExe;
 }
 
@@ -284,7 +289,11 @@ async function installMiniconda(
 /**
  * Run Conda command
  */
-async function condaCommand(cmd: string, useBundled: boolean, useMamba: boolean = false): Promise<Result> {
+async function condaCommand(
+  cmd: string,
+  useBundled: boolean,
+  useMamba: boolean = false
+): Promise<Result> {
   const command = `${condaExecutable(useBundled, useMamba)} ${cmd}`;
   return await execute(command);
 }
@@ -799,7 +808,11 @@ async function setupMiniconda(
     }
 
     if (activateEnvironment) {
-      result = await createTestEnvironment(activateEnvironment, useBundled, useMamba);
+      result = await createTestEnvironment(
+        activateEnvironment,
+        useBundled,
+        useMamba
+      );
       if (!result.ok) return result;
     }
 

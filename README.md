@@ -226,7 +226,7 @@ Experimental! Use `mamba` to handle conda installs in a faster way. `mamba-versi
 jobs:
   example-6:
     name: Ex6 Mamba
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: ./
