@@ -5,6 +5,7 @@
 ![Example 3: Other options](https://github.com/goanpeca/setup-miniconda/workflows/Example%203:%20Other%20options/badge.svg?branch=master)
 ![Example 4: Channels](https://github.com/goanpeca/setup-miniconda/workflows/Example%204:%20Channels/badge.svg?branch=master)
 ![Example 5: Custom installer](https://github.com/goanpeca/setup-miniconda/workflows/Example%205:%20Custom%20installer/badge.svg?branch=master)
+![Example 6: Mamba](https://github.com/goanpeca/setup-miniconda/workflows/Example%206:%20Mamba/badge.svg?branch=master)
 ![Caching Example](https://github.com/goanpeca/setup-miniconda/workflows/Caching%20Example/badge.svg?branch=master)
 ![Linting](https://github.com/goanpeca/setup-miniconda/workflows/Linting/badge.svg?branch=master)
 
@@ -215,6 +216,36 @@ jobs:
           conda list
           conda config --show-sources
           conda config --show
+```
+
+#### Example 6: Mamba
+
+Experimental! Use `mamba` to handle conda installs in a faster way. `mamba-version` accepts either a version string `x.y` or `latest`. It requires you specify `conda-forge` as part of the channels, ideally with the highest priority.
+
+```yaml
+jobs:
+  example-6:
+    name: Ex6 Mamba
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        with:
+          python-version: 3.6
+          mamba-version: latest
+          channels: conda-forge,defaults
+          channel-priority: true
+          activate-environment: anaconda-client-env
+          environment-file: etc/example-environment.yml
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show
+          printenv | sort
+      - shell: bash -l {0}
+        run: mamba install jupyterlab
 ```
 
 ## Caching

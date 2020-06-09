@@ -111,12 +111,14 @@ function minicondaPath(useBundled: boolean = true): string {
 }
 
 /**
- * Provide cross platform location of conda executable
+ * Provide cross platform location of conda/mamba executable
  */
-function condaExecutable(useBundled: boolean): string {
+function condaExecutable(useBundled: boolean, useMamba: boolean = false): string {
   const dir: string = minicondaPath(useBundled);
   let condaExe: string;
-  condaExe = IS_UNIX ? `${dir}/condabin/conda` : `${dir}\\condabin\\conda.bat`;
+  let commandName: string;
+  commandName = useMamba ? "mamba" : "conda";
+  condaExe = IS_UNIX ? `${dir}/condabin/${commandName}` : `${dir}\\condabin\\${commandName}.bat`;
   return condaExe;
 }
 
@@ -282,8 +284,8 @@ async function installMiniconda(
 /**
  * Run Conda command
  */
-async function condaCommand(cmd: string, useBundled: boolean): Promise<Result> {
-  const command = `${condaExecutable(useBundled)} ${cmd}`;
+async function condaCommand(cmd: string, useBundled: boolean, useMamba: boolean = false): Promise<Result> {
+  const command = `${condaExecutable(useBundled, useMamba)} ${cmd}`;
   return await execute(command);
 }
 
@@ -312,7 +314,8 @@ async function setVariables(useBundled: boolean): Promise<Result> {
  */
 async function createTestEnvironment(
   activateEnvironment: string,
-  useBundled: boolean
+  useBundled: boolean,
+  useMamba: boolean
 ): Promise<Result> {
   let result: Result;
   if (
@@ -324,7 +327,8 @@ async function createTestEnvironment(
       utils.consoleLog("Create test environment...");
       result = await condaCommand(
         `create --name ${activateEnvironment}`,
-        useBundled
+        useBundled,
+        useMamba
       );
       if (!result.ok) return result;
     }
@@ -419,7 +423,7 @@ async function condaInit(
   // Run conda init
   core.info("\n");
   for (let cmd of ["--all"]) {
-    const command = `${condaExecutable(useBundled)} init ${cmd}`;
+    const command = `${condaExecutable(useBundled, false)} init ${cmd}`;
     await execute(command);
   }
 
@@ -522,11 +526,13 @@ conda activate ${activateEnvironment}`;
 async function setupPython(
   activateEnvironment: string,
   pythonVersion: string,
-  useBundled: boolean
+  useBundled: boolean,
+  useMamba: boolean
 ): Promise<Result> {
   return await condaCommand(
     `install --name ${activateEnvironment} python=${pythonVersion}`,
-    useBundled
+    useBundled,
+    useMamba
   );
 }
 
@@ -550,24 +556,26 @@ async function applyCondaConfiguration(
           for (channel of channels) {
             result = await condaCommand(
               `config --add ${key} ${channel}`,
-              useBundled
+              useBundled,
+              false
             );
             if (!result.ok) return result;
           }
         } else {
           result = await condaCommand(
             `config --set ${key} ${condaConfig[key]}`,
-            useBundled
+            useBundled,
+            false
           );
           if (!result.ok) return result;
         }
       }
     }
 
-    result = await condaCommand(`config --show-sources`, useBundled);
+    result = await condaCommand(`config --show-sources`, useBundled, false);
     if (!result.ok) return result;
 
-    result = await condaCommand(`config --show`, useBundled);
+    result = await condaCommand(`config --show`, useBundled, false);
     if (!result.ok) return result;
   } catch (err) {
     return { ok: false, error: err };
@@ -589,10 +597,12 @@ async function setupMiniconda(
   environmentFile: string,
   condaConfigFile: string,
   condaConfig: TCondaConfig,
-  removeProfiles: string
+  removeProfiles: string,
+  mambaVersion: string
 ): Promise<Result> {
   let result: Result;
   let useBundled: boolean = true;
+  let useMamba: boolean = false;
   try {
     // Check for consistency
     if (condaConfig["auto_update_conda"] == "true" && condaVersion) {
@@ -605,6 +615,14 @@ async function setupMiniconda(
         ok: false,
         error: new Error(
           `"python-version=${pythonVersion}" was provided but "activate-environment" is not defined!`
+        )
+      };
+    }
+    if (!condaConfig["channels"].includes("conda-forge") && mambaVersion) {
+      return {
+        ok: false,
+        error: new Error(
+          `"mamba-version=${mambaVersion}" requires "conda-forge" to be included in "channels!"`
         )
       };
     }
@@ -680,7 +698,8 @@ async function setupMiniconda(
     cacheFolder = cacheFolder.replace("~", os.homedir().replace("\\", "/"));
     result = await condaCommand(
       `config --add pkgs_dirs ${cacheFolder}`,
-      useBundled
+      useBundled,
+      useMamba
     );
     if (!result.ok) return result;
     core.exportVariable("CONDA_PKGS_DIR", cacheFolder);
@@ -707,7 +726,8 @@ async function setupMiniconda(
     utils.consoleLog("Setup Conda basic configuration...");
     result = await condaCommand(
       "config --set always_yes yes --set changeps1 no",
-      useBundled
+      useBundled,
+      useMamba
     );
     if (!result.ok) return result;
 
@@ -724,14 +744,15 @@ async function setupMiniconda(
       utils.consoleLog("Installing Conda...");
       result = await condaCommand(
         `install --name base conda=${condaVersion}`,
-        useBundled
+        useBundled,
+        useMamba
       );
       if (!result.ok) return result;
     }
 
     if (condaConfig["auto_update_conda"] == "true") {
       utils.consoleLog("Updating conda...");
-      result = await condaCommand("update conda", useBundled);
+      result = await condaCommand("update conda", useBundled, useMamba);
       if (!result.ok) return result;
 
       if (condaConfig) {
@@ -742,17 +763,43 @@ async function setupMiniconda(
     }
 
     // Any conda commands run here after init and setup
+    if (mambaVersion) {
+      utils.consoleLog("Installing Mamba...");
+      core.warning(
+        `Mamba support is still experimental and can result in differently solved environments!`
+      );
+      if (mambaVersion == "latest") {
+        result = await condaCommand(
+          `install --name base mamba`,
+          useBundled,
+          useMamba
+        );
+      } else {
+        result = await condaCommand(
+          `install --name base mamba=${mambaVersion}`,
+          useBundled,
+          useMamba
+        );
+      }
+      if (result.ok) {
+        useMamba = true;
+      } else {
+        return result;
+      }
+    }
+
     if (condaBuildVersion) {
       utils.consoleLog("Installing Conda Build...");
       result = await condaCommand(
         `install --name base conda-build=${condaBuildVersion}`,
-        useBundled
+        useBundled,
+        useMamba
       );
       if (!result.ok) return result;
     }
 
     if (activateEnvironment) {
-      result = await createTestEnvironment(activateEnvironment, useBundled);
+      result = await createTestEnvironment(activateEnvironment, useBundled, useMamba);
       if (!result.ok) return result;
     }
 
@@ -763,7 +810,8 @@ async function setupMiniconda(
       result = await setupPython(
         activateEnvironment,
         pythonVersion,
-        useBundled
+        useBundled,
+        useMamba
       );
       if (!result.ok) return result;
     }
@@ -803,7 +851,8 @@ async function setupMiniconda(
       }
       result = await condaCommand(
         `env ${condaAction} -f ${environmentFile}`,
-        useBundled
+        useBundled,
+        useMamba
       );
       if (!result.ok) return result;
     }
@@ -844,6 +893,9 @@ async function run(): Promise<void> {
     let showChannelUrls: string = core.getInput("show-channel-urls");
     let useOnlyTarBz2: string = core.getInput("use-only-tar-bz2");
 
+    // Mamba
+    let mambaVersion: string = core.getInput("mamba-version");
+
     const condaConfig: TCondaConfig = {
       add_anaconda_token: addAnacondaToken,
       add_pip_as_python_dependency: addPipAsPythonDependency,
@@ -867,7 +919,8 @@ async function run(): Promise<void> {
       environmentFile,
       condaFile,
       condaConfig,
-      removeProfiles
+      removeProfiles,
+      mambaVersion
     );
     if (!result.ok) {
       throw result.error;
