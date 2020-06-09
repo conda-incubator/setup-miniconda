@@ -220,7 +220,7 @@ jobs:
 
 #### Example 6: Mamba
 
-Experimental! Use `mamba` to handle conda installs in a faster way. `mamba-version` accepts either a version string `x.y` or `latest`. It requires you specify `conda-forge` as part of the channels, ideally with the highest priority.
+Experimental! Use `mamba` to handle conda installs in a faster way. `mamba-version` accepts a version string `x.y` (including `"*"`). It requires you specify `conda-forge` as part of the channels, ideally with the highest priority.
 
 ```yaml
 jobs:
@@ -232,7 +232,7 @@ jobs:
       - uses: ./
         with:
           python-version: 3.6
-          mamba-version: latest
+          mamba-version: "*"
           channels: conda-forge,defaults
           channel-priority: true
           activate-environment: anaconda-client-env

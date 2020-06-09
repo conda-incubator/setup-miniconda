@@ -21917,10 +21917,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             if (mambaVersion) {
                 utils.consoleLog("Installing Mamba...");
                 core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
-                if (mambaVersion == "latest") {
-                    result = yield condaCommand(`install --name base mamba`, useBundled, useMamba);
-                }
-                else {
+                if (mambaVersion) {
                     result = yield condaCommand(`install --name base mamba=${mambaVersion}`, useBundled, useMamba);
                 }
                 if (result.ok) {

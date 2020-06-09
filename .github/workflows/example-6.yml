@@ -17,7 +17,7 @@ jobs:
       - uses: ./
         with:
           python-version: 3.6
-          mamba-version: latest
+          mamba-version: "*"
           channels: conda-forge,defaults
           channel-priority: true
           activate-environment: anaconda-client-env

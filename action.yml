@@ -79,7 +79,7 @@ inputs:
     required: false
     default: "true"
   mamba-version:
-    description: 'Experimental. Use mamba (https://github.com/QuantStack/mamba) as a faster drop-in replacement for conda installs. Disabled by default. To enable, use "latest" or a "x.y" version string.'
+    description: 'Experimental. Use mamba (https://github.com/QuantStack/mamba) as a faster drop-in replacement for conda installs. Disabled by default. To enable, use "*" or a "x.y" version string.'
     required: false
     default: ""
 runs:

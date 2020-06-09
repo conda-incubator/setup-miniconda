@@ -777,13 +777,7 @@ async function setupMiniconda(
       core.warning(
         `Mamba support is still experimental and can result in differently solved environments!`
       );
-      if (mambaVersion == "latest") {
-        result = await condaCommand(
-          `install --name base mamba`,
-          useBundled,
-          useMamba
-        );
-      } else {
+      if (mambaVersion) {
         result = await condaCommand(
           `install --name base mamba=${mambaVersion}`,
           useBundled,
