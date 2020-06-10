@@ -21368,12 +21368,16 @@ function minicondaPath(useBundled = true) {
     return condaPath;
 }
 /**
- * Provide cross platform location of conda executable
+ * Provide cross platform location of conda/mamba executable
  */
-function condaExecutable(useBundled) {
+function condaExecutable(useBundled, useMamba = false) {
     const dir = minicondaPath(useBundled);
     let condaExe;
-    condaExe = IS_UNIX ? `${dir}/condabin/conda` : `${dir}\\condabin\\conda.bat`;
+    let commandName;
+    commandName = useMamba ? "mamba" : "conda";
+    condaExe = IS_UNIX
+        ? `${dir}/condabin/${commandName}`
+        : `${dir}\\condabin\\${commandName}.bat`;
     return condaExe;
 }
 /**
@@ -21510,9 +21514,9 @@ function installMiniconda(installerPath, useBundled) {
 /**
  * Run Conda command
  */
-function condaCommand(cmd, useBundled) {
+function condaCommand(cmd, useBundled, useMamba = false) {
     return __awaiter(this, void 0, void 0, function* () {
-        const command = `${condaExecutable(useBundled)} ${cmd}`;
+        const command = `${condaExecutable(useBundled, useMamba)} ${cmd}`;
         return yield execute(command);
     });
 }
@@ -21541,7 +21545,7 @@ function setVariables(useBundled) {
 /**
  * Create test environment
  */
-function createTestEnvironment(activateEnvironment, useBundled) {
+function createTestEnvironment(activateEnvironment, useBundled, useMamba) {
     return __awaiter(this, void 0, void 0, function* () {
         let result;
         if (activateEnvironment !== "root" &&
@@ -21549,7 +21553,7 @@ function createTestEnvironment(activateEnvironment, useBundled) {
             activateEnvironment !== "") {
             if (!environmentExists(activateEnvironment, useBundled)) {
                 utils.consoleLog("Create test environment...");
-                result = yield condaCommand(`create --name ${activateEnvironment}`, useBundled);
+                result = yield condaCommand(`create --name ${activateEnvironment}`, useBundled, useMamba);
                 if (!result.ok)
                     return result;
             }
@@ -21633,7 +21637,7 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
         // Run conda init
         core.info("\n");
         for (let cmd of ["--all"]) {
-            const command = `${condaExecutable(useBundled)} init ${cmd}`;
+            const command = `${condaExecutable(useBundled, false)} init ${cmd}`;
             yield execute(command);
         }
         // Rename files
@@ -21730,9 +21734,9 @@ conda activate ${activateEnvironment}`;
 /**
  * Setup python test environment
  */
-function setupPython(activateEnvironment, pythonVersion, useBundled) {
+function setupPython(activateEnvironment, pythonVersion, useBundled, useMamba) {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield condaCommand(`install --name ${activateEnvironment} python=${pythonVersion}`, useBundled);
+        return yield condaCommand(`install --name ${activateEnvironment} python=${pythonVersion}`, useBundled, useMamba);
     });
 }
 /**
@@ -21751,22 +21755,22 @@ function applyCondaConfiguration(condaConfig, useBundled) {
                         let channels = condaConfig[key].split(",").reverse();
                         let channel;
                         for (channel of channels) {
-                            result = yield condaCommand(`config --add ${key} ${channel}`, useBundled);
+                            result = yield condaCommand(`config --add ${key} ${channel}`, useBundled, false);
                             if (!result.ok)
                                 return result;
                         }
                     }
                     else {
-                        result = yield condaCommand(`config --set ${key} ${condaConfig[key]}`, useBundled);
+                        result = yield condaCommand(`config --set ${key} ${condaConfig[key]}`, useBundled, false);
                         if (!result.ok)
                             return result;
                     }
                 }
             }
-            result = yield condaCommand(`config --show-sources`, useBundled);
+            result = yield condaCommand(`config --show-sources`, useBundled, false);
             if (!result.ok)
                 return result;
-            result = yield condaCommand(`config --show`, useBundled);
+            result = yield condaCommand(`config --show`, useBundled, false);
             if (!result.ok)
                 return result;
         }
@@ -21779,10 +21783,11 @@ function applyCondaConfiguration(condaConfig, useBundled) {
 /**
  * Main conda setup method to handle all configuration options
  */
-function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaConfigFile, condaConfig, removeProfiles) {
+function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaConfigFile, condaConfig, removeProfiles, mambaVersion) {
     return __awaiter(this, void 0, void 0, function* () {
         let result;
         let useBundled = true;
+        let useMamba = false;
         try {
             // Check for consistency
             if (condaConfig["auto_update_conda"] == "true" && condaVersion) {
@@ -21792,6 +21797,12 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 return {
                     ok: false,
                     error: new Error(`"python-version=${pythonVersion}" was provided but "activate-environment" is not defined!`)
+                };
+            }
+            if (!condaConfig["channels"].includes("conda-forge") && mambaVersion) {
+                return {
+                    ok: false,
+                    error: new Error(`"mamba-version=${mambaVersion}" requires "conda-forge" to be included in "channels!"`)
                 };
             }
             if (installerUrl !== "") {
@@ -21856,7 +21867,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             }
             let cacheFolder = "~/conda_pkgs_dir";
             cacheFolder = cacheFolder.replace("~", os.homedir().replace("\\", "/"));
-            result = yield condaCommand(`config --add pkgs_dirs ${cacheFolder}`, useBundled);
+            result = yield condaCommand(`config --add pkgs_dirs ${cacheFolder}`, useBundled, useMamba);
             if (!result.ok)
                 return result;
             core.exportVariable("CONDA_PKGS_DIR", cacheFolder);
@@ -21877,7 +21888,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 // if (!result.ok) return result;
             }
             utils.consoleLog("Setup Conda basic configuration...");
-            result = yield condaCommand("config --set always_yes yes --set changeps1 no", useBundled);
+            result = yield condaCommand("config --set always_yes yes --set changeps1 no", useBundled, useMamba);
             if (!result.ok)
                 return result;
             utils.consoleLog("Initialize Conda and fix ownership...");
@@ -21886,13 +21897,13 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 return result;
             if (condaVersion) {
                 utils.consoleLog("Installing Conda...");
-                result = yield condaCommand(`install --name base conda=${condaVersion}`, useBundled);
+                result = yield condaCommand(`install --name base conda=${condaVersion}`, useBundled, useMamba);
                 if (!result.ok)
                     return result;
             }
             if (condaConfig["auto_update_conda"] == "true") {
                 utils.consoleLog("Updating conda...");
-                result = yield condaCommand("update conda", useBundled);
+                result = yield condaCommand("update conda", useBundled, useMamba);
                 if (!result.ok)
                     return result;
                 if (condaConfig) {
@@ -21903,20 +21914,33 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 }
             }
             // Any conda commands run here after init and setup
+            if (mambaVersion) {
+                utils.consoleLog("Installing Mamba...");
+                core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
+                if (mambaVersion) {
+                    result = yield condaCommand(`install --name base mamba=${mambaVersion}`, useBundled, useMamba);
+                }
+                if (result.ok) {
+                    useMamba = true;
+                }
+                else {
+                    return result;
+                }
+            }
             if (condaBuildVersion) {
                 utils.consoleLog("Installing Conda Build...");
-                result = yield condaCommand(`install --name base conda-build=${condaBuildVersion}`, useBundled);
+                result = yield condaCommand(`install --name base conda-build=${condaBuildVersion}`, useBundled, useMamba);
                 if (!result.ok)
                     return result;
             }
             if (activateEnvironment) {
-                result = yield createTestEnvironment(activateEnvironment, useBundled);
+                result = yield createTestEnvironment(activateEnvironment, useBundled, useMamba);
                 if (!result.ok)
                     return result;
             }
             if (pythonVersion && activateEnvironment) {
                 utils.consoleLog(`Installing Python="${pythonVersion}" on "${activateEnvironment}" environment...`);
-                result = yield setupPython(activateEnvironment, pythonVersion, useBundled);
+                result = yield setupPython(activateEnvironment, pythonVersion, useBundled, useMamba);
                 if (!result.ok)
                     return result;
             }
@@ -21945,7 +21969,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 else {
                     condaAction = "create";
                 }
-                result = yield condaCommand(`env ${condaAction} -f ${environmentFile}`, useBundled);
+                result = yield condaCommand(`env ${condaAction} -f ${environmentFile}`, useBundled, useMamba);
                 if (!result.ok)
                     return result;
             }
@@ -21983,6 +22007,8 @@ function run() {
             let removeProfiles = core.getInput("remove-profiles");
             let showChannelUrls = core.getInput("show-channel-urls");
             let useOnlyTarBz2 = core.getInput("use-only-tar-bz2");
+            // Mamba
+            let mambaVersion = core.getInput("mamba-version");
             const condaConfig = {
                 add_anaconda_token: addAnacondaToken,
                 add_pip_as_python_dependency: addPipAsPythonDependency,
@@ -21995,7 +22021,7 @@ function run() {
                 show_channel_urls: showChannelUrls,
                 use_only_tar_bz2: useOnlyTarBz2
             };
-            const result = yield setupMiniconda(installerUrl, minicondaVersion, "x64", condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaFile, condaConfig, removeProfiles);
+            const result = yield setupMiniconda(installerUrl, minicondaVersion, "x64", condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaFile, condaConfig, removeProfiles, mambaVersion);
             if (!result.ok) {
                 throw result.error;
             }
@@ -29040,7 +29066,7 @@ module.exports = defaults;
 /* 771 */
 /***/ (function(module) {
 
-module.exports = {"_args":[["cheerio@1.0.0-rc.3","/Users/goanpeca/Dropbox (Personal)/develop/quansight/setup-miniconda"]],"_from":"cheerio@1.0.0-rc.3","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"cheerio@1.0.0-rc.3","name":"cheerio","escapedName":"cheerio","rawSpec":"1.0.0-rc.3","saveSpec":null,"fetchSpec":"1.0.0-rc.3"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_spec":"1.0.0-rc.3","_where":"/Users/goanpeca/Dropbox (Personal)/develop/quansight/setup-miniconda","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
+module.exports = {"_args":[["cheerio@1.0.0-rc.3","/home/jaime/devel/py/jaimergp/setup-miniconda"]],"_from":"cheerio@1.0.0-rc.3","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"cheerio@1.0.0-rc.3","name":"cheerio","escapedName":"cheerio","rawSpec":"1.0.0-rc.3","saveSpec":null,"fetchSpec":"1.0.0-rc.3"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_spec":"1.0.0-rc.3","_where":"/home/jaime/devel/py/jaimergp/setup-miniconda","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
 
 /***/ }),
 /* 772 */
