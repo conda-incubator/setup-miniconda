@@ -189,7 +189,7 @@ jobs:
           conda config --show
 ```
 
-#### Example 5: Custom installer
+### Example 5: Custom installer
 
 Any installer created with [constructor](https://github.com/conda/constructor)
 which includes `conda` can be used in place of Miniconda.
@@ -218,7 +218,7 @@ jobs:
           conda config --show
 ```
 
-#### Example 6: Mamba
+### Example 6: Mamba
 
 Experimental! Use `mamba` to handle conda installs in a faster way. `mamba-version` accepts a version string `x.y` (including `"*"`). It requires you specify `conda-forge` as part of the channels, ideally with the highest priority.
 
