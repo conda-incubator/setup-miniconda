@@ -82,6 +82,10 @@ inputs:
     description: 'Experimental. Use mamba (https://github.com/QuantStack/mamba) as a faster drop-in replacement for conda installs. Disabled by default. To enable, use "*" or a "x.y" version string.'
     required: false
     default: ""
+  architecture:
+    description: 'Architecture of Miniconda that should be installed. Available options on GitHub-hosted runners are "x86" and "x64". Default is "x64".'
+    required: false
+    default: "x64"
 runs:
   using: "node12"
   main: "dist/setup/index.js"

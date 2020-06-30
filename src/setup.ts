@@ -899,6 +899,7 @@ async function run(): Promise<void> {
     let removeProfiles: string = core.getInput("remove-profiles");
     let showChannelUrls: string = core.getInput("show-channel-urls");
     let useOnlyTarBz2: string = core.getInput("use-only-tar-bz2");
+    let architecture: string = core.getInput("architecture");
 
     // Mamba
     let mambaVersion: string = core.getInput("mamba-version");
@@ -918,7 +919,7 @@ async function run(): Promise<void> {
     const result = await setupMiniconda(
       installerUrl,
       minicondaVersion,
-      "x64",
+      architecture,
       condaVersion,
       condaBuildVersion,
       pythonVersion,
