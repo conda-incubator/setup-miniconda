@@ -879,6 +879,7 @@ async function run(): Promise<void> {
     let condaVersion: string = core.getInput("conda-version");
     let condaBuildVersion: string = core.getInput("conda-build-version");
     let pythonVersion: string = core.getInput("python-version");
+    let architecture: string = core.getInput("architecture");
 
     // Environment behavior
     let activateEnvironment: string = core.getInput("activate-environment");
@@ -899,7 +900,6 @@ async function run(): Promise<void> {
     let removeProfiles: string = core.getInput("remove-profiles");
     let showChannelUrls: string = core.getInput("show-channel-urls");
     let useOnlyTarBz2: string = core.getInput("use-only-tar-bz2");
-    let architecture: string = core.getInput("architecture");
 
     // Mamba
     let mambaVersion: string = core.getInput("mamba-version");
