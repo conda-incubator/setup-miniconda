@@ -21389,8 +21389,10 @@ function environmentExists(name, useBundled) {
 }
 /**
  * List available Miniconda versions
+ *
+ * @param arch
  */
-function minicondaVersions() {
+function minicondaVersions(arch) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             let extension = IS_UNIX ? "sh" : "exe";
@@ -21398,7 +21400,7 @@ function minicondaVersions() {
             const content = fs.readFileSync(downloadPath, "utf8");
             let hrefs = get_hrefs_1.default(content);
             hrefs = hrefs.filter((item) => item.startsWith("/Miniconda3"));
-            hrefs = hrefs.filter((item) => item.endsWith(`x86_64.${extension}`));
+            hrefs = hrefs.filter((item) => item.endsWith(`${arch}.${extension}`));
             hrefs = hrefs.map((item) => item.substring(1));
             return hrefs;
         }
@@ -21429,7 +21431,7 @@ function downloadMiniconda(pythonMajorVersion, minicondaVersion, architecture) {
         const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
         core.info(minicondaInstallerName);
         // Check version name
-        let versions = yield minicondaVersions();
+        let versions = yield minicondaVersions(arch);
         if (versions) {
             if (!versions.includes(minicondaInstallerName)) {
                 return {
@@ -21821,6 +21823,12 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 result = yield installMiniconda(result.data, useBundled);
             }
             else if (minicondaVersion !== "" || architecture !== "x64") {
+                if (architecture !== "x64" && minicondaVersion == "") {
+                    return {
+                        ok: false,
+                        error: new Error(`"architecture" is set to something other than "x64" so "miniconda-version" must be set as well.`)
+                    };
+                }
                 utils.consoleLog("\n# Downloading Miniconda...\n");
                 useBundled = false;
                 result = yield downloadMiniconda(3, minicondaVersion, architecture);
@@ -21991,6 +21999,7 @@ function run() {
             let condaVersion = core.getInput("conda-version");
             let condaBuildVersion = core.getInput("conda-build-version");
             let pythonVersion = core.getInput("python-version");
+            let architecture = core.getInput("architecture");
             // Environment behavior
             let activateEnvironment = core.getInput("activate-environment");
             let environmentFile = core.getInput("environment-file");
@@ -22007,7 +22016,6 @@ function run() {
             let removeProfiles = core.getInput("remove-profiles");
             let showChannelUrls = core.getInput("show-channel-urls");
             let useOnlyTarBz2 = core.getInput("use-only-tar-bz2");
-            let architecture = core.getInput("architecture");
             // Mamba
             let mambaVersion = core.getInput("mamba-version");
             const condaConfig = {
