@@ -62,11 +62,6 @@ jobs:
         with:
           miniconda-version: "latest"
           activate-environment: foo
-      - name: Sh
-        shell: sh -l {0}
-        run: |
-          conda info
-          conda list
       - name: Bash
         shell: bash -l {0}
         run: |
@@ -292,6 +287,7 @@ jobs:
 - For caching to work properly, you will need to set the `use-only-tar-bz2` option to `true`.
 - Some options (e.g. `use-only-tar-bz2`) are not available on the default conda installed on Windows VMs, be sure to use `auto-update-conda` or provide a version of conda compatible with the option.
 - If you plan to use a `environment.yaml` file to set up the environment, the action will read the `channels`listed in the key (if found). If you provide the `channels` input in the action they must not conflict with what was defined in `environment.yaml`, otherwise the conda solver might find conflicts and result in very long install times.
+- Conda activation does not correctly work on `sh`. Please use `bash.
 
 ## License
 
