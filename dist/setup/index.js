@@ -21947,6 +21947,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             if (environmentFile) {
                 let environmentYaml;
                 let condaAction;
+                let activateEnvironmentToUse;
                 try {
                     const sourceEnvironmentPath = path.join(process.env["GITHUB_WORKSPACE"] || "", environmentFile);
                     environmentYaml = yield yaml.safeLoad(fs.readFileSync(sourceEnvironmentPath, "utf8"));
@@ -21958,18 +21959,26 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                     environmentYaml["name"] !== undefined &&
                     environmentYaml["name"] !== activateEnvironment) {
                     condaAction = "create";
+                    activateEnvironmentToUse = environmentYaml["name"];
                     utils.consoleLog(`Creating conda environment from yaml file...`);
-                    core.warning('The environment name on "environment-file" is not the same as "enviroment-activate"!');
+                    core.warning('The environment name on "environment-file" is not the same as "enviroment-activate", using "environment-file"!');
                 }
                 else if (activateEnvironment &&
                     activateEnvironment === environmentYaml["name"]) {
                     utils.consoleLog(`Updating conda environment from yaml file...`);
                     condaAction = "update";
+                    activateEnvironmentToUse = activateEnvironment;
+                }
+                else if (activateEnvironment && environmentYaml["name"] === undefined) {
+                    core.warning('The environment name on "environment-file" is not defined, using "enviroment-activate"!');
+                    condaAction = "update";
+                    activateEnvironmentToUse = activateEnvironment;
                 }
                 else {
+                    activateEnvironmentToUse = activateEnvironment;
                     condaAction = "create";
                 }
-                result = yield condaCommand(`env ${condaAction} -f ${environmentFile}`, useBundled, useMamba);
+                result = yield condaCommand(`env ${condaAction} --file ${environmentFile} --name ${activateEnvironmentToUse}`, useBundled, useMamba);
                 if (!result.ok)
                     return result;
             }
