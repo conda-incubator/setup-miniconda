@@ -826,6 +826,7 @@ async function setupMiniconda(
     if (environmentFile) {
       let environmentYaml: TEnvironment;
       let condaAction: string;
+      let activateEnvironmentToUse: string;
       try {
         const sourceEnvironmentPath: string = path.join(
           process.env["GITHUB_WORKSPACE"] || "",
@@ -843,9 +844,10 @@ async function setupMiniconda(
         environmentYaml["name"] !== activateEnvironment
       ) {
         condaAction = "create";
+        activateEnvironmentToUse = environmentYaml["name"];
         utils.consoleLog(`Creating conda environment from yaml file...`);
         core.warning(
-          'The environment name on "environment-file" is not the same as "enviroment-activate"!'
+          'The environment name on "environment-file" is not the same as "enviroment-activate", using "environment-file"!'
         );
       } else if (
         activateEnvironment &&
@@ -853,11 +855,19 @@ async function setupMiniconda(
       ) {
         utils.consoleLog(`Updating conda environment from yaml file...`);
         condaAction = "update";
+        activateEnvironmentToUse = activateEnvironment;
+      } else if (activateEnvironment && environmentYaml["name"] === undefined) {
+        core.warning(
+          'The environment name on "environment-file" is not defined, using "enviroment-activate"!'
+        );
+        condaAction = "update";
+        activateEnvironmentToUse = activateEnvironment;
       } else {
+        activateEnvironmentToUse = activateEnvironment;
         condaAction = "create";
       }
       result = await condaCommand(
-        `env ${condaAction} -f ${environmentFile}`,
+        `env ${condaAction} --file ${environmentFile} --name ${activateEnvironmentToUse}`,
         useBundled,
         useMamba
       );
