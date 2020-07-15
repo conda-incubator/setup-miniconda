@@ -925,6 +925,23 @@ async function run(): Promise<void> {
       show_channel_urls: showChannelUrls,
       use_only_tar_bz2: useOnlyTarBz2
     };
+
+    // Extract custom channels from the configuration.
+    if (channels.length != 0) {
+      utils.consoleLog("Splitting " + channels);
+      let split_channels: Array<string> = channels.split(",");
+      let channel: string;
+      for (channel of split_channels) {
+        let key: string = "custom_channels." + channel;
+        utils.consoleLog("Checking for " + key);
+        let custom_channel: string = core.getInput(key);
+        if (custom_channel.length != 0) {
+          utils.consoleLog("Setting " + key);
+          condaConfig[key] = custom_channel;
+        }
+      }
+    }
+
     const result = await setupMiniconda(
       installerUrl,
       minicondaVersion,

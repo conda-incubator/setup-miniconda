@@ -22030,6 +22030,21 @@ function run() {
                 show_channel_urls: showChannelUrls,
                 use_only_tar_bz2: useOnlyTarBz2
             };
+            // Extract custom channels from the configuration.
+            if (channels.length != 0) {
+                utils.consoleLog("Splitting " + channels);
+                let split_channels = channels.split(",");
+                let channel;
+                for (channel of split_channels) {
+                    let key = "custom_channels." + channel;
+                    utils.consoleLog("Checking for " + key);
+                    let custom_channel = core.getInput(key);
+                    if (custom_channel.length != 0) {
+                        utils.consoleLog("Setting " + key);
+                        condaConfig[key] = custom_channel;
+                    }
+                }
+            }
             const result = yield setupMiniconda(installerUrl, minicondaVersion, "x64", condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaFile, condaConfig, removeProfiles, mambaVersion);
             if (!result.ok) {
                 throw result.error;
@@ -29075,7 +29090,7 @@ module.exports = defaults;
 /* 771 */
 /***/ (function(module) {
 
-module.exports = {"_args":[["cheerio@1.0.0-rc.3","/Users/goanpeca/Dropbox (Personal)/develop/quansight/setup-miniconda"]],"_from":"cheerio@1.0.0-rc.3","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"cheerio@1.0.0-rc.3","name":"cheerio","escapedName":"cheerio","rawSpec":"1.0.0-rc.3","saveSpec":null,"fetchSpec":"1.0.0-rc.3"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_spec":"1.0.0-rc.3","_where":"/Users/goanpeca/Dropbox (Personal)/develop/quansight/setup-miniconda","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
+module.exports = {"_args":[["cheerio@1.0.0-rc.3","/Users/uwe/Development/setup-miniconda"]],"_from":"cheerio@1.0.0-rc.3","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"cheerio@1.0.0-rc.3","name":"cheerio","escapedName":"cheerio","rawSpec":"1.0.0-rc.3","saveSpec":null,"fetchSpec":"1.0.0-rc.3"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_spec":"1.0.0-rc.3","_where":"/Users/uwe/Development/setup-miniconda","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
 
 /***/ }),
 /* 772 */
