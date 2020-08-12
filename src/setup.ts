@@ -654,11 +654,19 @@ async function setupMiniconda(
       utils.consoleLog("Installing Custom Installer...");
       result = await installMiniconda(result.data, useBundled);
     } else if (minicondaVersion !== "" || architecture !== "x64") {
-      if (architecture !== "x64" && minicondaVersion == "") {
+      if (architecture !== "x64" && minicondaVersion === "") {
         return {
           ok: false,
           error: new Error(
             `"architecture" is set to something other than "x64" so "miniconda-version" must be set as well.`
+          )
+        };
+      }
+      if (architecture === "x86" && process.platform === "linux") {
+        return {
+          ok: false,
+          error: new Error(
+            `32-bit Linux is not supported by recent versions of Miniconda`
           )
         };
       }
