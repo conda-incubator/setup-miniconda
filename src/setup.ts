@@ -142,8 +142,10 @@ function environmentExists(name: string, useBundled: boolean): boolean {
 
 /**
  * List available Miniconda versions
+ *
+ * @param arch
  */
-async function minicondaVersions(): Promise<string[]> {
+async function minicondaVersions(arch: string): Promise<string[]> {
   try {
     let extension: string = IS_UNIX ? "sh" : "exe";
     const downloadPath: string = await tc.downloadTool(MINICONDA_BASE_URL);
@@ -151,7 +153,7 @@ async function minicondaVersions(): Promise<string[]> {
     let hrefs: string[] = getHrefs(content);
     hrefs = hrefs.filter((item: string) => item.startsWith("/Miniconda3"));
     hrefs = hrefs.filter((item: string) =>
-      item.endsWith(`x86_64.${extension}`)
+      item.endsWith(`${arch}.${extension}`)
     );
     hrefs = hrefs.map((item: string) => item.substring(1));
     return hrefs;
@@ -188,7 +190,7 @@ async function downloadMiniconda(
   core.info(minicondaInstallerName);
 
   // Check version name
-  let versions: string[] = await minicondaVersions();
+  let versions: string[] = await minicondaVersions(arch);
   if (versions) {
     if (!versions.includes(minicondaInstallerName)) {
       return {
@@ -652,6 +654,22 @@ async function setupMiniconda(
       utils.consoleLog("Installing Custom Installer...");
       result = await installMiniconda(result.data, useBundled);
     } else if (minicondaVersion !== "" || architecture !== "x64") {
+      if (architecture !== "x64" && minicondaVersion === "") {
+        return {
+          ok: false,
+          error: new Error(
+            `"architecture" is set to something other than "x64" so "miniconda-version" must be set as well.`
+          )
+        };
+      }
+      if (architecture === "x86" && process.platform === "linux") {
+        return {
+          ok: false,
+          error: new Error(
+            `32-bit Linux is not supported by recent versions of Miniconda`
+          )
+        };
+      }
       utils.consoleLog("\n# Downloading Miniconda...\n");
       useBundled = false;
       result = await downloadMiniconda(3, minicondaVersion, architecture);
@@ -889,6 +907,7 @@ async function run(): Promise<void> {
     let condaVersion: string = core.getInput("conda-version");
     let condaBuildVersion: string = core.getInput("conda-build-version");
     let pythonVersion: string = core.getInput("python-version");
+    let architecture: string = core.getInput("architecture");
 
     // Environment behavior
     let activateEnvironment: string = core.getInput("activate-environment");
@@ -928,7 +947,7 @@ async function run(): Promise<void> {
     const result = await setupMiniconda(
       installerUrl,
       minicondaVersion,
-      "x64",
+      architecture,
       condaVersion,
       condaBuildVersion,
       pythonVersion,
