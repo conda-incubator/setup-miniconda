@@ -713,9 +713,17 @@ async function setupMiniconda(
           process.env["GITHUB_WORKSPACE"] || "",
           environmentFile
         );
-        environmentYaml = await yaml.safeLoad(
-          fs.readFileSync(sourceEnvironmentPath, "utf8")
-        );
+        if (
+          fs
+            .readFileSync(sourceEnvironmentPath, "utf8")
+            .includes("\n@EXPLICIT\n")
+        ) {
+          environmentYaml = {};
+        } else {
+          environmentYaml = await yaml.safeLoad(
+            fs.readFileSync(sourceEnvironmentPath, "utf8")
+          );
+        }
       } catch (err) {
         return { ok: false, error: err };
       }
@@ -850,9 +858,17 @@ async function setupMiniconda(
           process.env["GITHUB_WORKSPACE"] || "",
           environmentFile
         );
-        environmentYaml = await yaml.safeLoad(
-          fs.readFileSync(sourceEnvironmentPath, "utf8")
-        );
+        if (
+          fs
+            .readFileSync(sourceEnvironmentPath, "utf8")
+            .includes("\n@EXPLICIT\n")
+        ) {
+          environmentYaml = {};
+        } else {
+          environmentYaml = await yaml.safeLoad(
+            fs.readFileSync(sourceEnvironmentPath, "utf8")
+          );
+        }
       } catch (err) {
         return { ok: false, error: err };
       }
