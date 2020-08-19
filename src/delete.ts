@@ -25,7 +25,13 @@ async function run(): Promise<void> {
           folder_or_file != "cache"
         ) {
           core.info(`Removing "${fullPath}"`);
-          await io.rmRF(fullPath);
+          try {
+            await io.rmRF(fullPath);
+          } catch (err) {
+            // If file could not be deleted, move to a temp folder
+            core.info(`Remove failed, moving "${fullPath}" to temp folder`);
+            await io.mv(fullPath, path.join(os.tmpdir(), folder_or_file));
+          }
         }
       }
     }

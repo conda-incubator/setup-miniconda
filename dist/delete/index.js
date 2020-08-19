@@ -459,7 +459,14 @@ function run() {
                         fs.lstatSync(fullPath).isDirectory() &&
                         folder_or_file != "cache") {
                         core.info(`Removing "${fullPath}"`);
-                        yield io.rmRF(fullPath);
+                        try {
+                            yield io.rmRF(fullPath);
+                        }
+                        catch (err) {
+                            // If file could not be deleted, move to a temp folder
+                            core.info(`Remove failed, moving "${fullPath}" to temp folder`);
+                            yield io.mv(fullPath, path.join(os.tmpdir(), folder_or_file));
+                        }
                     }
                 }
             }
