@@ -1,6 +1,6 @@
 {
   "name": "action-setup-conda",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "GitHub action for setting up conda from default or custom installers",
   "main": "lib/main.js",
   "scripts": {
@@ -50,6 +50,8 @@
     "eslint": "^6.8.0",
     "husky": "^3.1.0",
     "lerna": "^3.19.0",
+    "dot-prop": ">=4.2.1",
+    "lodash": ">=4.17.19",
     "lint-staged": "^9.5.0",
     "prettier": "^1.19.1",
     "shell-quote": "^1.7.2",
