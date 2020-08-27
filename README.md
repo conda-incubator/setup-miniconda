@@ -224,7 +224,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: ./
+      - uses: goanpeca/setup-miniconda@v1
         with:
           python-version: 3.6
           mamba-version: "*"
