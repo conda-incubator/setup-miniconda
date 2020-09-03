@@ -279,6 +279,8 @@ jobs:
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
 ```
 
+If you are using pip to resolve any dependencies in your conda environment then you may want to [cache those dependencies separately](https://docs.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#caching-dependencies), as they are not included in the conda package cache.
+
 ## IMPORTANT
 
 - Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be explicitely declared as `shell: bash -l {0}` on steps that need to be properly activated. This is because bash shells are executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash profile files made by `conda init bash`. See [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell) and [thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).
