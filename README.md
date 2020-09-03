@@ -273,7 +273,6 @@ jobs:
       - uses: goanpeca/setup-miniconda@v1
         with:
           activate-environment: anaconda-client-env
-          python-version: 3.8
           channel-priority: strict
           environment-file: etc/example-environment.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
