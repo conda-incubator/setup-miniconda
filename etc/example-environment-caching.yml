@@ -1,0 +1,5 @@
+name: anaconda-client-env
+dependencies:
+  - python=3.8
+  - black
+  - anaconda-client

@@ -25,7 +25,6 @@ jobs:
       - uses: ./
         with:
           activate-environment: anaconda-client-env
-          python-version: 3.8
           channel-priority: strict
-          environment-file: etc/example-environment.yml
+          environment-file: etc/example-environment-caching.yml
           use-only-tar-bz2: true

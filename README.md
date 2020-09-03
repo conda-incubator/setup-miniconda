@@ -273,11 +273,12 @@ jobs:
       - uses: goanpeca/setup-miniconda@v1
         with:
           activate-environment: anaconda-client-env
-          python-version: 3.8
           channel-priority: strict
-          environment-file: etc/example-environment.yml
+          environment-file: etc/example-environment-caching.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
 ```
+
+If you are using pip to resolve any dependencies in your conda environment then you may want to [cache those dependencies separately](https://docs.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#caching-dependencies), as they are not included in the conda package cache.
 
 ## IMPORTANT
 
