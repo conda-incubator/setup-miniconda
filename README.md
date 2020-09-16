@@ -1,13 +1,13 @@
 # Setup Miniconda
 
-![Example 1: Basic usage](https://github.com/goanpeca/setup-miniconda/workflows/Example%201:%20Basic%20usage/badge.svg?branch=master)
-![Example 2: Other shells](https://github.com/goanpeca/setup-miniconda/workflows/Example%202:%20Other%20shells/badge.svg?branch=master)
-![Example 3: Other options](https://github.com/goanpeca/setup-miniconda/workflows/Example%203:%20Other%20options/badge.svg?branch=master)
-![Example 4: Channels](https://github.com/goanpeca/setup-miniconda/workflows/Example%204:%20Channels/badge.svg?branch=master)
-![Example 5: Custom installer](https://github.com/goanpeca/setup-miniconda/workflows/Example%205:%20Custom%20installer/badge.svg?branch=master)
-![Example 6: Mamba](https://github.com/goanpeca/setup-miniconda/workflows/Example%206:%20Mamba/badge.svg?branch=master)
-![Caching Example](https://github.com/goanpeca/setup-miniconda/workflows/Caching%20Example/badge.svg?branch=master)
-![Linting](https://github.com/goanpeca/setup-miniconda/workflows/Linting/badge.svg?branch=master)
+![Example 1: Basic usage](https://github.com/conda-incubator/setup-miniconda/workflows/Example%201:%20Basic%20usage/badge.svg?branch=master)
+![Example 2: Other shells](https://github.com/conda-incubator/setup-miniconda/workflows/Example%202:%20Other%20shells/badge.svg?branch=master)
+![Example 3: Other options](https://github.com/conda-incubator/setup-miniconda/workflows/Example%203:%20Other%20options/badge.svg?branch=master)
+![Example 4: Channels](https://github.com/conda-incubator/setup-miniconda/workflows/Example%204:%20Channels/badge.svg?branch=master)
+![Example 5: Custom installer](https://github.com/conda-incubator/setup-miniconda/workflows/Example%205:%20Custom%20installer/badge.svg?branch=master)
+![Example 6: Mamba](https://github.com/conda-incubator/setup-miniconda/workflows/Example%206:%20Mamba/badge.svg?branch=master)
+![Caching Example](https://github.com/conda-incubator/setup-miniconda/workflows/Caching%20Example/badge.svg?branch=master)
+![Linting](https://github.com/conda-incubator/setup-miniconda/workflows/Linting/badge.svg?branch=master)
 
 This action sets up a [Miniconda](https://docs.conda.io/en/latest/miniconda.html) installation to use the [Conda](https://docs.conda.io/projects/conda/en/latest/) package and environment manager by either locating the Miniconda installation bundled with the available runners or by installing a specific Miniconda3 version. By default this action will also create a test environment.
 
@@ -36,7 +36,7 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         python-version: ["3.7", "2.7"]
     steps:
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v1
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
@@ -58,7 +58,7 @@ jobs:
     name: Ex2 Linux
     runs-on: "ubuntu-latest"
     steps:
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v1
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -77,7 +77,7 @@ jobs:
     name: Ex2 Mac
     runs-on: "macos-latest"
     steps:
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v1
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -101,7 +101,7 @@ jobs:
     name: Ex2 Windows
     runs-on: "windows-latest"
     steps:
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v1
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -138,7 +138,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v1
         with:
           activate-environment: anaconda-client-env
           environment-file: etc/example-environment.yml
@@ -167,7 +167,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v1
         with:
           activate-environment: foo
           python-version: 3.6
@@ -199,7 +199,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v1
         with:
           installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-Linux-x86_64.sh
           allow-softlinks: true
@@ -224,7 +224,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v1
         with:
           python-version: 3.6
           mamba-version: "*"
@@ -270,7 +270,7 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('etc/example-environment.yml') }}
-      - uses: goanpeca/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v1
         with:
           activate-environment: anaconda-client-env
           channel-priority: strict
