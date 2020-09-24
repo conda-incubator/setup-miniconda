@@ -21875,14 +21875,26 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             }
             // Read the environment yaml to use channels if provided and avoid conda solver conflicts
             let environmentYaml;
+            let environmentExplicit;
             if (environmentFile) {
                 try {
                     const sourceEnvironmentPath = path.join(process.env["GITHUB_WORKSPACE"] || "", environmentFile);
-                    environmentYaml = yield yaml.safeLoad(fs.readFileSync(sourceEnvironmentPath, "utf8"));
+                    environmentExplicit = fs
+                        .readFileSync(sourceEnvironmentPath, "utf8")
+                        .includes("\n@EXPLICIT\n");
+                    if (environmentExplicit) {
+                        environmentYaml = {};
+                    }
+                    else {
+                        environmentYaml = yield yaml.safeLoad(fs.readFileSync(sourceEnvironmentPath, "utf8"));
+                    }
                 }
                 catch (err) {
                     return { ok: false, error: err };
                 }
+            }
+            else {
+                environmentExplicit = false;
             }
             let cacheFolder = "~/conda_pkgs_dir";
             cacheFolder = cacheFolder.replace("~", os.homedir().replace("\\", "/"));
@@ -21969,15 +21981,25 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 let activateEnvironmentToUse;
                 try {
                     const sourceEnvironmentPath = path.join(process.env["GITHUB_WORKSPACE"] || "", environmentFile);
-                    environmentYaml = yield yaml.safeLoad(fs.readFileSync(sourceEnvironmentPath, "utf8"));
+                    if (environmentExplicit) {
+                        environmentYaml = {};
+                    }
+                    else {
+                        environmentYaml = yield yaml.safeLoad(fs.readFileSync(sourceEnvironmentPath, "utf8"));
+                    }
                 }
                 catch (err) {
                     return { ok: false, error: err };
                 }
-                if (activateEnvironment &&
+                if (environmentExplicit) {
+                    condaAction = "install";
+                    activateEnvironmentToUse = activateEnvironment;
+                    utils.consoleLog(`Creating conda environment from explicit specs file...`);
+                }
+                else if (activateEnvironment &&
                     environmentYaml["name"] !== undefined &&
                     environmentYaml["name"] !== activateEnvironment) {
-                    condaAction = "create";
+                    condaAction = "env create";
                     activateEnvironmentToUse = environmentYaml["name"];
                     utils.consoleLog(`Creating conda environment from yaml file...`);
                     core.warning('The environment name on "environment-file" is not the same as "enviroment-activate", using "environment-file"!');
@@ -21985,19 +22007,19 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 else if (activateEnvironment &&
                     activateEnvironment === environmentYaml["name"]) {
                     utils.consoleLog(`Updating conda environment from yaml file...`);
-                    condaAction = "update";
+                    condaAction = "env update";
                     activateEnvironmentToUse = activateEnvironment;
                 }
                 else if (activateEnvironment && environmentYaml["name"] === undefined) {
                     core.warning('The environment name on "environment-file" is not defined, using "enviroment-activate"!');
-                    condaAction = "update";
+                    condaAction = "env update";
                     activateEnvironmentToUse = activateEnvironment;
                 }
                 else {
                     activateEnvironmentToUse = activateEnvironment;
-                    condaAction = "create";
+                    condaAction = "env create";
                 }
-                result = yield condaCommand(`env ${condaAction} --file ${environmentFile} --name ${activateEnvironmentToUse}`, useBundled, useMamba);
+                result = yield condaCommand(`${condaAction} --file ${environmentFile} --name ${activateEnvironmentToUse}`, useBundled, useMamba);
                 if (!result.ok)
                     return result;
             }
@@ -29134,7 +29156,7 @@ module.exports = defaults;
 /* 771 */
 /***/ (function(module) {
 
-module.exports = {"_from":"cheerio@^1.0.0-rc.2","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"range","registry":true,"raw":"cheerio@^1.0.0-rc.2","name":"cheerio","escapedName":"cheerio","rawSpec":"^1.0.0-rc.2","saveSpec":null,"fetchSpec":"^1.0.0-rc.2"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_shasum":"094636d425b2e9c0f4eb91a46c05630c9a1a8bf6","_spec":"cheerio@^1.0.0-rc.2","_where":"/Users/goanpeca/Dropbox (Personal)/develop/quansight/setup-miniconda/node_modules/get-hrefs","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"bundleDependencies":false,"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"deprecated":false,"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
+module.exports = {"_args":[["cheerio@1.0.0-rc.3","/home/weg/projects/actions/setup-miniconda"]],"_from":"cheerio@1.0.0-rc.3","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"cheerio@1.0.0-rc.3","name":"cheerio","escapedName":"cheerio","rawSpec":"1.0.0-rc.3","saveSpec":null,"fetchSpec":"1.0.0-rc.3"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_spec":"1.0.0-rc.3","_where":"/home/weg/projects/actions/setup-miniconda","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
 
 /***/ }),
 /* 772 */

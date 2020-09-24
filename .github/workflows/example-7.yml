@@ -1,0 +1,28 @@
+name: "Example 7: Explicit Environment Specification"
+
+on:
+  pull_request:
+    branches:
+    - '*'
+  push:
+    branches:
+    - 'master'
+
+jobs:
+  example-7:
+    name: Ex7 Explicit
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        with:
+          auto-update-conda: false
+          activate-environment: explicit-env
+          environment-file: etc/example-explicit.conda.lock
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show
+          printenv | sort
