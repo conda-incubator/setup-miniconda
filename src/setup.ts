@@ -717,18 +717,28 @@ async function setupMiniconda(
 
     // Read the environment yaml to use channels if provided and avoid conda solver conflicts
     let environmentYaml: any;
+    let environmentExplicit: boolean;
     if (environmentFile) {
       try {
         const sourceEnvironmentPath: string = path.join(
           process.env["GITHUB_WORKSPACE"] || "",
           environmentFile
         );
-        environmentYaml = await yaml.safeLoad(
-          fs.readFileSync(sourceEnvironmentPath, "utf8")
-        );
+        environmentExplicit = fs
+          .readFileSync(sourceEnvironmentPath, "utf8")
+          .includes("\n@EXPLICIT\n");
+        if (environmentExplicit) {
+          environmentYaml = {};
+        } else {
+          environmentYaml = await yaml.safeLoad(
+            fs.readFileSync(sourceEnvironmentPath, "utf8")
+          );
+        }
       } catch (err) {
         return { ok: false, error: err };
       }
+    } else {
+      environmentExplicit = false;
     }
 
     let cacheFolder: string = "~/conda_pkgs_dir";
@@ -860,18 +870,28 @@ async function setupMiniconda(
           process.env["GITHUB_WORKSPACE"] || "",
           environmentFile
         );
-        environmentYaml = await yaml.safeLoad(
-          fs.readFileSync(sourceEnvironmentPath, "utf8")
-        );
+        if (environmentExplicit) {
+          environmentYaml = {};
+        } else {
+          environmentYaml = await yaml.safeLoad(
+            fs.readFileSync(sourceEnvironmentPath, "utf8")
+          );
+        }
       } catch (err) {
         return { ok: false, error: err };
       }
-      if (
+      if (environmentExplicit) {
+        condaAction = "install";
+        activateEnvironmentToUse = activateEnvironment;
+        utils.consoleLog(
+          `Creating conda environment from explicit specs file...`
+        );
+      } else if (
         activateEnvironment &&
         environmentYaml["name"] !== undefined &&
         environmentYaml["name"] !== activateEnvironment
       ) {
-        condaAction = "create";
+        condaAction = "env create";
         activateEnvironmentToUse = environmentYaml["name"];
         utils.consoleLog(`Creating conda environment from yaml file...`);
         core.warning(
@@ -882,20 +902,20 @@ async function setupMiniconda(
         activateEnvironment === environmentYaml["name"]
       ) {
         utils.consoleLog(`Updating conda environment from yaml file...`);
-        condaAction = "update";
+        condaAction = "env update";
         activateEnvironmentToUse = activateEnvironment;
       } else if (activateEnvironment && environmentYaml["name"] === undefined) {
         core.warning(
           'The environment name on "environment-file" is not defined, using "enviroment-activate"!'
         );
-        condaAction = "update";
+        condaAction = "env update";
         activateEnvironmentToUse = activateEnvironment;
       } else {
         activateEnvironmentToUse = activateEnvironment;
-        condaAction = "create";
+        condaAction = "env create";
       }
       result = await condaCommand(
-        `env ${condaAction} --file ${environmentFile} --name ${activateEnvironmentToUse}`,
+        `${condaAction} --file ${environmentFile} --name ${activateEnvironmentToUse}`,
         useBundled,
         useMamba
       );

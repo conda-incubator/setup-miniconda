@@ -243,6 +243,58 @@ jobs:
         run: mamba install jupyterlab
 ```
 
+### Example 7: Explicit Specification
+
+`conda list --explicit` and [conda-lock][] support generating
+[explicit environment specifications][spec], which skip the environment
+solution step altogether, as they contain the _ordered_ list of exact URLs needed
+to reproduce the environment.
+
+This means explicitly-defined environments...
+
+- are _much faster_ to install, as several expensive steps are skipped:
+  - channels are not queried for their repo data
+  - no solver is run
+- are not cross-platform, as the URLs almost always contain platform/architecture information
+- can become broken if any file becomes unavailable
+
+This approach can be useful as part of a larger system e.g. a separate workflow that
+runs `conda-lock` for all the platforms needed in a separate job.
+
+[conda-lock]: https://github.com/conda-incubator/conda-lock
+[spec]: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#building-identical-conda-environments
+
+```yaml
+name: "Example 7: Explicit Environment Specification"
+
+on:
+  pull_request:
+    branches:
+    - '*'
+  push:
+    branches:
+    - 'master'
+
+jobs:
+  example-7:
+    name: Ex7 Explicit
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v1
+        with:
+          auto-update-conda: false
+          activate-environment: explicit-env
+          environment-file: etc/example-explicit.conda.lock
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show
+          printenv | sort
+```
+
 ## Caching
 
 If you want to enable package caching for conda you can use the [cache action](https://github.com/actions/cache) using `~/conda_pkgs_dir` as path for conda packages.
