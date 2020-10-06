@@ -270,15 +270,15 @@ name: "Example 7: Explicit Environment Specification"
 on:
   pull_request:
     branches:
-    - '*'
+      - "*"
   push:
     branches:
-    - 'master'
+      - "master"
 
 jobs:
   example-7:
     name: Ex7 Explicit
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v1

@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import * as stream from "stream";
 
 import * as core from "@actions/core";
 import * as exec from "@actions/exec";
@@ -54,6 +55,7 @@ const ARCHITECTURES: IArchitectures = {
   ARM64: "aarch64", // To be supported by github runners
   ARM32: "armv7l" // To be supported by github runners
 };
+
 const OS_NAMES: IOperatingSystems = {
   win32: "Windows",
   darwin: "MacOSX",
@@ -61,23 +63,43 @@ const OS_NAMES: IOperatingSystems = {
 };
 
 /**
+ * errors that are always probably spurious
+ */
+const IGNORED_WARNINGS = [
+  // appear on win install, we can swallow them
+  `menuinst_win32`,
+  `Unable to register environment`,
+  `0%|`,
+  // appear on certain Linux/OSX installers
+  `Please run using "bash"`,
+  // old condas don't know what to do with these
+  `Key 'use_only_tar_bz2' is not a known primitive parameter.`
+];
+
+/**
+ * avoid spurious conda warnings before we have a chance to update them
+ */
+const BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
+
+/**
+ * the conda config file
+ */
+const CONDARC_PATH = path.join(os.homedir(), ".condarc");
+
+/**
  * Run exec.exec with error handling
  */
 async function execute(command: string): Promise<Result> {
-  let options = { listeners: {} };
-  let stringData: string;
-  options.listeners = {
-    stdout: (data: Buffer) => {
-      // core.info(data.toString());
-    },
-    stderr: (data: Buffer) => {
-      stringData = data.toString();
-      // These warnings are appearing on win install, we can swallow them
-      if (
-        !stringData.includes("menuinst_win32") &&
-        !stringData.includes("Unable to register environment") &&
-        !stringData.includes("0%|")
-      ) {
+  let options: exec.ExecOptions = {
+    errStream: new stream.Writable(),
+    listeners: {
+      stderr: (data: Buffer) => {
+        const stringData = data.toString();
+        for (const ignore of IGNORED_WARNINGS) {
+          if (stringData.includes(ignore)) {
+            return;
+          }
+        }
         core.warning(stringData);
       }
     }
@@ -638,6 +660,13 @@ async function setupMiniconda(
       };
     }
 
+    try {
+      utils.consoleLog(`Creating bootstrap condarc file in ${CONDARC_PATH}...`);
+      await fs.promises.writeFile(CONDARC_PATH, BOOTSTRAP_CONDARC);
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+
     if (installerUrl !== "") {
       if (minicondaVersion !== "") {
         return {
@@ -692,14 +721,13 @@ async function setupMiniconda(
 
     if (condaConfigFile) {
       utils.consoleLog("Copying condarc file...");
-      const destinationPath: string = path.join(os.homedir(), ".condarc");
       const sourcePath: string = path.join(
         process.env["GITHUB_WORKSPACE"] || "",
         condaConfigFile
       );
-      core.info(`"${sourcePath}" to "${destinationPath}"`);
+      core.info(`"${sourcePath}" to "${CONDARC_PATH}"`);
       try {
-        await io.cp(sourcePath, destinationPath);
+        await io.cp(sourcePath, CONDARC_PATH);
       } catch (err) {
         return { ok: false, error: err };
       }
