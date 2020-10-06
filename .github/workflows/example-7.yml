@@ -11,14 +11,18 @@ on:
 jobs:
   example-7:
     name: Ex7 Explicit
-    runs-on: 'ubuntu-latest'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
     steps:
       - uses: actions/checkout@v2
       - uses: ./
         with:
           auto-update-conda: false
           activate-environment: explicit-env
-          environment-file: etc/example-explicit.conda.lock
+          environment-file: etc/example-explicit.${{ runner.os }}.conda.lock
       - shell: bash -l {0}
         run: |
           conda info

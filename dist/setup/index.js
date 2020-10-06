@@ -21911,14 +21911,14 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             if (environmentFile) {
                 try {
                     const sourceEnvironmentPath = path.join(process.env["GITHUB_WORKSPACE"] || "", environmentFile);
-                    environmentExplicit = fs
-                        .readFileSync(sourceEnvironmentPath, "utf8")
-                        .includes("\n@EXPLICIT\n");
+                    environmentExplicit =
+                        fs.readFileSync(sourceEnvironmentPath, "utf8").match(/^@EXPLICIT/m) !=
+                            null;
                     if (environmentExplicit) {
                         environmentYaml = {};
                     }
                     else {
-                        environmentYaml = yield yaml.safeLoad(fs.readFileSync(sourceEnvironmentPath, "utf8"));
+                        environmentYaml = yaml.safeLoad(fs.readFileSync(sourceEnvironmentPath, "utf8"));
                     }
                 }
                 catch (err) {
@@ -21941,7 +21941,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                     if (condaConfig["channels"] === "" && channels !== undefined) {
                         condaConfig["channels"] = channels.join(",");
                     }
-                    else {
+                    else if (!environmentExplicit) {
                         core.warning('"channels" set on the "environment-file" do not match "channels" set on the action!');
                     }
                 }
