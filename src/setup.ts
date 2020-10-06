@@ -776,7 +776,7 @@ async function setupMiniconda(
 
         if (condaConfig["channels"] === "" && channels !== undefined) {
           condaConfig["channels"] = channels.join(",");
-        } else {
+        } else if (!environmentExplicit) {
           core.warning(
             '"channels" set on the "environment-file" do not match "channels" set on the action!'
           );
