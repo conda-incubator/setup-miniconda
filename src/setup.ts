@@ -65,11 +65,11 @@ const OS_NAMES: IOperatingSystems = {
  */
 const IGNORED_ERRORS = [
   // appear on win install, we can swallow them
-  /menuinst_win32/,
-  /Unable to register environment/,
-  /0%\|/,
+  `menuinst_win32`,
+  `Unable to register environment`,
+  `0%|`,
   // appear on certain Linux/OSX installers
-  /Please run using "bash"/
+  `Please run using "bash"`
 ];
 
 /**
@@ -85,7 +85,7 @@ async function execute(command: string): Promise<Result> {
     stderr: (data: Buffer) => {
       stringData = data.toString();
       for (const ignore in IGNORED_ERRORS) {
-        if (stringData.match(ignore) != null) {
+        if (stringData.includes(ignore)) {
           return;
         }
       }
