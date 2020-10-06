@@ -21332,6 +21332,17 @@ const OS_NAMES = {
     linux: "Linux"
 };
 /**
+ * errors that are always probably spurious
+ */
+const IGNORED_ERRORS = [
+    // appear on win install, we can swallow them
+    /menuinst_win32/,
+    /Unable to register environment/,
+    /0%\|/,
+    // appear on certain Linux/OSX installers
+    /Please run using "bash"/
+];
+/**
  * Run exec.exec with error handling
  */
 function execute(command) {
@@ -21344,12 +21355,12 @@ function execute(command) {
             },
             stderr: (data) => {
                 stringData = data.toString();
-                // These warnings are appearing on win install, we can swallow them
-                if (!stringData.includes("menuinst_win32") &&
-                    !stringData.includes("Unable to register environment") &&
-                    !stringData.includes("0%|")) {
-                    core.warning(stringData);
+                for (const ignore in IGNORED_ERRORS) {
+                    if (stringData.match(ignore) != null) {
+                        return;
+                    }
                 }
+                core.warning(stringData);
             }
         };
         try {
