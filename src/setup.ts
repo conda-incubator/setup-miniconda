@@ -742,13 +742,13 @@ async function setupMiniconda(
           process.env["GITHUB_WORKSPACE"] || "",
           environmentFile
         );
-        environmentExplicit = fs
-          .readFileSync(sourceEnvironmentPath, "utf8")
-          .includes("\n@EXPLICIT\n");
+        environmentExplicit =
+          fs.readFileSync(sourceEnvironmentPath, "utf8").match(/^@EXPLICIT/m) !=
+          null;
         if (environmentExplicit) {
           environmentYaml = {};
         } else {
-          environmentYaml = await yaml.safeLoad(
+          environmentYaml = yaml.safeLoad(
             fs.readFileSync(sourceEnvironmentPath, "utf8")
           );
         }

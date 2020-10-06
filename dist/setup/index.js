@@ -21911,14 +21911,14 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             if (environmentFile) {
                 try {
                     const sourceEnvironmentPath = path.join(process.env["GITHUB_WORKSPACE"] || "", environmentFile);
-                    environmentExplicit = fs
-                        .readFileSync(sourceEnvironmentPath, "utf8")
-                        .includes("\n@EXPLICIT\n");
+                    environmentExplicit =
+                        fs.readFileSync(sourceEnvironmentPath, "utf8").match(/^@EXPLICIT/m) !=
+                            null;
                     if (environmentExplicit) {
                         environmentYaml = {};
                     }
                     else {
-                        environmentYaml = yield yaml.safeLoad(fs.readFileSync(sourceEnvironmentPath, "utf8"));
+                        environmentYaml = yaml.safeLoad(fs.readFileSync(sourceEnvironmentPath, "utf8"));
                     }
                 }
                 catch (err) {
