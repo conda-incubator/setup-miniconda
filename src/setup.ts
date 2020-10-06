@@ -55,6 +55,7 @@ const ARCHITECTURES: IArchitectures = {
   ARM64: "aarch64", // To be supported by github runners
   ARM32: "armv7l" // To be supported by github runners
 };
+
 const OS_NAMES: IOperatingSystems = {
   win32: "Windows",
   darwin: "MacOSX",
@@ -72,6 +73,16 @@ const IGNORED_WARNINGS = [
   // appear on certain Linux/OSX installers
   `Please run using "bash"`
 ];
+
+/**
+ * avoid spurious conda warnings before we have a chance to update them
+ */
+const BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
+
+/**
+ * the conda config file
+ */
+const CONDARC_PATH = path.join(os.homedir(), ".condarc");
 
 /**
  * Run exec.exec with error handling
@@ -647,6 +658,13 @@ async function setupMiniconda(
       };
     }
 
+    try {
+      utils.consoleLog(`Creating bootstrap condarc file in ${CONDARC_PATH}...`);
+      await fs.promises.writeFile(CONDARC_PATH, BOOTSTRAP_CONDARC);
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+
     if (installerUrl !== "") {
       if (minicondaVersion !== "") {
         return {
@@ -701,14 +719,13 @@ async function setupMiniconda(
 
     if (condaConfigFile) {
       utils.consoleLog("Copying condarc file...");
-      const destinationPath: string = path.join(os.homedir(), ".condarc");
       const sourcePath: string = path.join(
         process.env["GITHUB_WORKSPACE"] || "",
         condaConfigFile
       );
-      core.info(`"${sourcePath}" to "${destinationPath}"`);
+      core.info(`"${sourcePath}" to "${CONDARC_PATH}"`);
       try {
-        await io.cp(sourcePath, destinationPath);
+        await io.cp(sourcePath, CONDARC_PATH);
       } catch (err) {
         return { ok: false, error: err };
       }

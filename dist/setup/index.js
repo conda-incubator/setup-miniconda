@@ -21343,6 +21343,14 @@ const IGNORED_WARNINGS = [
     `Please run using "bash"`
 ];
 /**
+ * avoid spurious conda warnings before we have a chance to update them
+ */
+const BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
+/**
+ * the conda config file
+ */
+const CONDARC_PATH = path.join(os.homedir(), ".condarc");
+/**
  * Run exec.exec with error handling
  */
 function execute(command) {
@@ -21828,6 +21836,13 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                     error: new Error(`"mamba-version=${mambaVersion}" requires "conda-forge" to be included in "channels!"`)
                 };
             }
+            try {
+                utils.consoleLog(`Creating bootstrap condarc file in ${CONDARC_PATH}...`);
+                yield fs.promises.writeFile(CONDARC_PATH, BOOTSTRAP_CONDARC);
+            }
+            catch (err) {
+                return { ok: false, error: err };
+            }
             if (installerUrl !== "") {
                 if (minicondaVersion !== "") {
                     return {
@@ -21879,11 +21894,10 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 return result;
             if (condaConfigFile) {
                 utils.consoleLog("Copying condarc file...");
-                const destinationPath = path.join(os.homedir(), ".condarc");
                 const sourcePath = path.join(process.env["GITHUB_WORKSPACE"] || "", condaConfigFile);
-                core.info(`"${sourcePath}" to "${destinationPath}"`);
+                core.info(`"${sourcePath}" to "${CONDARC_PATH}"`);
                 try {
-                    yield io.cp(sourcePath, destinationPath);
+                    yield io.cp(sourcePath, CONDARC_PATH);
                 }
                 catch (err) {
                     return { ok: false, error: err };
