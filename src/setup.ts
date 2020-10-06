@@ -71,7 +71,9 @@ const IGNORED_WARNINGS = [
   `Unable to register environment`,
   `0%|`,
   // appear on certain Linux/OSX installers
-  `Please run using "bash"`
+  `Please run using "bash"`,
+  // old condas don't know what to do with these
+  `Key 'use_only_tar_bz2' is not a known primitive parameter.`
 ];
 
 /**
