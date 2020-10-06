@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import * as stream from "stream";
 
 import * as core from "@actions/core";
 import * as exec from "@actions/exec";
@@ -63,7 +64,7 @@ const OS_NAMES: IOperatingSystems = {
 /**
  * errors that are always probably spurious
  */
-const IGNORED_ERRORS = [
+const IGNORED_WARNINGS = [
   // appear on win install, we can swallow them
   `menuinst_win32`,
   `Unable to register environment`,
@@ -76,20 +77,18 @@ const IGNORED_ERRORS = [
  * Run exec.exec with error handling
  */
 async function execute(command: string): Promise<Result> {
-  let options = { listeners: {} };
-  let stringData: string;
-  options.listeners = {
-    stdout: (data: Buffer) => {
-      // core.info(data.toString());
-    },
-    stderr: (data: Buffer) => {
-      stringData = data.toString();
-      for (const ignore in IGNORED_ERRORS) {
-        if (stringData.includes(ignore)) {
-          return;
+  let options: exec.ExecOptions = {
+    errStream: new stream.Writable(),
+    listeners: {
+      stderr: (data: Buffer) => {
+        const stringData = data.toString();
+        for (const ignore of IGNORED_WARNINGS) {
+          if (stringData.includes(ignore)) {
+            return;
+          }
         }
+        core.warning(stringData);
       }
-      core.warning(stringData);
     }
   };
 

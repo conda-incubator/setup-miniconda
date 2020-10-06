@@ -12266,7 +12266,7 @@ module.exports = baseIsNative;
 "use strict";
 
 
-var ReadableStream = __webpack_require__(794).Readable,
+var ReadableStream = __webpack_require__(413).Readable,
     inherits = __webpack_require__(669).inherits,
     Serializer = __webpack_require__(748);
 
@@ -17084,7 +17084,7 @@ module.exports = overArg;
 "use strict";
 
 
-var WritableStream = __webpack_require__(794).Writable,
+var WritableStream = __webpack_require__(413).Writable,
     inherits = __webpack_require__(669).inherits,
     Parser = __webpack_require__(60);
 
@@ -17325,10 +17325,9 @@ module.exports = baseIsTypedArray;
 
 /***/ }),
 /* 413 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ (function(module) {
 
-module.exports = __webpack_require__(141);
-
+module.exports = require("stream");
 
 /***/ }),
 /* 414 */
@@ -17418,7 +17417,7 @@ module.exports = Set;
 /* 427 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-module.exports = __webpack_require__(794);
+module.exports = __webpack_require__(413);
 
 
 /***/ }),
@@ -21304,6 +21303,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs = __importStar(__webpack_require__(747));
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
+const stream = __importStar(__webpack_require__(413));
 const core = __importStar(__webpack_require__(470));
 const exec = __importStar(__webpack_require__(986));
 const io = __importStar(__webpack_require__(1));
@@ -21334,33 +21334,31 @@ const OS_NAMES = {
 /**
  * errors that are always probably spurious
  */
-const IGNORED_ERRORS = [
+const IGNORED_WARNINGS = [
     // appear on win install, we can swallow them
-    /menuinst_win32/,
-    /Unable to register environment/,
-    /0%\|/,
+    `menuinst_win32`,
+    `Unable to register environment`,
+    `0%|`,
     // appear on certain Linux/OSX installers
-    /Please run using "bash"/
+    `Please run using "bash"`
 ];
 /**
  * Run exec.exec with error handling
  */
 function execute(command) {
     return __awaiter(this, void 0, void 0, function* () {
-        let options = { listeners: {} };
-        let stringData;
-        options.listeners = {
-            stdout: (data) => {
-                // core.info(data.toString());
-            },
-            stderr: (data) => {
-                stringData = data.toString();
-                for (const ignore in IGNORED_ERRORS) {
-                    if (stringData.match(ignore) != null) {
-                        return;
+        let options = {
+            errStream: new stream.Writable(),
+            listeners: {
+                stderr: (data) => {
+                    const stringData = data.toString();
+                    for (const ignore of IGNORED_WARNINGS) {
+                        if (stringData.includes(ignore)) {
+                            return;
+                        }
                     }
+                    core.warning(stringData);
                 }
-                core.warning(stringData);
             }
         };
         try {
@@ -22144,7 +22142,7 @@ const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 const httpm = __importStar(__webpack_require__(539));
 const semver = __importStar(__webpack_require__(280));
-const stream = __importStar(__webpack_require__(794));
+const stream = __importStar(__webpack_require__(413));
 const util = __importStar(__webpack_require__(669));
 const v4_1 = __importDefault(__webpack_require__(826));
 const exec_1 = __webpack_require__(986);
@@ -23147,7 +23145,7 @@ class HttpClient {
         if (useProxy) {
             // If using proxy, need tunnel
             if (!tunnel) {
-                tunnel = __webpack_require__(413);
+                tunnel = __webpack_require__(856);
             }
             const agentOptions = {
                 maxSockets: maxSockets,
@@ -25200,7 +25198,7 @@ module.exports = new Type('tag:yaml.org,2002:merge', {
 "use strict";
 
 
-var WritableStream = __webpack_require__(794).Writable,
+var WritableStream = __webpack_require__(413).Writable,
     util = __webpack_require__(669);
 
 var DevNullStream = module.exports = function () {
@@ -26337,7 +26335,7 @@ module.exports = basePropertyDeep;
 /* 681 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var Stream = __webpack_require__(794);
+var Stream = __webpack_require__(413);
 if (process.env.READABLE_STREAM === 'disable' && Stream) {
   module.exports = Stream.Readable;
   Object.assign(module.exports, Stream);
@@ -29504,12 +29502,7 @@ module.exports = baseFilter;
 
 
 /***/ }),
-/* 794 */
-/***/ (function(module) {
-
-module.exports = require("stream");
-
-/***/ }),
+/* 794 */,
 /* 795 */
 /***/ (function(module) {
 
@@ -32607,7 +32600,13 @@ module.exports = {
 
 
 /***/ }),
-/* 856 */,
+/* 856 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+module.exports = __webpack_require__(141);
+
+
+/***/ }),
 /* 857 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -34341,7 +34340,7 @@ module.exports = wrapperClone;
 "use strict";
 
 
-var TransformStream = __webpack_require__(794).Transform,
+var TransformStream = __webpack_require__(413).Transform,
     DevNullStream = __webpack_require__(636),
     inherits = __webpack_require__(669).inherits,
     Tokenizer = __webpack_require__(990),
