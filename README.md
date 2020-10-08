@@ -1,4 +1,4 @@
-# Setup Miniconda
+# `conda-incubator/setup-miniconda`
 
 ![Example 1: Basic usage](https://github.com/conda-incubator/setup-miniconda/workflows/Example%201:%20Basic%20usage/badge.svg?branch=master)
 ![Example 2: Other shells](https://github.com/conda-incubator/setup-miniconda/workflows/Example%202:%20Other%20shells/badge.svg?branch=master)
@@ -9,11 +9,12 @@
 ![Caching Example](https://github.com/conda-incubator/setup-miniconda/workflows/Caching%20Example/badge.svg?branch=master)
 ![Linting](https://github.com/conda-incubator/setup-miniconda/workflows/Linting/badge.svg?branch=master)
 
+
 This action sets up a
 [Miniconda](https://docs.conda.io/en/latest/miniconda.html) installation to use
 the [Conda](https://docs.conda.io/projects/conda/en/latest/) package and
-environment manager by either locating the Miniconda installation bundled with
-the available runners or by installing a specific Miniconda3 version. By default
+environment manager by either locating the Miniconda installation [bundled with
+the available runners](https://docs.github.com/en/free-pro-team@latest/actions/reference/specifications-for-github-hosted-runners#supported-software) or by installing a specific Miniconda3 version. By default
 this action will also create a test environment.
 
 Miniconda `condabin/` folder is added to `PATH` and conda is correctly
@@ -22,7 +23,7 @@ initialized across all platforms.
 This action correctly handles activation of conda environments and offers the
 possibility of automatically activating the test environment on all shells.
 
-See the **[IMPORTANT](#IMPORTANT)** notes on additional information on
+> See the **[IMPORTANT](#IMPORTANT)** notes on additional information on
 environment activation.
 
 ## Usage examples
@@ -396,6 +397,11 @@ as they are not included in the conda package cache.
   defined in `environment.yaml`, otherwise the conda solver might find conflicts
   and result in very long install times.
 - Conda activation does not correctly work on `sh`. Please use `bash.
+
+## Project History and Contributing
+
+See the [CHANGELOG](https://github.com/conda-incubator/setup-miniconda/blob/master/CHANGELOG.md) for project history, or [CONTRIBUTING](https://github.com/conda-incubator/setup-miniconda/blob/master/CONTRIBUTING.md) to get started adding
+features you need.
 
 ## License
 
