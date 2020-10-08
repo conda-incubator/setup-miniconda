@@ -5,20 +5,19 @@
 The build step transpiles the `src/` to `dist/`, with `ncc`. These files, by
 convention, are also checked in.
 
-- Create Conda env
+- Create Conda env with `nodejs`:
 
 ```bash
 conda create -n github-action nodejs -c conda-forge
 ```
 
-- Install NodeJS
+- Install NodeJS dependencies:
 
 ```bash
-conda activate github-action
 npm install
 ```
 
-- Ensure the files in `dist` has been rebuilt
+- Ensure the files in `dist` have been rebuilt:
 
 ```bash
 npm run format
