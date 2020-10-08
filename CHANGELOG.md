@@ -41,7 +41,8 @@
 
 ### Features
 
-- [???](#) fixes conflicting channels on `environment.yml` files and the action input channels
+- [???](#) fixes conflicting channels on `environment.yml` files and the action
+  input channels
 
 ### Fixes
 
@@ -62,7 +63,9 @@
 
 ### Features
 
-- [???](#) adds a post step to remove any uncompressed packages found in the packages dir, so the cache can also save packages that were installed in different steps from the action step.
+- [???](#) adds a post step to remove any uncompressed packages found in the
+  packages dir, so the cache can also save packages that were installed in
+  different steps from the action step.
 
 [v1.4.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v1.4.0
 
@@ -70,7 +73,8 @@
 
 ### Fixes
 
-- [???](#) fixes regression in systems where the cache folder has not been created.
+- [???](#) fixes regression in systems where the cache folder has not been
+  created.
 
 [v1.3.1]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v1.3.1
 
@@ -78,7 +82,8 @@
 
 ### Features
 
-- [???](#) adds the possibility of using the cache action to cache downloaded conda packages and (hopefully) reduce build times.
+- [???](#) adds the possibility of using the cache action to cache downloaded
+  conda packages and (hopefully) reduce build times.
 
 [v1.3.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v1.3.0
 
@@ -89,10 +94,7 @@
 - adds additional configuration options to the action input, including:
 
 ```yaml
-allow-softlinks
-channel-priority
-show-channel-urls
-use-only-tar-bz2
+allow-softlinks channel-priority show-channel-urls use-only-tar-bz2
 ```
 
 [v1.2.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v1.2.0
