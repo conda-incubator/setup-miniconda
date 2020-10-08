@@ -1,13 +1,41 @@
 # Setup Miniconda
 
-![Example 1: Basic usage](https://github.com/conda-incubator/setup-miniconda/workflows/Example%201:%20Basic%20usage/badge.svg?branch=master)
-![Example 2: Other shells](https://github.com/conda-incubator/setup-miniconda/workflows/Example%202:%20Other%20shells/badge.svg?branch=master)
-![Example 3: Other options](https://github.com/conda-incubator/setup-miniconda/workflows/Example%203:%20Other%20options/badge.svg?branch=master)
-![Example 4: Channels](https://github.com/conda-incubator/setup-miniconda/workflows/Example%204:%20Channels/badge.svg?branch=master)
-![Example 5: Custom installer](https://github.com/conda-incubator/setup-miniconda/workflows/Example%205:%20Custom%20installer/badge.svg?branch=master)
-![Example 6: Mamba](https://github.com/conda-incubator/setup-miniconda/workflows/Example%206:%20Mamba/badge.svg?branch=master)
-![Caching Example](https://github.com/conda-incubator/setup-miniconda/workflows/Caching%20Example/badge.svg?branch=master)
-![Linting](https://github.com/conda-incubator/setup-miniconda/workflows/Linting/badge.svg?branch=master)
+| | |
+| --- | --- |
+| [Example 1: Basic usage](#example-1-basic-usage) | [![Basic Usage Build Status][ex1-badge]][ex1] |
+| [Example 2: Other shells](#example-2-other-shells) | [![Other Shells Build Status][ex2-badge]][ex2] |
+| [Example 3: Other options](#example-3-other-options) | [![Other Options Build Status][ex3-badge]][ex3] |
+| [Example 4: Channels](#example-4-conda-options) | [![Channels Build Status][ex4-badge]][ex4] |
+| [Example 5: Custom installer](#example-5-custom-installer) | [![Custom installer Build Status][ex5-badge]][ex5] |
+| [Example 6: Mamba](#example-6-mamba) | [![Mamba Build Status][ex6-badge]][ex6] |
+| [Caching Example](#caching) | [![Caching Example Build Status][ex7-badge]][ex7] |
+| Linting | [![Linting Build Status][linting-badge]][linting] |
+
+
+[ex1]: https://github.com/conda-incubator/setup-miniconda/actions?query=workflow%3A%22Example+1%3A+Basic+usage%22
+[ex1-badge]: https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%201:%20Basic%20usage/master
+
+[ex2]: https://github.com/conda-incubator/setup-miniconda/actions?query=workflow%3A%22Example+2%3A+Other+shells%22
+[ex2-badge]: https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%202:%20Other%20shells/master
+
+[ex3]: https://github.com/conda-incubator/setup-miniconda/actions?query=workflow%3A%22Example+3%3A+Other+options%22
+[ex3-badge]: https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%203:%20Other%20options/master
+
+[ex4]: https://github.com/conda-incubator/setup-miniconda/actions?query=workflow%3A%22Example+4%3A+Channels%22
+[ex4-badge]: https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%204:%20Channels/master
+
+[ex5]: https://github.com/conda-incubator/setup-miniconda/actions?query=workflow%3A%22Example+5%3A+Custom+installer%22
+[ex5-badge]: https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%205:%20Custom%20installer/master
+
+[ex6]: https://github.com/conda-incubator/setup-miniconda/actions?query=workflow%3A%22Example+6%3A+Mamba%22
+[ex6-badge]: https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%206:%20Mamba/master
+
+[ex7]: https://github.com/conda-incubator/setup-miniconda/actions?query=workflow%3A%22Example+7%3A+Explicit+Environment+Specification%22
+[ex7-badge]: https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Caching%20Example/master
+
+[linting]: https://github.com/conda-incubator/setup-miniconda/actions?query=workflow%3ALinting
+[linting-badge]: https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Linting/master
+
 
 This action sets up a [Miniconda](https://docs.conda.io/en/latest/miniconda.html) installation to use the [Conda](https://docs.conda.io/projects/conda/en/latest/) package and environment manager by either locating the Miniconda installation bundled with the available runners or by installing a specific Miniconda3 version. By default this action will also create a test environment.
 
