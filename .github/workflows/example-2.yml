@@ -3,20 +3,20 @@ name: "Example 2: Other shells"
 on:
   pull_request:
     branches:
-    - '*'
+      - "*"
   push:
     branches:
-    - 'master'
+      - "master"
 
 jobs:
   example-2-linux:
     name: Ex2 Linux
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: ./
         with:
-          miniconda-version: 'latest'
+          miniconda-version: "latest"
           activate-environment: foo
       - name: Bash
         shell: bash -l {0}
@@ -33,12 +33,12 @@ jobs:
 
   example-2-mac:
     name: Ex2 Mac
-    runs-on: 'macos-latest'
+    runs-on: "macos-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: ./
         with:
-          miniconda-version: 'latest'
+          miniconda-version: "latest"
           activate-environment: foo
       - name: Sh
         shell: sh -l {0}
@@ -61,7 +61,7 @@ jobs:
 
   example-2-win:
     name: Ex2 Windows
-    runs-on: 'windows-latest'
+    runs-on: "windows-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: ./
@@ -96,6 +96,4 @@ jobs:
       - name: Cmd.exe
         shell: cmd /C CALL {0}
         run: >-
-          conda info &&
-          conda list  &&
-          SET
+          conda info && conda list  && SET
