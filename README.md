@@ -49,7 +49,7 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         python-version: ["3.7", "2.7"]
     steps:
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
@@ -73,7 +73,7 @@ jobs:
     name: Ex2 Linux
     runs-on: "ubuntu-latest"
     steps:
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -92,7 +92,7 @@ jobs:
     name: Ex2 Mac
     runs-on: "macos-latest"
     steps:
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -116,7 +116,7 @@ jobs:
     name: Ex2 Windows
     runs-on: "windows-latest"
     steps:
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -157,7 +157,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: anaconda-client-env
           environment-file: etc/example-environment.yml
@@ -187,7 +187,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: foo
           python-version: 3.6
@@ -219,7 +219,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-Linux-x86_64.sh
           allow-softlinks: true
@@ -247,7 +247,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: 3.6
           mamba-version: "*"
@@ -306,7 +306,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: false
           activate-environment: explicit-env
@@ -351,7 +351,7 @@ jobs:
           key:
             ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
             hashFiles('etc/example-environment.yml') }}
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: anaconda-client-env
           channel-priority: strict

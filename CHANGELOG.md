@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## _Unreleased_
+## [v2.0.0][] (2020-11-04)
 
 ### Fixes
 
@@ -10,6 +10,7 @@
 
 - [#61][], [#74][] adds support for explicit environment specifications.
 
+[v2.0.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v2.0.0
 [#61]: https://github.com/conda-incubator/setup-miniconda/pull/61
 [#74]: https://github.com/conda-incubator/setup-miniconda/pull/74
 [#78]: https://github.com/conda-incubator/setup-miniconda/pull/78
