@@ -3,15 +3,15 @@ name: "Example 5: Custom installer"
 on:
   pull_request:
     branches:
-    - '*'
+      - "*"
   push:
     branches:
-    - 'master'
+      - "master"
 
 jobs:
   example-5-linux:
     name: Ex5 PyPy Linux
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: ./
@@ -29,7 +29,7 @@ jobs:
 
   example-5-mac:
     name: Ex5 PyPy MacOS
-    runs-on: 'macos-latest'
+    runs-on: "macos-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: ./

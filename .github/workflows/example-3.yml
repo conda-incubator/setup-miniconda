@@ -3,15 +3,15 @@ name: "Example 3: Other options"
 on:
   pull_request:
     branches:
-    - '*'
+      - "*"
   push:
     branches:
-    - 'master'
+      - "master"
 
 jobs:
   example-3:
     name: Ex3 Linux
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: ./
@@ -28,10 +28,9 @@ jobs:
           conda list
           printenv | sort
 
-
   example-3-no-name:
     name: Ex3-no-name Linux
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
       - uses: ./

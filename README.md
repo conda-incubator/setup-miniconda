@@ -1,4 +1,4 @@
-# Setup Miniconda
+# `conda-incubator/setup-miniconda`
 
 ![Example 1: Basic usage](https://github.com/conda-incubator/setup-miniconda/workflows/Example%201:%20Basic%20usage/badge.svg?branch=master)
 ![Example 2: Other shells](https://github.com/conda-incubator/setup-miniconda/workflows/Example%202:%20Other%20shells/badge.svg?branch=master)
@@ -9,21 +9,34 @@
 ![Caching Example](https://github.com/conda-incubator/setup-miniconda/workflows/Caching%20Example/badge.svg?branch=master)
 ![Linting](https://github.com/conda-incubator/setup-miniconda/workflows/Linting/badge.svg?branch=master)
 
-This action sets up a [Miniconda](https://docs.conda.io/en/latest/miniconda.html) installation to use the [Conda](https://docs.conda.io/projects/conda/en/latest/) package and environment manager by either locating the Miniconda installation bundled with the available runners or by installing a specific Miniconda3 version. By default this action will also create a test environment.
 
-Miniconda `condabin/` folder is added to `PATH` and conda is correctly initialized across all platforms.
+This action sets up a
+[Miniconda](https://docs.conda.io/en/latest/miniconda.html) installation to use
+the [Conda](https://docs.conda.io/projects/conda/en/latest/) package and
+environment manager by either locating the Miniconda installation [bundled with
+the available runners](https://docs.github.com/en/free-pro-team@latest/actions/reference/specifications-for-github-hosted-runners#supported-software) or by installing a specific Miniconda3 version. By default
+this action will also create a test environment.
 
-This action correctly handles activation of conda environments and offers the possibility of automatically activating the test environment on all shells.
+Miniconda `condabin/` folder is added to `PATH` and conda is correctly
+initialized across all platforms.
 
-See the **[IMPORTANT](#IMPORTANT)** notes on additional information on environment activation.
+This action correctly handles activation of conda environments and offers the
+possibility of automatically activating the test environment on all shells.
+
+> See the **[IMPORTANT](#IMPORTANT)** notes on additional information on
+environment activation.
 
 ## Usage examples
 
-For a full list of available inputs for this action see [action.yml](action.yml).
+For a full list of available inputs for this action see
+[action.yml](action.yml).
 
 ### Example 1: Basic usage
 
-This example shows how to set a basic python workflow with conda using the crossplatform available shells: `bash` and `pwsh`. On this example an environment named `test` will be created with the specific `python-version` installed for each opearating system, resulting on 6 build workers.
+This example shows how to set a basic python workflow with conda using the
+crossplatform available shells: `bash` and `pwsh`. On this example an
+environment named `test` will be created with the specific `python-version`
+installed for each opearating system, resulting on 6 build workers.
 
 ```yaml
 jobs:
@@ -36,7 +49,7 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         python-version: ["3.7", "2.7"]
     steps:
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
@@ -50,7 +63,9 @@ jobs:
 
 ### Example 2: Other shells
 
-This example shows how to use all other available shells for specific operating systems. On this example we select to download the latest anaconda version available and create and activate by default an environment named `foo`.
+This example shows how to use all other available shells for specific operating
+systems. On this example we select to download the latest anaconda version
+available and create and activate by default an environment named `foo`.
 
 ```yaml
 jobs:
@@ -58,7 +73,7 @@ jobs:
     name: Ex2 Linux
     runs-on: "ubuntu-latest"
     steps:
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -77,7 +92,7 @@ jobs:
     name: Ex2 Mac
     runs-on: "macos-latest"
     steps:
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -101,7 +116,7 @@ jobs:
     name: Ex2 Windows
     runs-on: "windows-latest"
     steps:
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -123,13 +138,17 @@ jobs:
       - name: Cmd.exe
         shell: cmd /C CALL {0}
         run: >-
-          conda info &&
-          conda list
+          conda info && conda list
 ```
 
 ### Example 3: Other options
 
-This example shows how to use [environment.yml](etc/example-environment.yml) for easier creation of test/build environments and [.condarc](etc/example-condarc.yml) files for fine grained configuration management. On this example we use a custom configuration file, install an environment from a yaml file and disable autoactivating the base environment before activating the `anaconda-client-env`.
+This example shows how to use [environment.yml](etc/example-environment.yml) for
+easier creation of test/build environments and
+[.condarc](etc/example-condarc.yml) files for fine grained configuration
+management. On this example we use a custom configuration file, install an
+environment from a yaml file and disable autoactivating the base environment
+before activating the `anaconda-client-env`.
 
 ```yaml
 jobs:
@@ -138,7 +157,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: anaconda-client-env
           environment-file: etc/example-environment.yml
@@ -153,8 +172,9 @@ jobs:
 
 ### Example 4: Conda options
 
-This example shows how to use `channels` option and other extra options. The priority will be set by the order of the channels.
-In this example it will result in:
+This example shows how to use `channels` option and other extra options. The
+priority will be set by the order of the channels. In this example it will
+result in:
 
 - conda-forge
 - spyder-ide
@@ -167,7 +187,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: foo
           python-version: 3.6
@@ -187,10 +207,10 @@ jobs:
 ### Example 5: Custom installer
 
 Any installer created with [constructor](https://github.com/conda/constructor)
-which includes `conda` can be used in place of Miniconda.
-For example, [conda-forge](https://conda-forge.org/) maintains additional builds
-of [miniforge](https://github.com/conda-forge/miniforge/releases) for platforms
-not yet supported by Miniconda.
+which includes `conda` can be used in place of Miniconda. For example,
+[conda-forge](https://conda-forge.org/) maintains additional builds of
+[miniforge](https://github.com/conda-forge/miniforge/releases) for platforms not
+yet supported by Miniconda.
 
 ```yaml
 jobs:
@@ -199,7 +219,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-Linux-x86_64.sh
           allow-softlinks: true
@@ -215,7 +235,10 @@ jobs:
 
 ### Example 6: Mamba
 
-Experimental! Use `mamba` to handle conda installs in a faster way. `mamba-version` accepts a version string `x.y` (including `"*"`). It requires you specify `conda-forge` as part of the channels, ideally with the highest priority.
+Experimental! Use `mamba` to handle conda installs in a faster way.
+`mamba-version` accepts a version string `x.y` (including `"*"`). It requires
+you specify `conda-forge` as part of the channels, ideally with the highest
+priority.
 
 ```yaml
 jobs:
@@ -224,7 +247,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: 3.6
           mamba-version: "*"
@@ -245,24 +268,26 @@ jobs:
 
 ### Example 7: Explicit Specification
 
-`conda list --explicit` and [conda-lock][] support generating
-[explicit environment specifications][spec], which skip the environment
-solution step altogether, as they contain the _ordered_ list of exact URLs needed
-to reproduce the environment.
+`conda list --explicit` and [conda-lock][] support generating [explicit
+environment specifications][spec], which skip the environment solution step
+altogether, as they contain the _ordered_ list of exact URLs needed to reproduce
+the environment.
 
 This means explicitly-defined environments...
 
 - are _much faster_ to install, as several expensive steps are skipped:
   - channels are not queried for their repo data
   - no solver is run
-- are not cross-platform, as the URLs almost always contain platform/architecture information
+- are not cross-platform, as the URLs almost always contain
+  platform/architecture information
 - can become broken if any file becomes unavailable
 
-This approach can be useful as part of a larger system e.g. a separate workflow that
-runs `conda-lock` for all the platforms needed in a separate job.
+This approach can be useful as part of a larger system e.g. a separate workflow
+that runs `conda-lock` for all the platforms needed in a separate job.
 
 [conda-lock]: https://github.com/conda-incubator/conda-lock
-[spec]: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#building-identical-conda-environments
+[spec]:
+  https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#building-identical-conda-environments
 
 ```yaml
 name: "Example 7: Explicit Environment Specification"
@@ -281,7 +306,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v2
-      - uses: conda-incubator/setup-miniconda@v1
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: false
           activate-environment: explicit-env
@@ -297,7 +322,9 @@ jobs:
 
 ## Caching
 
-If you want to enable package caching for conda you can use the [cache action](https://github.com/actions/cache) using `~/conda_pkgs_dir` as path for conda packages.
+If you want to enable package caching for conda you can use the
+[cache action](https://github.com/actions/cache) using `~/conda_pkgs_dir` as
+path for conda packages.
 
 The cache will use a explicit key for restoring and saving the cache.
 
@@ -321,8 +348,10 @@ jobs:
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('etc/example-environment.yml') }}
-      - uses: conda-incubator/setup-miniconda@v1
+          key:
+            ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('etc/example-environment.yml') }}
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: anaconda-client-env
           channel-priority: strict
@@ -330,18 +359,51 @@ jobs:
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
 ```
 
-If you are using pip to resolve any dependencies in your conda environment then you may want to [cache those dependencies separately](https://docs.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#caching-dependencies), as they are not included in the conda package cache.
+If you are using pip to resolve any dependencies in your conda environment then
+you may want to
+[cache those dependencies separately](https://docs.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#caching-dependencies),
+as they are not included in the conda package cache.
 
 ## IMPORTANT
 
-- Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be explicitely declared as `shell: bash -l {0}` on steps that need to be properly activated. This is because bash shells are executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash profile files made by `conda init bash`. See [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell) and [thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).
-- Sh shells do not use `~/.profile` or `~/.bashrc` so these shells need to be explicitely declared as `shell: sh -l {0}` on steps that need to be properly activated. This is because sh shells are executed with `sh -e {0}` thus ignoring updated on bash profile files made by `conda init bash`. See [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
-- Cmd shells do not run `Autorun` commands so these shells need to be explicitely declared as `shell: cmd /C call {0}` on steps that need to be properly activated. This is because cmd shells are executed with `%ComSpec% /D /E:ON /V:OFF /S /C "CALL "{0}""` and the `/D` flag disabled execution of `Command Processor/Autorun` windows registry keys, which is what `conda init cmd.exe` sets. See [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
-- For caching to work properly, you will need to set the `use-only-tar-bz2` option to `true`.
-- Some options (e.g. `use-only-tar-bz2`) are not available on the default conda installed on Windows VMs, be sure to use `auto-update-conda` or provide a version of conda compatible with the option.
-- If you plan to use a `environment.yaml` file to set up the environment, the action will read the `channels`listed in the key (if found). If you provide the `channels` input in the action they must not conflict with what was defined in `environment.yaml`, otherwise the conda solver might find conflicts and result in very long install times.
+- Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
+  explicitely declared as `shell: bash -l {0}` on steps that need to be properly
+  activated. This is because bash shells are executed with
+  `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash
+  profile files made by `conda init bash`. See
+  [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell)
+  and
+  [thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).
+- Sh shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
+  explicitely declared as `shell: sh -l {0}` on steps that need to be properly
+  activated. This is because sh shells are executed with `sh -e {0}` thus
+  ignoring updated on bash profile files made by `conda init bash`. See
+  [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
+- Cmd shells do not run `Autorun` commands so these shells need to be
+  explicitely declared as `shell: cmd /C call {0}` on steps that need to be
+  properly activated. This is because cmd shells are executed with
+  `%ComSpec% /D /E:ON /V:OFF /S /C "CALL "{0}""` and the `/D` flag disabled
+  execution of `Command Processor/Autorun` windows registry keys, which is what
+  `conda init cmd.exe` sets. See
+  [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
+- For caching to work properly, you will need to set the `use-only-tar-bz2`
+  option to `true`.
+- Some options (e.g. `use-only-tar-bz2`) are not available on the default conda
+  installed on Windows VMs, be sure to use `auto-update-conda` or provide a
+  version of conda compatible with the option.
+- If you plan to use a `environment.yaml` file to set up the environment, the
+  action will read the `channels`listed in the key (if found). If you provide
+  the `channels` input in the action they must not conflict with what was
+  defined in `environment.yaml`, otherwise the conda solver might find conflicts
+  and result in very long install times.
 - Conda activation does not correctly work on `sh`. Please use `bash.
+
+## Project History and Contributing
+
+See the [CHANGELOG](https://github.com/conda-incubator/setup-miniconda/blob/master/CHANGELOG.md) for project history, or [CONTRIBUTING](https://github.com/conda-incubator/setup-miniconda/blob/master/CONTRIBUTING.md) to get started adding
+features you need.
 
 ## License
 
-The scripts and documentation in this project are released under the [MIT License](LICENSE.txt)
+The scripts and documentation in this project are released under the
+[MIT License](LICENSE.txt)

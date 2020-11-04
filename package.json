@@ -1,14 +1,14 @@
 {
   "name": "action-setup-conda",
-  "version": "1.7.0",
+  "version": "2.0.0",
   "description": "GitHub action for setting up conda from default or custom installers",
   "main": "lib/main.js",
   "scripts": {
     "build": "ncc build -o dist/setup src/setup.ts && ncc build -o dist/delete src/delete.ts",
     "format": "npm run prettier:format && npm run eslint:format",
     "check": "npm run prettier:check && npm run eslint:check",
-    "prettier:format": "prettier --write \"src/**/*.ts\" \"{.,etc,.github}/*.{md,json,yml,js}\"",
-    "prettier:check": "prettier --list-different \"src/**/*.ts\" \"{.,etc,.github}/*.{md,json,yml,js}\"",
+    "prettier:format": "prettier --list-different --write \"src/**/*.ts\" \"{.,etc,.github}/**/*.{md,json,yml,js}\"",
+    "prettier:check": "prettier --list-different \"src/**/*.ts\" \"{.,etc,.github}/**/*.{md,json,yml,js}\"",
     "eslint:format": "eslint --ext .js,.jsx,.ts,.tsx --fix .",
     "eslint:check": "eslint --ext .js,.jsx,.ts,.tsx ."
   },
@@ -53,7 +53,7 @@
     "dot-prop": ">=4.2.1",
     "lodash": ">=4.17.19",
     "lint-staged": "^9.5.0",
-    "prettier": "^1.19.1",
+    "prettier": "^2.1.2",
     "shell-quote": "^1.7.2",
     "typescript": "^3.7.2"
   },

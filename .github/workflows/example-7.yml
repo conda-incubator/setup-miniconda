@@ -3,10 +3,10 @@ name: "Example 7: Explicit Environment Specification"
 on:
   pull_request:
     branches:
-    - '*'
+      - "*"
   push:
     branches:
-    - 'master'
+      - "master"
 
 jobs:
   example-7:
@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
     steps:
       - uses: actions/checkout@v2
       - uses: ./

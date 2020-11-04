@@ -21324,12 +21324,12 @@ const ARCHITECTURES = {
     x64: "x86_64",
     x86: "x86",
     ARM64: "aarch64",
-    ARM32: "armv7l" // To be supported by github runners
+    ARM32: "armv7l",
 };
 const OS_NAMES = {
     win32: "Windows",
     darwin: "MacOSX",
-    linux: "Linux"
+    linux: "Linux",
 };
 /**
  * errors that are always probably spurious
@@ -21342,7 +21342,7 @@ const IGNORED_WARNINGS = [
     // appear on certain Linux/OSX installers
     `Please run using "bash"`,
     // old condas don't know what to do with these
-    `Key 'use_only_tar_bz2' is not a known primitive parameter.`
+    `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
 ];
 /**
  * avoid spurious conda warnings before we have a chance to update them
@@ -21368,8 +21368,8 @@ function execute(command) {
                         }
                     }
                     core.warning(stringData);
-                }
-            }
+                },
+            },
         };
         try {
             yield exec.exec(command, [], options);
@@ -21467,7 +21467,7 @@ function downloadMiniconda(pythonMajorVersion, minicondaVersion, architecture) {
             if (!versions.includes(minicondaInstallerName)) {
                 return {
                     ok: false,
-                    error: new Error(`Invalid miniconda version!\n\nMust be among ${versions.toString()}`)
+                    error: new Error(`Invalid miniconda version!\n\nMust be among ${versions.toString()}`),
                 };
             }
         }
@@ -21594,7 +21594,7 @@ function createTestEnvironment(activateEnvironment, useBundled, useMamba) {
         else {
             return {
                 ok: false,
-                error: new Error('To activate "base" environment use the "auto-activate-base" action input!')
+                error: new Error('To activate "base" environment use the "auto-activate-base" action input!'),
             };
         }
         return { ok: true, data: "ok" };
@@ -21628,7 +21628,7 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
                     "shell",
                     "/etc/profile.d/",
                     "/Lib/site-packages/xonsh",
-                    "/etc/profile.d/"
+                    "/etc/profile.d/",
                 ]) {
                     ownPath = path.join(minicondaPath(useBundled).replace("\\", "/"), folder);
                     if (fs.existsSync(ownPath)) {
@@ -21653,7 +21653,7 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
                 "~/.zshrc",
                 "~/.config/powershell/profile.ps1",
                 "~/Documents/PowerShell/profile.ps1",
-                "~/Documents/WindowsPowerShell/profile.ps1"
+                "~/Documents/WindowsPowerShell/profile.ps1",
             ]) {
                 try {
                     let file = rc.replace("~", os.homedir().replace("\\", "/"));
@@ -21736,24 +21736,24 @@ conda activate ${activateEnvironment}`;
             "~/.xonshrc": bashExtraText,
             "~/.config/powershell/profile.ps1": powerExtraText,
             "~/Documents/PowerShell/profile.ps1": powerExtraText,
-            "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText
+            "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
         };
         if (useBundled) {
             extraShells = {
                 "C:/Miniconda/etc/profile.d/conda.sh": bashExtraText,
                 "C:/Miniconda/etc/fish/conf.d/conda.fish": bashExtraText,
-                "C:/Miniconda/condabin/conda_hook.bat": batchExtraText
+                "C:/Miniconda/condabin/conda_hook.bat": batchExtraText,
             };
         }
         else {
             extraShells = {
                 "C:/Miniconda3/etc/profile.d/conda.sh": bashExtraText,
                 "C:/Miniconda3/etc/fish/conf.d/conda.fish": bashExtraText,
-                "C:/Miniconda3/condabin/conda_hook.bat": batchExtraText
+                "C:/Miniconda3/condabin/conda_hook.bat": batchExtraText,
             };
         }
         const allShells = Object.assign(Object.assign({}, shells), extraShells);
-        Object.keys(allShells).forEach(key => {
+        Object.keys(allShells).forEach((key) => {
             let filePath = key.replace("~", os.homedir());
             const text = allShells[key];
             if (fs.existsSync(filePath)) {
@@ -21829,13 +21829,13 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             if (pythonVersion && activateEnvironment === "") {
                 return {
                     ok: false,
-                    error: new Error(`"python-version=${pythonVersion}" was provided but "activate-environment" is not defined!`)
+                    error: new Error(`"python-version=${pythonVersion}" was provided but "activate-environment" is not defined!`),
                 };
             }
             if (!condaConfig["channels"].includes("conda-forge") && mambaVersion) {
                 return {
                     ok: false,
-                    error: new Error(`"mamba-version=${mambaVersion}" requires "conda-forge" to be included in "channels!"`)
+                    error: new Error(`"mamba-version=${mambaVersion}" requires "conda-forge" to be included in "channels!"`),
                 };
             }
             try {
@@ -21849,7 +21849,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 if (minicondaVersion !== "") {
                     return {
                         ok: false,
-                        error: new Error(`"installer-url" and "miniconda-version" were provided: pick one!`)
+                        error: new Error(`"installer-url" and "miniconda-version" were provided: pick one!`),
                     };
                 }
                 utils.consoleLog("\n# Downloading Custom Installer...\n");
@@ -21864,13 +21864,13 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 if (architecture !== "x64" && minicondaVersion === "") {
                     return {
                         ok: false,
-                        error: new Error(`"architecture" is set to something other than "x64" so "miniconda-version" must be set as well.`)
+                        error: new Error(`"architecture" is set to something other than "x64" so "miniconda-version" must be set as well.`),
                     };
                 }
                 if (architecture === "x86" && process.platform === "linux") {
                     return {
                         ok: false,
-                        error: new Error(`32-bit Linux is not supported by recent versions of Miniconda`)
+                        error: new Error(`32-bit Linux is not supported by recent versions of Miniconda`),
                     };
                 }
                 utils.consoleLog("\n# Downloading Miniconda...\n");
@@ -22102,7 +22102,7 @@ function run() {
                 channel_priority: channelPriority,
                 channels: channels,
                 show_channel_urls: showChannelUrls,
-                use_only_tar_bz2: useOnlyTarBz2
+                use_only_tar_bz2: useOnlyTarBz2,
             };
             const result = yield setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaFile, condaConfig, removeProfiles, mambaVersion);
             if (!result.ok) {

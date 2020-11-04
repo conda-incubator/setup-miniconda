@@ -3,10 +3,10 @@ name: "Example 1: Basic usage"
 on:
   pull_request:
     branches:
-    - '*'
+      - "*"
   push:
     branches:
-    - 'master'
+      - "master"
 
 jobs:
   example-1:
@@ -15,8 +15,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
-        python-version: ['3.7', '2.7']
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        python-version: ["3.7", "2.7"]
     steps:
       - uses: actions/checkout@v2
       - uses: ./
