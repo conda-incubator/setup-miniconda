@@ -293,8 +293,9 @@ async function downloadInstaller(url: string): Promise<Result> {
     downloadPath = cachedInstallerPath;
   } else {
     try {
+      core.info(`Downloading to...\n\t${cachedInstallerPath}`);
       downloadPath = await tc.downloadTool(url);
-      core.info(`Saving cache...`);
+      core.info(`Saving to cahce...\n\t${downloadPath}`);
       await tc.cacheFile(downloadPath, installerName, url, url);
     } catch (err) {
       return { ok: false, error: err };
