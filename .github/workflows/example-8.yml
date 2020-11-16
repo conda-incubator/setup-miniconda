@@ -21,7 +21,6 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./
         id: setup-miniconda
-        continue-on-error: true
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
