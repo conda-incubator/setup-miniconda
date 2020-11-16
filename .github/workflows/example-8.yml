@@ -21,6 +21,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./
         id: setup-miniconda
+        continue-on-error: true
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
@@ -29,12 +30,3 @@ jobs:
         shell: bash
         if: always()
         run: ${{ steps.setup-miniconda.conclusion == 'failure' }}
-      - name: Conda info
-        shell: bash -l {0}
-        run: conda info
-      - name: Conda list
-        shell: pwsh
-        run: conda list
-      - name: Environment
-        shell: bash -l {0}
-        run: printenv | sort
