@@ -155,6 +155,9 @@ jobs:
   example-3:
     name: Ex3 Linux
     runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -164,8 +167,7 @@ jobs:
           python-version: 3.5
           condarc-file: etc/example-condarc.yml
           auto-activate-base: false
-      - shell: bash -l {0}
-        run: |
+      - run: |
           conda info
           conda list
 ```
@@ -185,6 +187,9 @@ jobs:
   example-4:
     name: Ex4 Linux
     runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -196,8 +201,7 @@ jobs:
           channel-priority: flexible
           show-channel-urls: true
           use-only-tar-bz2: true
-      - shell: bash -l {0}
-        run: |
+      - run: |
           conda info
           conda list
           conda config --show-sources
@@ -217,6 +221,9 @@ jobs:
   example-5:
     name: Ex5 Miniforge for PyPy
     runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -225,8 +232,7 @@ jobs:
           allow-softlinks: true
           show-channel-urls: true
           use-only-tar-bz2: true
-      - shell: bash -l {0}
-        run: |
+      - run: |
           conda info
           conda list
           conda config --show-sources
@@ -290,20 +296,13 @@ that runs `conda-lock` for all the platforms needed in a separate job.
   https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#building-identical-conda-environments
 
 ```yaml
-name: "Example 7: Explicit Environment Specification"
-
-on:
-  pull_request:
-    branches:
-      - "*"
-  push:
-    branches:
-      - "master"
-
 jobs:
   example-7:
     name: Ex7 Explicit
     runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -311,8 +310,7 @@ jobs:
           auto-update-conda: false
           activate-environment: explicit-env
           environment-file: etc/example-explicit.conda.lock
-      - shell: bash -l {0}
-        run: |
+      - run: |
           conda info
           conda list
           conda config --show-sources
@@ -363,6 +361,37 @@ If you are using pip to resolve any dependencies in your conda environment then
 you may want to
 [cache those dependencies separately](https://docs.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#caching-dependencies),
 as they are not included in the conda package cache.
+
+## Use a default shell
+
+Assuming you are using the bash shell, now adding to `shell: bash -l {0}` to every single step can
+be avoided if your workflow uses the same shell for all the steps.
+
+By adding a `defaults` section and specifying the `bash -l {0}`, all steps in the job will default
+to that value.
+
+For other shells, make sure to use the right `shell` parameter as the default value.
+
+More information the [Github help page](https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_iddefaultsrun).
+
+```yaml
+jobs:
+  default-shell:
+    name: Default shell
+    runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: anaconda-client-env
+          environment-file: etc/example-environment-caching.yml
+      - run: conda info
+      - run: conda list
+      - run: conda config --show
+```
 
 ## IMPORTANT
 
