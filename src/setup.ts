@@ -103,9 +103,7 @@ async function execute(command: string): Promise<Result> {
     listeners: {
       stdout: (data: Buffer) => {
         const stringData = data.toString();
-        utils.consoleLog(stringData);
         for (const forced_error of FORCED_ERRORS) {
-          utils.consoleLog(forced_error);
           if (stringData.includes(forced_error)) {
             utils.consoleLog(`"${command}" failed with "${forced_error}"`);
             throw new Error(`"${command}" failed with "${forced_error}"`);
