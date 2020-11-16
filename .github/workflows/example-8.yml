@@ -27,6 +27,7 @@ jobs:
           environment-file: etc/example-faulty-environment.yml
       - name: Check previous step failed
         shell: bash
+        if: always()
         run: ${{ steps.setup-miniconda.conclusion == 'failure' }}
       - name: Conda info
         shell: bash -l {0}
