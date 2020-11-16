@@ -1,0 +1,4 @@
+name: anaconda-client-env
+requirements:
+  - black
+  - anaconda-client
