@@ -21527,8 +21527,9 @@ function downloadInstaller(url) {
         }
         else {
             try {
+                core.info(`Downloading to...\n\t${cachedInstallerPath}`);
                 downloadPath = yield tc.downloadTool(url);
-                core.info(`Saving cache...`);
+                core.info(`Saving to cache...\n\t${downloadPath}`);
                 yield tc.cacheFile(downloadPath, installerName, url, url);
             }
             catch (err) {
