@@ -21304,7 +21304,6 @@ const fs = __importStar(__webpack_require__(747));
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 const stream = __importStar(__webpack_require__(413));
-const crypto = __importStar(__webpack_require__(417));
 const core = __importStar(__webpack_require__(470));
 const exec = __importStar(__webpack_require__(986));
 const io = __importStar(__webpack_require__(1));
@@ -21519,20 +21518,19 @@ function downloadInstaller(url) {
     return __awaiter(this, void 0, void 0, function* () {
         let downloadPath;
         const installerName = path.posix.basename(url);
-        const fakeVersion = crypto.createHash("sha256").update(url).digest("base64");
-        core.info(`Installer: ${installerName}@${fakeVersion}`);
+        // assumes the version is embedded, and ends with .sh/.exe
+        const version = installerName.split(/-/).slice(1, -1).join(".");
         // Look for cache to use
-        const cachedInstallerPath = tc.find(installerName, fakeVersion);
+        const cachedInstallerPath = tc.find(installerName, version);
         if (cachedInstallerPath) {
             core.info(`Found cache at ${cachedInstallerPath}`);
             downloadPath = cachedInstallerPath;
         }
         else {
             try {
-                core.info(`Downloading to...\n\t${cachedInstallerPath}`);
                 downloadPath = yield tc.downloadTool(url);
                 core.info(`Saving to cache...\n\t${downloadPath}`);
-                yield tc.cacheFile(downloadPath, installerName, installerName, fakeVersion);
+                yield tc.cacheFile(downloadPath, installerName, installerName, version);
             }
             catch (err) {
                 return { ok: false, error: err };
@@ -21557,6 +21555,7 @@ function installMiniconda(installerPath, useBundled) {
         else {
             command = `bash "${installerPath}" -b -p ${outputPath}`;
         }
+        core.info(`Install Command:\n\t${command}`);
         try {
             return yield execute(command);
         }

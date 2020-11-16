@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
-import * as crypto from "crypto";
 
 import * as core from "@actions/core";
 import * as exec from "@actions/exec";
@@ -284,27 +283,20 @@ async function downloadInstaller(url: string): Promise<Result> {
   let downloadPath: string;
 
   const installerName: string = path.posix.basename(url);
-  const fakeVersion = crypto.createHash("sha256").update(url).digest("base64");
-
-  core.info(`Installer: ${installerName}@${fakeVersion}`);
+  // assumes the version is embedded, and ends with .sh/.exe
+  const version = installerName.split(/-/).slice(1, -1).join(".");
 
   // Look for cache to use
-  const cachedInstallerPath = tc.find(installerName, fakeVersion);
+  const cachedInstallerPath = tc.find(installerName, version);
 
   if (cachedInstallerPath) {
     core.info(`Found cache at ${cachedInstallerPath}`);
     downloadPath = cachedInstallerPath;
   } else {
     try {
-      core.info(`Downloading to...\n\t${cachedInstallerPath}`);
       downloadPath = await tc.downloadTool(url);
       core.info(`Saving to cache...\n\t${downloadPath}`);
-      await tc.cacheFile(
-        downloadPath,
-        installerName,
-        installerName,
-        fakeVersion
-      );
+      await tc.cacheFile(downloadPath, installerName, installerName, version);
     } catch (err) {
       return { ok: false, error: err };
     }
@@ -330,6 +322,8 @@ async function installMiniconda(
   } else {
     command = `bash "${installerPath}" -b -p ${outputPath}`;
   }
+
+  core.info(`Install Command:\n\t${command}`);
 
   try {
     return await execute(command);
