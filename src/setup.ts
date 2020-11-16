@@ -318,6 +318,11 @@ async function installMiniconda(
 
   // See: https://docs.anaconda.com/anaconda/install/silent-mode/
   if (IS_WINDOWS) {
+    if (!installerPath.endsWith(".exe")) {
+      const withExe = `${installerPath}.exe`;
+      await io.mv(installerPath, withExe);
+      installerPath = withExe;
+    }
     command = `${installerPath} /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`;
   } else {
     command = `bash "${installerPath}" -b -p ${outputPath}`;

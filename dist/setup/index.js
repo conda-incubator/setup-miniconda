@@ -21550,6 +21550,11 @@ function installMiniconda(installerPath, useBundled) {
         let command;
         // See: https://docs.anaconda.com/anaconda/install/silent-mode/
         if (IS_WINDOWS) {
+            if (!installerPath.endsWith(".exe")) {
+                const withExe = `${installerPath}.exe`;
+                yield io.mv(installerPath, withExe);
+                installerPath = withExe;
+            }
             command = `${installerPath} /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`;
         }
         else {
