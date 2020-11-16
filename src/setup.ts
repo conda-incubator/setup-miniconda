@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
+import * as crypto from "crypto";
 
 import * as core from "@actions/core";
 import * as exec from "@actions/exec";
@@ -283,10 +284,12 @@ async function downloadInstaller(url: string): Promise<Result> {
   let downloadPath: string;
 
   const installerName: string = path.posix.basename(url);
-  core.info(installerName);
+  const fakeVersion = crypto.createHash("sha256").update(url).digest("base64");
+
+  core.info(`Installer: ${installerName}@${fakeVersion}`);
 
   // Look for cache to use
-  const cachedInstallerPath = tc.find(installerName, url);
+  const cachedInstallerPath = tc.find(installerName, fakeVersion);
 
   if (cachedInstallerPath) {
     core.info(`Found cache at ${cachedInstallerPath}`);
@@ -296,7 +299,12 @@ async function downloadInstaller(url: string): Promise<Result> {
       core.info(`Downloading to...\n\t${cachedInstallerPath}`);
       downloadPath = await tc.downloadTool(url);
       core.info(`Saving to cache...\n\t${downloadPath}`);
-      await tc.cacheFile(downloadPath, installerName, url, url);
+      await tc.cacheFile(
+        downloadPath,
+        installerName,
+        installerName,
+        fakeVersion
+      );
     } catch (err) {
       return { ok: false, error: err };
     }

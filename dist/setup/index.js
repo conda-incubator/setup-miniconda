@@ -21304,6 +21304,7 @@ const fs = __importStar(__webpack_require__(747));
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 const stream = __importStar(__webpack_require__(413));
+const crypto = __importStar(__webpack_require__(417));
 const core = __importStar(__webpack_require__(470));
 const exec = __importStar(__webpack_require__(986));
 const io = __importStar(__webpack_require__(1));
@@ -21518,9 +21519,10 @@ function downloadInstaller(url) {
     return __awaiter(this, void 0, void 0, function* () {
         let downloadPath;
         const installerName = path.posix.basename(url);
-        core.info(installerName);
+        const fakeVersion = crypto.createHash("sha256").update(url).digest("base64");
+        core.info(`Installer: ${installerName}@${fakeVersion}`);
         // Look for cache to use
-        const cachedInstallerPath = tc.find(installerName, url);
+        const cachedInstallerPath = tc.find(installerName, fakeVersion);
         if (cachedInstallerPath) {
             core.info(`Found cache at ${cachedInstallerPath}`);
             downloadPath = cachedInstallerPath;
@@ -21530,7 +21532,7 @@ function downloadInstaller(url) {
                 core.info(`Downloading to...\n\t${cachedInstallerPath}`);
                 downloadPath = yield tc.downloadTool(url);
                 core.info(`Saving to cache...\n\t${downloadPath}`);
-                yield tc.cacheFile(downloadPath, installerName, url, url);
+                yield tc.cacheFile(downloadPath, installerName, installerName, fakeVersion);
             }
             catch (err) {
                 return { ok: false, error: err };
