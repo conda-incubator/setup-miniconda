@@ -9,8 +9,8 @@ on:
       - "master"
 
 jobs:
-  example-1:
-    name: Ex1 (${{ matrix.python-version }}, ${{ matrix.os }})
+  example-8:
+    name: Ex8 (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,7 +27,7 @@ jobs:
           environment-file: etc/example-faulty-environment.yml
       - name: Check previous step failed
         shell: bash
-        run: ${{ steps.setup-miniconda.conclusion == "failure" }}
+        run: ${{ steps.setup-miniconda.conclusion == 'failure' }}
       - name: Conda info
         shell: bash -l {0}
         run: conda info
