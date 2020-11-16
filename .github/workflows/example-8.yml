@@ -1,4 +1,4 @@
-name: "Example 8: this should fail"
+name: "Example 8: Catch invalid environment files"
 
 on:
   pull_request:
