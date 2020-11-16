@@ -109,10 +109,7 @@ async function execute(command: string): Promise<Result> {
           utils.consoleLog(forced_error);
           if (stringData.includes(forced_error)) {
             utils.consoleLog(`"${command}" failed with "${forced_error}"`);
-            return {
-              ok: false,
-              error: new Error(`"${command}" failed with "${forced_error}"`),
-            };
+            throw new Error(`"${command}" failed with "${forced_error}"`);
           }
         }
         return data;
