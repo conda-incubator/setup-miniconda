@@ -25,7 +25,7 @@ jobs:
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
-          environment-file: etc/example-faulty-environment.yml
+          environment-file: etc/example-environment.yml
       - name: Check previous step failed
         shell: bash
         if: always()
