@@ -21365,7 +21365,6 @@ const CONDARC_PATH = path.join(os.homedir(), ".condarc");
 function execute(command) {
     return __awaiter(this, void 0, void 0, function* () {
         let options = {
-            outStream: new stream.Writable(),
             errStream: new stream.Writable(),
             listeners: {
                 stdout: (data) => {

@@ -99,7 +99,6 @@ const CONDARC_PATH = path.join(os.homedir(), ".condarc");
  */
 async function execute(command: string): Promise<Result> {
   let options: exec.ExecOptions = {
-    outStream: new stream.Writable(),
     errStream: new stream.Writable(),
     listeners: {
       stdout: (data: Buffer) => {
