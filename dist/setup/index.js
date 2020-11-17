@@ -22000,8 +22000,8 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 if (result.ok) {
                     if (IS_WINDOWS) {
                         // add bat-less forwarder for bash users on Windows
-                        const mambaBat = condaExecutable(useBundled, true);
-                        const contents = `bash.exe -c "exec \"$(cygpath -u ${mambaBat})\" $*"`;
+                        const mambaBat = condaExecutable(useBundled, true).replace("\\", "/");
+                        const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
                         try {
                             fs.writeFileSync(mambaBat.slice(0, -4), contents);
                         }
