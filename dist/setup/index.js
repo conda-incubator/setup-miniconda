@@ -21300,10 +21300,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const crypto = __importStar(__webpack_require__(417));
 const fs = __importStar(__webpack_require__(747));
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 const stream = __importStar(__webpack_require__(413));
+const url_1 = __webpack_require__(835);
 const core = __importStar(__webpack_require__(470));
 const exec = __importStar(__webpack_require__(986));
 const io = __importStar(__webpack_require__(1));
@@ -21514,14 +21516,26 @@ function downloadMiniconda(pythonMajorVersion, minicondaVersion, architecture) {
         return { ok: true, data: downloadPath };
     });
 }
-function downloadInstaller(url) {
+/**
+ * @param url A URL for a file with the CLI of a `constructor`-built artifact
+ *
+ * ### Notes
+ * We must assume `url` it at least ends with the correct executable extension
+ * for that platform, but generally can't make any assumptions about `url`'s format,
+ * which might include GET params (?&) and hashes (#),
+ */
+function downloadCustomInstaller(url) {
     return __awaiter(this, void 0, void 0, function* () {
-        let downloadPath;
-        const installerName = path.posix.basename(url);
-        // assumes the version is embedded, and ends with .sh/.exe
-        const version = installerName.split(/-/).slice(1, -1).join(".");
+        const { pathname } = new url_1.URL(url);
+        // strip off the folder
+        const installerName = pathname.split("/").slice(-1)[0];
+        // use the filesystem-safe hash of the URL as a version
+        const urlHash = crypto.createHash("sha256").update(url).digest("hex");
+        // as a URL, we assume posix paths
+        const installerExtension = path.posix.extname(installerName);
         // Look for cache to use
-        const cachedInstallerPath = tc.find(installerName, version);
+        const cachedInstallerPath = tc.find(installerName, urlHash);
+        let downloadPath;
         if (cachedInstallerPath) {
             core.info(`Found cache at ${cachedInstallerPath}`);
             downloadPath = cachedInstallerPath;
@@ -21529,12 +21543,16 @@ function downloadInstaller(url) {
         else {
             try {
                 downloadPath = yield tc.downloadTool(url);
-                core.info(`Saving to cache...\n\t${downloadPath}`);
-                yield tc.cacheFile(downloadPath, installerName, installerName, version);
+                core.info(`Saving to cache...`);
+                yield tc.cacheFile(downloadPath, installerName, installerName, urlHash);
             }
             catch (err) {
                 return { ok: false, error: err };
             }
+        }
+        if (!downloadPath.endsWith(installerExtension)) {
+            core.info(`Adding "${installerExtension}"...`);
+            downloadPath += installerExtension;
         }
         return { ok: true, data: downloadPath };
     });
@@ -21542,23 +21560,31 @@ function downloadInstaller(url) {
 /**
  * Install Miniconda
  *
- * @param installerPath
+ * @param installerPath must have an appropriate extension for this platform
  */
 function installMiniconda(installerPath, useBundled) {
     return __awaiter(this, void 0, void 0, function* () {
         const outputPath = minicondaPath(useBundled);
+        const installerExtension = path.extname(installerPath);
         let command;
-        // See: https://docs.anaconda.com/anaconda/install/silent-mode/
-        if (IS_WINDOWS) {
-            if (!installerPath.endsWith(".exe")) {
-                const withExe = `${installerPath}.exe`;
-                yield io.mv(installerPath, withExe);
-                installerPath = withExe;
-            }
-            command = `${installerPath} /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`;
-        }
-        else {
-            command = `bash "${installerPath}" -b -p ${outputPath}`;
+        switch (installerExtension) {
+            case ".exe":
+                /* From https://docs.anaconda.com/anaconda/install/silent-mode/
+                  /D=<installation path> - Destination installation path.
+                                          - Must be the last argument.
+                                          - Do not wrap in quotation marks.
+                                          - Required if you use /S.
+                */
+                command = `"${installerPath}" /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`;
+                break;
+            case ".sh":
+                command = `bash "${installerPath}" -f -b -p "${outputPath}"`;
+                break;
+            default:
+                return {
+                    ok: false,
+                    error: Error(`Unknown installer extension: ${installerExtension}`),
+                };
         }
         core.info(`Install Command:\n\t${command}`);
         try {
@@ -21880,7 +21906,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 }
                 utils.consoleLog("\n# Downloading Custom Installer...\n");
                 useBundled = false;
-                result = yield downloadInstaller(installerUrl);
+                result = yield downloadCustomInstaller(installerUrl);
                 if (!result.ok)
                     return result;
                 utils.consoleLog("Installing Custom Installer...");
