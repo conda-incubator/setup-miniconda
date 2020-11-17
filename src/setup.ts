@@ -281,45 +281,52 @@ async function downloadCustomInstaller(url: string): Promise<Result> {
  * @returns the local path to the installer (with the correct extension)
  *
  * ### Notes
- * We must assume `url` it at least ends with the correct executable extension
- * for that platform, but can't make any assumptions about `url`'s format,
- * which might include GET params (?&) and hashes (#), not built with constructor,
- * or have been renamed.
+ * Assume `url` at least ends with the correct executable extension
+ * for this platform, but don't make any other assumptions about `url`'s format:
+ * - might include GET params (?&) and hashes (#),
+ * - was not built with `constructor` (but still has the same CLI),
+ * - or has been renamed during a build process
  */
 async function ensureLocalInstaller(
   options: ILocalInstallerOpts
 ): Promise<string> {
-  core.startGroup("Downloading Installer...");
+  core.startGroup("Ensuring Installer...");
+
   const { pathname } = new URL(options.url);
   const installerName = path.basename(pathname);
   // as a URL, we assume posix paths
   const installerExtension = path.posix.extname(installerName);
   const tool = options.tool != null ? options.tool : installerName;
+  // create a fake version if neccessary
   const version =
     options.version != null
       ? options.version
-      : crypto.createHash("sha256").update(options.url).digest("hex");
+      : "0.0.0-" +
+        crypto.createHash("sha256").update(options.url).digest("hex");
 
   // Look for cache to use
-  let cachedInstallerPath = tc.find(installerName, version);
+  let executablePath = tc.find(installerName, version);
 
-  if (cachedInstallerPath) {
-    core.info(`Found cache at ${cachedInstallerPath}`);
-    core.endGroup();
-    return cachedInstallerPath;
+  if (executablePath !== "") {
+    core.info(`Found ${installerName} cache at ${executablePath}!`);
+  } else {
+    core.info(`Did not find ${installerName} in cache, downloading...`);
+    const rawDownloadPath = await tc.downloadTool(options.url);
+    core.info(`Downloaded ${installerName}, appending ${installerExtension}`);
+    // always ensure the installer ends with a known path
+    executablePath = rawDownloadPath + installerExtension;
+    await io.mv(rawDownloadPath, executablePath);
+    core.info(`Caching ${installerName}...`);
+    await tc.cacheFile(
+      executablePath,
+      installerName,
+      tool,
+      version,
+      ...(options.arch ? [options.arch] : [])
+    );
+    core.info(`Cached ${installerName}!`);
   }
-
-  const rawDownloadPath = await tc.downloadTool(options.url);
-  // always ensure the installer ends with a known path
-  const executablePath = rawDownloadPath + installerExtension;
-  await io.mv(rawDownloadPath, executablePath);
-  await tc.cacheFile(
-    executablePath,
-    installerName,
-    tool,
-    version,
-    options.arch
-  );
+  core.endGroup();
 
   return executablePath;
 }
