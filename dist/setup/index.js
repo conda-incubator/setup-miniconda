@@ -21871,7 +21871,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
         let useBundled = true;
         let useMamba = false;
         try {
-            // Check for consistency
+            core.startGroup("Checking consistency...");
             if (condaConfig["auto_update_conda"] == "true" && condaVersion) {
                 core.warning(`"conda-version=${condaVersion}" was provided but "auto-update-conda" is also enabled!`);
             }
@@ -21887,20 +21887,22 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                     error: new Error(`"mamba-version=${mambaVersion}" requires "conda-forge" to be included in "channels!"`),
                 };
             }
+            if (installerUrl && minicondaVersion) {
+                return {
+                    ok: false,
+                    error: new Error(`"installer-url" and "miniconda-version" were provided: pick one!`),
+                };
+            }
+            core.endGroup();
             try {
-                utils.consoleLog(`Creating bootstrap condarc file in ${CONDARC_PATH}...`);
+                core.startGroup(`Creating bootstrap condarc file in ${CONDARC_PATH}...`);
                 yield fs.promises.writeFile(CONDARC_PATH, BOOTSTRAP_CONDARC);
             }
             catch (err) {
                 return { ok: false, error: err };
             }
+            core.endGroup();
             if (installerUrl !== "") {
-                if (minicondaVersion !== "") {
-                    return {
-                        ok: false,
-                        error: new Error(`"installer-url" and "miniconda-version" were provided: pick one!`),
-                    };
-                }
                 core.startGroup("Downloading Custom Installer...");
                 useBundled = false;
                 result = yield downloadCustomInstaller(installerUrl);
