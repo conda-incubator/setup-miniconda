@@ -12,6 +12,9 @@ jobs:
   example-6:
     name: Ex6 Mamba
     runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: ./
@@ -22,12 +25,10 @@ jobs:
           channel-priority: true
           activate-environment: anaconda-client-env
           environment-file: etc/example-environment.yml
-      - shell: bash -l {0}
-        run: |
+      - run: |
           conda info
           conda list
           conda config --show-sources
           conda config --show
           printenv | sort
-      - shell: bash -l {0}
-        run: mamba install jupyterlab
+      - run: mamba install jupyterlab

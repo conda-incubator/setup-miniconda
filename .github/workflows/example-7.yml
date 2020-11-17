@@ -12,6 +12,9 @@ jobs:
   example-7:
     name: Ex7 Explicit
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
@@ -23,8 +26,7 @@ jobs:
           auto-update-conda: false
           activate-environment: explicit-env
           environment-file: etc/example-explicit.${{ runner.os }}.conda.lock
-      - shell: bash -l {0}
-        run: |
+      - run: |
           conda info
           conda list
           conda config --show-sources

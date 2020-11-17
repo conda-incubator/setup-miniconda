@@ -12,10 +12,12 @@ jobs:
   lint:
     name: Lint
     runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
-      - shell: bash -l {0}
-        run: |
+      - run: |
           npm install
           npm check
           npm build

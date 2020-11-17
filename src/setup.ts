@@ -107,10 +107,7 @@ async function execute(command: string): Promise<Result> {
         const stringData = data.toString();
         for (const forced_error of FORCED_ERRORS) {
           if (stringData.includes(forced_error)) {
-            return {
-              ok: false,
-              error: new Error(`"${command}" failed with "${forced_error}"`),
-            };
+            throw new Error(`"${command}" failed with "${forced_error}"`);
           }
         }
         return data;

@@ -12,6 +12,9 @@ jobs:
   example-4:
     name: Ex4 Linux
     runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: ./
@@ -23,8 +26,7 @@ jobs:
           channel-priority: true
           show-channel-urls: true
           use-only-tar-bz2: true
-      - shell: bash -l {0}
-        run: |
+      - run: |
           conda info
           conda list
           conda config --show-sources
