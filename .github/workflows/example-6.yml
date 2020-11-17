@@ -39,14 +39,20 @@ jobs:
       - name: windows debugging
         if: matrix.os == 'windows-latest'
         run: |
+          set -x
           ls -al /c/Miniconda/condabin || true
           which mamba || true
+          which mamba.bat || true
           /c/Miniconda/condabin/mamba --help || true
+          mamba --help || true
+          /c/Miniconda/condabin/mamba.bat --help || true
+          mamba.bat --help || true
       - name: windows debugging 2
         if: matrix.os == 'windows-latest'
         shell: cmd /C call {0}
         run: |
           dir C:\Miniconda\condabin
           where mamba
+          mamba --help
           C:\Miniconda\condabin\mamba --help
       - run: mamba install jupyterlab
