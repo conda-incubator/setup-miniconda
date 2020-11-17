@@ -35,34 +35,28 @@ jobs:
           conda config --show-sources
           conda config --show
           printenv | sort
-      - name: Bash + NO .bat extension
+
+      - name: Universal call (= Windows, no .bat, from Bash)
+        run: mamba --version
+
+      - name: Windows, with .bat, from Bash
         if: matrix.os == 'windows-latest'
-        run: |
-          conda --help || true
-          /c/Miniconda/condabin/mamba --help || true
-          mamba --help || true
-          /c/Miniconda/condabin/conda --help || true
-      - name: Bash + .bat extension
-        if: matrix.os == 'windows-latest'
-        run: |
-          conda.bat --help || true
-          /c/Miniconda/condabin/mamba.bat --help || true
-          mamba.bat --help || true
-          /c/Miniconda/condabin/conda.bat --help || true
-      - name: CMD + NO .bat
-        if: matrix.os == 'windows-latest'
+        run: mamba.bat --version
+
+      - name: Windows, .bat, from Cmd
         shell: cmd /C call {0}
-        run: |
-          conda --help
-          C:\Miniconda\condabin\conda --help
-          mamba --help
-          C:\Miniconda\condabin\mamba --help
-      - name: CMD + .bat
         if: matrix.os == 'windows-latest'
+        run: mamba --version
+      - name: Windows, no .bat, from Cmd
         shell: cmd /C call {0}
-        run: |
-          conda --help
-          C:\Miniconda\condabin\conda.bat --help
-          mamba.bat --help
-          C:\Miniconda\condabin\mamba.bat --help
-      - run: mamba install jupyterlab
+        if: matrix.os == 'windows-latest'
+        run: mamba --version
+
+      - name: Windows, .bat, from PowerShell
+        shell: pwsh
+        if: matrix.os == 'windows-latest'
+        run: mamba.bat --version
+      - name: Windows, no .bat, from PowerShell
+        shell: pwsh
+        if: matrix.os == 'windows-latest'
+        run: mamba --version
