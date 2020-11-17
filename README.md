@@ -370,7 +370,7 @@ be avoided if your workflow uses the same shell for all the steps.
 By adding a `defaults` section and specifying the `bash -l {0}`, all steps in the job will default
 to that value.
 
-For other shells, make sure to use the right `shell` parameter as the default value.
+For other shells, make sure to use the right `shell` parameter as the default value. Check the [section below](#important) for some examples.
 
 More information the [Github help page](https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_iddefaultsrun).
 
