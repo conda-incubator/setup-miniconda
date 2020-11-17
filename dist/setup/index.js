@@ -22117,14 +22117,14 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 }
                 let group = "";
                 if (environmentExplicit) {
-                    condaAction = "install";
+                    condaAction = ["install"];
                     activateEnvironmentToUse = activateEnvironment;
                     group = `Creating conda environment from explicit specs file...`;
                 }
                 else if (activateEnvironment &&
                     environmentYaml["name"] !== undefined &&
                     environmentYaml["name"] !== activateEnvironment) {
-                    condaAction = "env create";
+                    condaAction = ["env", "create"];
                     activateEnvironmentToUse = environmentYaml["name"];
                     group = `Creating conda environment from yaml file...`;
                     core.warning('The environment name on "environment-file" is not the same as "enviroment-activate", using "environment-file"!');
@@ -22132,21 +22132,21 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 else if (activateEnvironment &&
                     activateEnvironment === environmentYaml["name"]) {
                     group = `Updating conda environment from yaml file...`;
-                    condaAction = "env update";
+                    condaAction = ["env", "update"];
                     activateEnvironmentToUse = activateEnvironment;
                 }
                 else if (activateEnvironment && environmentYaml["name"] === undefined) {
                     core.warning('The environment name on "environment-file" is not defined, using "enviroment-activate"!');
-                    condaAction = "env update";
+                    condaAction = ["env", "update"];
                     activateEnvironmentToUse = activateEnvironment;
                 }
                 else {
                     activateEnvironmentToUse = activateEnvironment;
-                    condaAction = "env create";
+                    condaAction = ["env", "create"];
                 }
-                core.startGroup(group.length ? group : `Running ${condaAction}`);
+                core.startGroup(group.length ? group : `Running ${condaAction.join(" ")}`);
                 result = yield condaCommand([
-                    condaAction,
+                    ...condaAction,
                     "--file",
                     environmentFile,
                     "--name",

@@ -989,7 +989,7 @@ async function setupMiniconda(
 
     if (environmentFile) {
       let environmentYaml: TEnvironment;
-      let condaAction: string;
+      let condaAction: string[];
       let activateEnvironmentToUse: string;
       try {
         const sourceEnvironmentPath: string = path.join(
@@ -1010,7 +1010,7 @@ async function setupMiniconda(
       let group: string = "";
 
       if (environmentExplicit) {
-        condaAction = "install";
+        condaAction = ["install"];
         activateEnvironmentToUse = activateEnvironment;
         group = `Creating conda environment from explicit specs file...`;
       } else if (
@@ -1018,7 +1018,7 @@ async function setupMiniconda(
         environmentYaml["name"] !== undefined &&
         environmentYaml["name"] !== activateEnvironment
       ) {
-        condaAction = "env create";
+        condaAction = ["env", "create"];
         activateEnvironmentToUse = environmentYaml["name"];
         group = `Creating conda environment from yaml file...`;
         core.warning(
@@ -1029,24 +1029,26 @@ async function setupMiniconda(
         activateEnvironment === environmentYaml["name"]
       ) {
         group = `Updating conda environment from yaml file...`;
-        condaAction = "env update";
+        condaAction = ["env", "update"];
         activateEnvironmentToUse = activateEnvironment;
       } else if (activateEnvironment && environmentYaml["name"] === undefined) {
         core.warning(
           'The environment name on "environment-file" is not defined, using "enviroment-activate"!'
         );
-        condaAction = "env update";
+        condaAction = ["env", "update"];
         activateEnvironmentToUse = activateEnvironment;
       } else {
         activateEnvironmentToUse = activateEnvironment;
-        condaAction = "env create";
+        condaAction = ["env", "create"];
       }
 
-      core.startGroup(group.length ? group : `Running ${condaAction}`);
+      core.startGroup(
+        group.length ? group : `Running ${condaAction.join(" ")}`
+      );
 
       result = await condaCommand(
         [
-          condaAction,
+          ...condaAction,
           "--file",
           environmentFile,
           "--name",
