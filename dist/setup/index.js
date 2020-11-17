@@ -21496,6 +21496,7 @@ function ensureLocalInstaller(options) {
             ? options.version
             : "0.0.0-" +
                 crypto.createHash("sha256").update(options.url).digest("hex");
+        core.info(`Checking for cached ${tool}@${version}...`);
         // Look for cache to use
         let executablePath = tc.find(installerName, version);
         if (executablePath !== "") {
@@ -21508,9 +21509,9 @@ function ensureLocalInstaller(options) {
             // always ensure the installer ends with a known path
             executablePath = rawDownloadPath + installerExtension;
             yield io.mv(rawDownloadPath, executablePath);
-            core.info(`Caching ${installerName}...`);
-            yield tc.cacheFile(executablePath, installerName, tool, version, ...(options.arch ? [options.arch] : []));
-            core.info(`Cached ${installerName}!`);
+            core.info(`Caching ${tool}@${version}...`);
+            const cacheResult = yield tc.cacheFile(executablePath, installerName, tool, version, ...(options.arch ? [options.arch] : []));
+            core.info(`Cached ${tool}@${version}: ${cacheResult}!`);
         }
         core.endGroup();
         return executablePath;
