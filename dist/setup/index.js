@@ -21333,6 +21333,7 @@ const OS_NAMES = {
     darwin: "MacOSX",
     linux: "Linux",
 };
+const KNOWN_EXTENSIONS = [".exe", ".sh"];
 /**
  * errors that are always probably spurious
  */
@@ -21468,8 +21469,6 @@ function minicondaVersions(arch) {
  */
 function downloadMiniconda(pythonMajorVersion, minicondaVersion, architecture) {
     return __awaiter(this, void 0, void 0, function* () {
-        let downloadPath;
-        let url;
         // Check valid arch
         const arch = ARCHITECTURES[architecture];
         if (!arch) {
@@ -21489,68 +21488,68 @@ function downloadMiniconda(pythonMajorVersion, minicondaVersion, architecture) {
                 };
             }
         }
-        // Look for cache to use
-        const cachedMinicondaInstallerPath = tc.find(`Miniconda${pythonMajorVersion}`, minicondaVersion, arch);
-        if (cachedMinicondaInstallerPath) {
-            core.info(`Found cache at ${cachedMinicondaInstallerPath}`);
-            downloadPath = cachedMinicondaInstallerPath;
+        try {
+            const downloadPath = yield ensureLocalInstaller({
+                url: MINICONDA_BASE_URL + minicondaInstallerName,
+                tool: `Miniconda${pythonMajorVersion}`,
+                version: minicondaVersion,
+                arch: arch,
+            });
+            return { ok: true, data: downloadPath };
         }
-        else {
-            url = MINICONDA_BASE_URL + minicondaInstallerName;
-            try {
-                downloadPath = yield tc.downloadTool(url);
-                const options = { recursive: true, force: false };
-                // Add extension to dowload
-                yield io.mv(downloadPath, downloadPath + `.${extension}`, options);
-                downloadPath = downloadPath + `.${extension}`;
-                core.info(`Saving cache...`);
-                yield tc.cacheFile(downloadPath, minicondaInstallerName, `Miniconda${pythonMajorVersion}`, minicondaVersion, arch);
-            }
-            catch (err) {
-                return { ok: false, error: err };
-            }
+        catch (error) {
+            return { ok: false, error };
         }
-        return { ok: true, data: downloadPath };
     });
 }
 /**
  * @param url A URL for a file with the CLI of a `constructor`-built artifact
- *
- * ### Notes
- * We must assume `url` it at least ends with the correct executable extension
- * for that platform, but generally can't make any assumptions about `url`'s format,
- * which might include GET params (?&) and hashes (#),
  */
 function downloadCustomInstaller(url) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { pathname } = new url_1.URL(url);
-        // strip off the folder
-        const installerName = pathname.split("/").slice(-1)[0];
-        // use the filesystem-safe hash of the URL as a version
-        const urlHash = crypto.createHash("sha256").update(url).digest("hex");
+        try {
+            const downloadPath = yield ensureLocalInstaller({ url });
+            return { ok: true, data: downloadPath };
+        }
+        catch (error) {
+            return { ok: false, error };
+        }
+    });
+}
+/** Get the path for a locally-executable installer from cache, or as downloaded
+ *
+ * @returns the local path to the installer (with the correct extension)
+ *
+ * ### Notes
+ * We must assume `url` it at least ends with the correct executable extension
+ * for that platform, but can't make any assumptions about `url`'s format,
+ * which might include GET params (?&) and hashes (#), not built with constructor,
+ * or have been renamed.
+ */
+function ensureLocalInstaller(options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.startGroup("Downloading Installer...");
+        const { pathname } = new url_1.URL(options.url);
+        const installerName = path.basename(pathname);
         // as a URL, we assume posix paths
         const installerExtension = path.posix.extname(installerName);
+        const tool = options.tool != null ? options.tool : installerName;
+        const version = options.version != null
+            ? options.version
+            : crypto.createHash("sha256").update(options.url).digest("hex");
         // Look for cache to use
-        const cachedInstallerPath = tc.find(installerName, urlHash);
-        let downloadPath;
+        let cachedInstallerPath = tc.find(installerName, version);
         if (cachedInstallerPath) {
             core.info(`Found cache at ${cachedInstallerPath}`);
-            downloadPath = cachedInstallerPath;
+            core.endGroup();
+            return cachedInstallerPath;
         }
-        else {
-            try {
-                downloadPath = yield tc.downloadTool(url);
-                const downloadWithExt = downloadPath + installerExtension;
-                yield io.mv(downloadPath, downloadWithExt);
-                downloadPath = downloadWithExt;
-                core.info(`Saving to cache...`);
-                yield tc.cacheFile(downloadPath, installerName, installerName, urlHash);
-            }
-            catch (err) {
-                return { ok: false, error: err };
-            }
-        }
-        return { ok: true, data: downloadPath };
+        const rawDownloadPath = yield tc.downloadTool(options.url);
+        // always ensure the installer ends with a known path
+        const executablePath = rawDownloadPath + installerExtension;
+        yield io.mv(rawDownloadPath, executablePath);
+        yield tc.cacheFile(executablePath, installerName, tool, version, options.arch);
+        return executablePath;
     });
 }
 /**
@@ -21558,7 +21557,7 @@ function downloadCustomInstaller(url) {
  *
  * @param installerPath must have an appropriate extension for this platform
  */
-function installMiniconda(installerPath, useBundled) {
+function runInstaller(installerPath, useBundled) {
     return __awaiter(this, void 0, void 0, function* () {
         const outputPath = minicondaPath(useBundled);
         const installerExtension = path.extname(installerPath);
@@ -21887,11 +21886,35 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                     error: new Error(`"mamba-version=${mambaVersion}" requires "conda-forge" to be included in "channels!"`),
                 };
             }
-            if (installerUrl && minicondaVersion) {
-                return {
-                    ok: false,
-                    error: new Error(`"installer-url" and "miniconda-version" were provided: pick one!`),
-                };
+            if (installerUrl) {
+                if (minicondaVersion) {
+                    return {
+                        ok: false,
+                        error: new Error(`"installer-url" and "miniconda-version" were provided: pick one!`),
+                    };
+                }
+                const { pathname } = new url_1.URL(installerUrl);
+                const extname = path.posix.extname(pathname);
+                if (!KNOWN_EXTENSIONS.includes(extname)) {
+                    return {
+                        ok: false,
+                        error: new Error(`"installer-url" file name ends with ${extname}, must be one of ${KNOWN_EXTENSIONS}!`),
+                    };
+                }
+            }
+            else {
+                if (!minicondaVersion && architecture !== "x64") {
+                    return {
+                        ok: false,
+                        error: new Error(`"architecture" is set to something other than "x64" so "miniconda-version" must be set as well.`),
+                    };
+                }
+                if (architecture === "x86" && IS_LINUX) {
+                    return {
+                        ok: false,
+                        error: new Error(`32-bit Linux is not supported by recent versions of Miniconda`),
+                    };
+                }
             }
             core.endGroup();
             try {
@@ -21903,37 +21926,23 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             }
             core.endGroup();
             if (installerUrl !== "") {
-                core.startGroup("Downloading Custom Installer...");
                 useBundled = false;
                 result = yield downloadCustomInstaller(installerUrl);
-                core.endGroup();
                 if (!result.ok)
                     return result;
                 core.startGroup("Installing Custom Installer...");
-                result = yield installMiniconda(result.data, useBundled);
+                result = yield runInstaller(result.data, useBundled);
                 core.endGroup();
             }
             else if (minicondaVersion !== "" || architecture !== "x64") {
-                if (architecture !== "x64" && minicondaVersion === "") {
-                    return {
-                        ok: false,
-                        error: new Error(`"architecture" is set to something other than "x64" so "miniconda-version" must be set as well.`),
-                    };
-                }
-                if (architecture === "x86" && process.platform === "linux") {
-                    return {
-                        ok: false,
-                        error: new Error(`32-bit Linux is not supported by recent versions of Miniconda`),
-                    };
-                }
-                core.startGroup("\n# Downloading Miniconda...\n");
+                core.startGroup("Downloading Miniconda...");
                 useBundled = false;
                 result = yield downloadMiniconda(3, minicondaVersion, architecture);
                 if (!result.ok)
                     return result;
                 core.endGroup();
                 core.startGroup("Installing Miniconda...");
-                result = yield installMiniconda(result.data, useBundled);
+                result = yield runInstaller(result.data, useBundled);
                 if (!result.ok)
                     return result;
                 core.endGroup();
