@@ -21633,10 +21633,11 @@ function createTestEnvironment(activateEnvironment, useBundled, useMamba) {
             activateEnvironment !== "base" &&
             activateEnvironment !== "") {
             if (!environmentExists(activateEnvironment, useBundled)) {
-                utils.consoleLog("Create test environment...");
+                core.startGroup("Create test environment...");
                 result = yield condaCommand(`create --name ${activateEnvironment}`, useBundled, useMamba);
                 if (!result.ok)
                     return result;
+                core.endGroup();
             }
         }
         else {
@@ -22086,22 +22087,23 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 catch (err) {
                     return { ok: false, error: err };
                 }
+                let group = "";
                 if (environmentExplicit) {
                     condaAction = "install";
                     activateEnvironmentToUse = activateEnvironment;
-                    utils.consoleLog(`Creating conda environment from explicit specs file...`);
+                    group = `Creating conda environment from explicit specs file...`;
                 }
                 else if (activateEnvironment &&
                     environmentYaml["name"] !== undefined &&
                     environmentYaml["name"] !== activateEnvironment) {
                     condaAction = "env create";
                     activateEnvironmentToUse = environmentYaml["name"];
-                    utils.consoleLog(`Creating conda environment from yaml file...`);
+                    group = `Creating conda environment from yaml file...`;
                     core.warning('The environment name on "environment-file" is not the same as "enviroment-activate", using "environment-file"!');
                 }
                 else if (activateEnvironment &&
                     activateEnvironment === environmentYaml["name"]) {
-                    utils.consoleLog(`Updating conda environment from yaml file...`);
+                    group = `Updating conda environment from yaml file...`;
                     condaAction = "env update";
                     activateEnvironmentToUse = activateEnvironment;
                 }
@@ -22114,9 +22116,11 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                     activateEnvironmentToUse = activateEnvironment;
                     condaAction = "env create";
                 }
+                core.startGroup(group.length ? group : `Running ${condaAction}`);
                 result = yield condaCommand(`${condaAction} --file ${environmentFile} --name ${activateEnvironmentToUse}`, useBundled, useMamba);
                 if (!result.ok)
                     return result;
+                core.endGroup();
             }
         }
         catch (err) {

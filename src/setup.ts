@@ -409,13 +409,14 @@ async function createTestEnvironment(
     activateEnvironment !== ""
   ) {
     if (!environmentExists(activateEnvironment, useBundled)) {
-      utils.consoleLog("Create test environment...");
+      core.startGroup("Create test environment...");
       result = await condaCommand(
         `create --name ${activateEnvironment}`,
         useBundled,
         useMamba
       );
       if (!result.ok) return result;
+      core.endGroup();
     }
   } else {
     return {
