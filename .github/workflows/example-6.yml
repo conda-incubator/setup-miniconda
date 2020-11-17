@@ -35,23 +35,34 @@ jobs:
           conda config --show-sources
           conda config --show
           printenv | sort
-      - name: windows debugging
+      - name: Bash + NO .bat extension
         if: matrix.os == 'windows-latest'
         run: |
-          set -x
-          ls -al /c/Miniconda/condabin || true
-          which mamba || true
-          which mamba.bat || true
+          conda --help || true
           /c/Miniconda/condabin/mamba --help || true
           mamba --help || true
+          /c/Miniconda/condabin/conda --help || true
+      - name: Bash + .bat extension
+        if: matrix.os == 'windows-latest'
+        run: |
+          conda.bat --help || true
           /c/Miniconda/condabin/mamba.bat --help || true
           mamba.bat --help || true
-      - name: windows debugging 2
+          /c/Miniconda/condabin/conda.bat --help || true
+      - name: CMD + NO .bat
         if: matrix.os == 'windows-latest'
         shell: cmd /C call {0}
         run: |
-          dir C:\Miniconda\condabin
-          where mamba
+          conda --help
+          C:\Miniconda\condabin\conda --help
           mamba --help
           C:\Miniconda\condabin\mamba --help
+      - name: CMD + .bat
+        if: matrix.os == 'windows-latest'
+        shell: cmd /C call {0}
+        run: |
+          conda --help
+          C:\Miniconda\condabin\conda.bat --help
+          mamba.bat --help
+          C:\Miniconda\condabin\mamba.bat --help
       - run: mamba install jupyterlab
