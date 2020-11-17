@@ -5,6 +5,9 @@
 ## Fixes
 
 - [#97][] fixes `installer-url` on Windows
+- [#94][], [#95][] catch ignored errors when an environment file contains
+  invalid section names
+- [#100][] fix `mamba` not being available on Windows if using a `bash` shell
 
 ## [v2.0.0][] (2020-11-08)
 
@@ -27,7 +30,6 @@
 ### Fixes
 
 - [#64][] fixes a bug on post section with removing conda files.
-
 
 ### Features
 
@@ -169,7 +171,6 @@
 [v1.1.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v1.1.0
 [#11]: https://github.com/conda-incubator/setup-miniconda/pull/11
 [#17]: https://github.com/conda-incubator/setup-miniconda/pull/17
-
 
 ## [v1.0.2][] (2019-12-23)
 
