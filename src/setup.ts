@@ -11,7 +11,6 @@ import * as io from "@actions/io";
 import * as tc from "@actions/tool-cache";
 import * as yaml from "js-yaml";
 import getHrefs from "get-hrefs";
-import * as utils from "./utils";
 
 //-----------------------------------------------------------------------
 // Types & Interfaces
@@ -797,9 +796,10 @@ async function setupMiniconda(
     core.startGroup("Setup environment variables...");
     result = await setVariables(useBundled);
     if (!result.ok) return result;
+    core.endGroup();
 
     if (condaConfigFile) {
-      utils.consoleLog("Copying condarc file...");
+      core.startGroup("Copying condarc file...");
       const sourcePath: string = path.join(
         process.env["GITHUB_WORKSPACE"] || "",
         condaConfigFile
@@ -810,8 +810,8 @@ async function setupMiniconda(
       } catch (err) {
         return { ok: false, error: err };
       }
+      core.endGroup();
     }
-    core.endGroup();
 
     // Read the environment yaml to use channels if provided and avoid conda solver conflicts
     let environmentYaml: any;

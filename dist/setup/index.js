@@ -7839,50 +7839,7 @@ module.exports = Uint8Array;
 
 /***/ }),
 /* 162 */,
-/* 163 */
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.consoleLog = void 0;
-const core = __importStar(__webpack_require__(470));
-// General use
-//-----------------------------------------------------------------------
-/**
- * Pretty print section messages
- *
- * @param args
- */
-function consoleLog(...args) {
-    for (let arg of args) {
-        core.info("\n# " + arg);
-        core.info("#".repeat(arg.length + 2) + "\n");
-    }
-}
-exports.consoleLog = consoleLog;
-
-
-/***/ }),
+/* 163 */,
 /* 164 */,
 /* 165 */,
 /* 166 */,
@@ -21312,7 +21269,6 @@ const io = __importStar(__webpack_require__(1));
 const tc = __importStar(__webpack_require__(533));
 const yaml = __importStar(__webpack_require__(414));
 const get_hrefs_1 = __importDefault(__webpack_require__(222));
-const utils = __importStar(__webpack_require__(163));
 //-----------------------------------------------------------------------
 // Constants
 //-----------------------------------------------------------------------
@@ -21959,8 +21915,9 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             result = yield setVariables(useBundled);
             if (!result.ok)
                 return result;
+            core.endGroup();
             if (condaConfigFile) {
-                utils.consoleLog("Copying condarc file...");
+                core.startGroup("Copying condarc file...");
                 const sourcePath = path.join(process.env["GITHUB_WORKSPACE"] || "", condaConfigFile);
                 core.info(`"${sourcePath}" to "${CONDARC_PATH}"`);
                 try {
@@ -21969,8 +21926,8 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 catch (err) {
                     return { ok: false, error: err };
                 }
+                core.endGroup();
             }
-            core.endGroup();
             // Read the environment yaml to use channels if provided and avoid conda solver conflicts
             let environmentYaml;
             let environmentExplicit;
