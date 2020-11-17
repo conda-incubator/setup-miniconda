@@ -969,12 +969,13 @@ async function setupMiniconda(
       } catch (err) {
         return { ok: false, error: err };
       }
+
+      let group: string = "";
+
       if (environmentExplicit) {
         condaAction = "install";
         activateEnvironmentToUse = activateEnvironment;
-        utils.consoleLog(
-          `Creating conda environment from explicit specs file...`
-        );
+        group = `Creating conda environment from explicit specs file...`;
       } else if (
         activateEnvironment &&
         environmentYaml["name"] !== undefined &&
@@ -982,7 +983,7 @@ async function setupMiniconda(
       ) {
         condaAction = "env create";
         activateEnvironmentToUse = environmentYaml["name"];
-        utils.consoleLog(`Creating conda environment from yaml file...`);
+        group = `Creating conda environment from yaml file...`;
         core.warning(
           'The environment name on "environment-file" is not the same as "enviroment-activate", using "environment-file"!'
         );
@@ -990,7 +991,7 @@ async function setupMiniconda(
         activateEnvironment &&
         activateEnvironment === environmentYaml["name"]
       ) {
-        utils.consoleLog(`Updating conda environment from yaml file...`);
+        group = `Updating conda environment from yaml file...`;
         condaAction = "env update";
         activateEnvironmentToUse = activateEnvironment;
       } else if (activateEnvironment && environmentYaml["name"] === undefined) {
@@ -1003,12 +1004,16 @@ async function setupMiniconda(
         activateEnvironmentToUse = activateEnvironment;
         condaAction = "env create";
       }
+
+      core.startGroup(group.length ? group : `Running ${condaAction}`);
+
       result = await condaCommand(
         `${condaAction} --file ${environmentFile} --name ${activateEnvironmentToUse}`,
         useBundled,
         useMamba
       );
       if (!result.ok) return result;
+      core.endGroup();
     }
   } catch (err) {
     return { ok: false, error: err };
