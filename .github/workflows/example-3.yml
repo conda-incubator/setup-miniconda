@@ -12,6 +12,9 @@ jobs:
   example-3:
     name: Ex3 Linux
     runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: ./
@@ -22,8 +25,7 @@ jobs:
           condarc-file: etc/example-condarc.yml
           auto-activate-base: false
           auto-update-conda: true
-      - shell: bash -l {0}
-        run: |
+      - run: |
           conda info
           conda list
           printenv | sort
@@ -31,6 +33,9 @@ jobs:
   example-3-no-name:
     name: Ex3-no-name Linux
     runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: ./
@@ -41,8 +46,7 @@ jobs:
           condarc-file: etc/example-condarc.yml
           auto-activate-base: false
           auto-update-conda: true
-      - shell: bash -l {0}
-        run: |
+      - run: |
           conda info
           conda list
           printenv | sort

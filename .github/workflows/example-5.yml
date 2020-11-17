@@ -12,6 +12,9 @@ jobs:
   example-5-linux:
     name: Ex5 PyPy Linux
     runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: ./
@@ -20,8 +23,7 @@ jobs:
           allow-softlinks: true
           show-channel-urls: true
           use-only-tar-bz2: true
-      - shell: bash -l {0}
-        run: |
+      - run: |
           conda info
           conda list
           conda config --show-sources
@@ -30,6 +32,9 @@ jobs:
   example-5-mac:
     name: Ex5 PyPy MacOS
     runs-on: "macos-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: ./
@@ -39,8 +44,7 @@ jobs:
           show-channel-urls: true
           use-only-tar-bz2: true
           activate-environment: ""
-      - shell: bash -l {0}
-        run: |
+      - run: |
           conda info
           conda list
           conda config --show-sources
