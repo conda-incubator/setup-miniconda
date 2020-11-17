@@ -21923,24 +21923,27 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                         error: new Error(`32-bit Linux is not supported by recent versions of Miniconda`),
                     };
                 }
-                utils.consoleLog("\n# Downloading Miniconda...\n");
+                core.startGroup("\n# Downloading Miniconda...\n");
                 useBundled = false;
                 result = yield downloadMiniconda(3, minicondaVersion, architecture);
                 if (!result.ok)
                     return result;
-                utils.consoleLog("Installing Miniconda...");
+                core.endGroup();
+                core.startGroup("Installing Miniconda...");
                 result = yield installMiniconda(result.data, useBundled);
                 if (!result.ok)
                     return result;
+                core.endGroup();
             }
             else {
-                utils.consoleLog("Locating Miniconda...");
+                core.startGroup("Locating Miniconda...");
                 core.info(minicondaPath());
                 if (!fs.existsSync(minicondaPath())) {
                     return { ok: false, error: new Error("Bundled Miniconda not found!") };
                 }
+                core.endGroup();
             }
-            utils.consoleLog("Setup environment variables...");
+            core.startGroup("Setup environment variables...");
             result = yield setVariables(useBundled);
             if (!result.ok)
                 return result;
@@ -21955,6 +21958,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                     return { ok: false, error: err };
                 }
             }
+            core.endGroup();
             // Read the environment yaml to use channels if provided and avoid conda solver conflicts
             let environmentYaml;
             let environmentExplicit;
@@ -22004,35 +22008,40 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             result = yield condaCommand("config --set always_yes yes --set changeps1 no", useBundled, useMamba);
             if (!result.ok)
                 return result;
-            utils.consoleLog("Initialize Conda and fix ownership...");
+            core.startGroup("Initialize Conda and fix ownership...");
             result = yield condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles);
             if (!result.ok)
                 return result;
+            core.endGroup();
             if (condaVersion) {
-                utils.consoleLog("Installing Conda...");
+                core.startGroup("Installing Conda...");
                 result = yield condaCommand(`install --name base conda=${condaVersion}`, useBundled, useMamba);
                 if (!result.ok)
                     return result;
+                core.endGroup();
             }
             if (condaConfig["auto_update_conda"] == "true") {
-                utils.consoleLog("Updating conda...");
+                core.startGroup("Updating conda...");
                 result = yield condaCommand("update conda", useBundled, useMamba);
                 if (!result.ok)
                     return result;
+                core.endGroup();
                 if (condaConfig) {
-                    utils.consoleLog("Applying conda configuration after update...");
+                    core.startGroup("Applying conda configuration after update...");
                     result = yield applyCondaConfiguration(condaConfig, useBundled);
                     if (!result.ok)
                         return result;
+                    core.endGroup();
                 }
             }
             // Any conda commands run here after init and setup
             if (mambaVersion) {
-                utils.consoleLog("Installing Mamba...");
+                core.startGroup("Installing Mamba...");
                 core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
                 if (mambaVersion) {
                     result = yield condaCommand(`install --name base mamba=${mambaVersion}`, useBundled, useMamba);
                 }
+                core.endGroup();
                 if (result.ok) {
                     useMamba = true;
                 }
@@ -22041,10 +22050,11 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 }
             }
             if (condaBuildVersion) {
-                utils.consoleLog("Installing Conda Build...");
+                core.startGroup("Installing Conda Build...");
                 result = yield condaCommand(`install --name base conda-build=${condaBuildVersion}`, useBundled, useMamba);
                 if (!result.ok)
                     return result;
+                core.endGroup();
             }
             if (activateEnvironment) {
                 result = yield createTestEnvironment(activateEnvironment, useBundled, useMamba);
@@ -22052,10 +22062,11 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                     return result;
             }
             if (pythonVersion && activateEnvironment) {
-                utils.consoleLog(`Installing Python="${pythonVersion}" on "${activateEnvironment}" environment...`);
+                core.startGroup(`Installing Python="${pythonVersion}" on "${activateEnvironment}" environment...`);
                 result = yield setupPython(activateEnvironment, pythonVersion, useBundled, useMamba);
                 if (!result.ok)
                     return result;
+                core.endGroup();
             }
             if (environmentFile) {
                 let environmentYaml;
