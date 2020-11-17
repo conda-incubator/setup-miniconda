@@ -5,8 +5,8 @@ inputs:
   installer-url:
     description:
       "If provided, this installer will be used instead of a miniconda
-      installer. Visit https://github.com/conda/constructor for more information
-      on creating installers"
+      installer, and cached based on its full URL
+      Visit https://github.com/conda/constructor for more information on creating installers"
     required: false
     default: ""
   miniconda-version:

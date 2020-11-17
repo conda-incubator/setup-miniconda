@@ -10,16 +10,21 @@ on:
 
 jobs:
   example-5-linux:
-    name: Ex5 PyPy Linux
+    name: Ex5 PyPy Linux Local
     runs-on: "ubuntu-latest"
+    env:
+      MINIFORGE_URL: https://github.com/conda-forge/miniforge/releases/download/4.9.0-3/Miniforge-pypy3-4.9.0-3-Linux-x86_64.sh
     defaults:
       run:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
+      - run: |
+          curl ${MINIFORGE_URL} > /tmp/some-built-installer-${{ github.run_number }}.sh
       - uses: ./
         with:
-          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.9.0-3/Miniforge-pypy3-4.9.0-3-Linux-x86_64.sh?foo
+          installer-url:
+            file:///tmp/some-built-installer-${{ github.run_number }}.sh
           allow-softlinks: true
           show-channel-urls: true
           use-only-tar-bz2: true
@@ -57,7 +62,9 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./
         with:
-          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.9.0-3/Miniforge3-4.9.0-0-Windows-x86_64.exe?foo=bar&baz#zzz
+          installer-url:
+            https://github.com/conda-forge/miniforge/releases/download/4.9.0-3/Miniforge3-4.9.0-0-Windows-x86_64.exe?foo=bar&baz#${{
+            github.run_number }}
           show-channel-urls: true
           use-only-tar-bz2: true
           activate-environment: ""
