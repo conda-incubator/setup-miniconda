@@ -36,4 +36,18 @@ jobs:
           conda config --show-sources
           conda config --show
           printenv | sort
+      - name: windows debugging
+        if: matrix.os == 'windows-latest'
+        run: |
+          set +e
+          ls -al /c/Miniconda/Scripts/condabin
+          which mamba
+          /c/Miniconda/Scripts/condabin/mamba --help
+      - name: windows debugging 2
+        if: matrix.os == 'windows-latest'
+        shell: cmd /C call {0}
+        run: |
+          dir C:\Miniconda\Scripts\condabin
+          where mamba
+          C:\Miniconda\Scripts\condabin\mamba --help
       - run: mamba install jupyterlab
