@@ -850,17 +850,31 @@ async function setupMiniconda(
       core.warning(
         `Mamba support is still experimental and can result in differently solved environments!`
       );
-      if (mambaVersion) {
-        result = await condaCommand(
-          `install --name base mamba=${mambaVersion}`,
-          useBundled,
-          useMamba
-        );
-      }
+      result = await condaCommand(
+        `install --name base mamba=${mambaVersion}`,
+        useBundled,
+        useMamba
+      );
       if (result.ok) {
         useMamba = true;
       } else {
         return result;
+      }
+    }
+
+    // bash users on windows might want to use conda/mamba instead of conda/mamba.bat... create copy?
+    if (IS_WINDOWS) {
+      let bats = [condaExecutable(useBundled, false)];
+      if (useMamba) {
+        bats.push(condaExecutable(useBundled, useMamba));
+      }
+      for (const bat of bats) {
+        core.info(`"${bat}" to "${bat.slice(0, -4)}"`);
+        try {
+          await io.cp(bat, bat.slice(0, -4));
+        } catch (err) {
+          return { ok: false, error: err };
+        }
       }
     }
 
