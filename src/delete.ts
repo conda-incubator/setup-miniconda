@@ -5,10 +5,11 @@ import * as path from "path";
 import * as core from "@actions/core";
 import * as io from "@actions/io";
 
+import * as utils from "./utils";
+
 async function run(): Promise<void> {
   try {
-    let cacheFolder: string = "~/conda_pkgs_dir";
-    cacheFolder = cacheFolder.replace("~", os.homedir().replace("\\", "/"));
+    const cacheFolder = utils.cacheFolder();
 
     if (fs.existsSync(cacheFolder) && fs.lstatSync(cacheFolder).isDirectory()) {
       core.startGroup(
