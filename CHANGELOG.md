@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [v2.1.0][] (Unreleased)
+
+## Fixes
+
+- [#97][] fixes `installer-url` on Windows
+
 ## [v2.0.0][] (2020-11-08)
 
 ### Fixes

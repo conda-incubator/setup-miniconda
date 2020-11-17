@@ -1,17 +1,12 @@
-import * as core from "@actions/core";
+import * as os from "os";
+import * as path from "path";
 
-// General use
-//-----------------------------------------------------------------------
-/**
- * Pretty print section messages
- *
- * @param args
- */
-function consoleLog(...args: string[]): void {
-  for (let arg of args) {
-    core.info("\n# " + arg);
-    core.info("#".repeat(arg.length + 2) + "\n");
-  }
+/** Where to put files. Should eventually be configurable */
+const CONDA_CACHE_FOLDER = "conda_pkgs_dir";
+
+/** the environment variable exported */
+export const ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+
+export function cacheFolder() {
+  return path.join(os.homedir(), CONDA_CACHE_FOLDER);
 }
-
-export { consoleLog };

@@ -9,11 +9,10 @@ import * as utils from "./utils";
 
 async function run(): Promise<void> {
   try {
-    let cacheFolder: string = "~/conda_pkgs_dir";
-    cacheFolder = cacheFolder.replace("~", os.homedir().replace("\\", "/"));
+    const cacheFolder = utils.cacheFolder();
 
     if (fs.existsSync(cacheFolder) && fs.lstatSync(cacheFolder).isDirectory()) {
-      utils.consoleLog(
+      core.startGroup(
         "Removing uncompressed packages to trim down cache folder..."
       );
       let fullPath: string;
@@ -34,6 +33,7 @@ async function run(): Promise<void> {
           }
         }
       }
+      core.endGroup();
     }
   } catch (err) {
     core.setFailed(err.message);

@@ -10,16 +10,22 @@ on:
 
 jobs:
   example-5-linux:
-    name: Ex5 PyPy Linux
+    name: Ex5 PyPy Linux Local
     runs-on: "ubuntu-latest"
+    env:
+      MINIFORGE_URL: https://github.com/conda-forge/miniforge/releases/download/4.9.0-3/Miniforge-pypy3-4.9.0-3-Linux-x86_64.sh
     defaults:
       run:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
+      - run: |
+          curl -L ${MINIFORGE_URL} > /tmp/some-built-installer-${{ github.run_number }}.sh
       - uses: ./
         with:
-          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-Linux-x86_64.sh
+          installer-url:
+            file:///tmp/some-built-installer-${{ github.run_number
+            }}.sh?foo=bar&baz#zzz
           allow-softlinks: true
           show-channel-urls: true
           use-only-tar-bz2: true
@@ -39,12 +45,32 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./
         with:
-          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-MacOSX-x86_64.sh
+          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.9.0-3/Miniforge-pypy3-4.9.0-3-MacOSX-x86_64.sh?foo=bar&baz
           allow-softlinks: true
           show-channel-urls: true
           use-only-tar-bz2: true
           activate-environment: ""
       - run: |
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show
+
+  example-5-win:
+    name: Ex5 Windows
+    runs-on: "windows-latest"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        with:
+          installer-url:
+            https://github.com/conda-forge/miniforge/releases/download/4.9.0-3/Miniforge3-4.9.0-0-Windows-x86_64.exe?foo=bar&baz#${{
+            github.run_number }}
+          show-channel-urls: true
+          use-only-tar-bz2: true
+          activate-environment: ""
+      - shell: bash -l {0}
+        run: |
           conda info
           conda list
           conda config --show-sources

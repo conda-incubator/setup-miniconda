@@ -447,22 +447,17 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.consoleLog = void 0;
-const core = __importStar(__webpack_require__(470));
-// General use
-//-----------------------------------------------------------------------
-/**
- * Pretty print section messages
- *
- * @param args
- */
-function consoleLog(...args) {
-    for (let arg of args) {
-        core.info("\n# " + arg);
-        core.info("#".repeat(arg.length + 2) + "\n");
-    }
+exports.cacheFolder = exports.ENV_VAR_CONDA_PKGS = void 0;
+const os = __importStar(__webpack_require__(87));
+const path = __importStar(__webpack_require__(622));
+/** Where to put files. Should eventually be configurable */
+const CONDA_CACHE_FOLDER = "conda_pkgs_dir";
+/** the environment variable exported */
+exports.ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+function cacheFolder() {
+    return path.join(os.homedir(), CONDA_CACHE_FOLDER);
 }
-exports.consoleLog = consoleLog;
+exports.cacheFolder = cacheFolder;
 
 
 /***/ }),
@@ -510,10 +505,9 @@ const utils = __importStar(__webpack_require__(163));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            let cacheFolder = "~/conda_pkgs_dir";
-            cacheFolder = cacheFolder.replace("~", os.homedir().replace("\\", "/"));
+            const cacheFolder = utils.cacheFolder();
             if (fs.existsSync(cacheFolder) && fs.lstatSync(cacheFolder).isDirectory()) {
-                utils.consoleLog("Removing uncompressed packages to trim down cache folder...");
+                core.startGroup("Removing uncompressed packages to trim down cache folder...");
                 let fullPath;
                 for (let folder_or_file of fs.readdirSync(cacheFolder)) {
                     fullPath = path.join(cacheFolder, folder_or_file);
@@ -531,6 +525,7 @@ function run() {
                         }
                     }
                 }
+                core.endGroup();
             }
         }
         catch (err) {

@@ -216,6 +216,9 @@ which includes `conda` can be used in place of Miniconda. For example,
 [miniforge](https://github.com/conda-forge/miniforge/releases) for platforms not
 yet supported by Miniconda.
 
+> Note: Installer downloads are cached based on their full URL: adding some
+  non-functional salt to the URL will prevent this behavior, e.g. `#${{ github.run_number }}`
+
 ```yaml
 jobs:
   example-5:
