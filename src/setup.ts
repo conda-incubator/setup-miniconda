@@ -856,25 +856,19 @@ async function setupMiniconda(
         useMamba
       );
       if (result.ok) {
+        if (IS_WINDOWS) {
+          // add bat-less forwarder for bash users
+          const mambaBat = condaExecutable(useBundled, true);
+          const contents = `cmd.exe /C ${mambaBat} $*`;
+          try {
+            fs.writeFileSync(mambaBat.slice(0, -4), contents);
+          } catch (err) {
+            return { ok: false, error: err };
+          }
+        }
         useMamba = true;
       } else {
         return result;
-      }
-    }
-
-    // bash users on windows might want to use conda/mamba instead of conda/mamba.bat... create copy?
-    if (IS_WINDOWS) {
-      let bats = [condaExecutable(useBundled, false)];
-      if (useMamba) {
-        bats.push(condaExecutable(useBundled, useMamba));
-      }
-      for (const bat of bats) {
-        core.info(`"${bat}" to "${bat.slice(0, -4)}"`);
-        try {
-          await io.cp(bat, bat.slice(0, -4));
-        } catch (err) {
-          return { ok: false, error: err };
-        }
       }
     }
 
