@@ -20,11 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: |
-          curl ${MINIFORGE_URL} > /tmp/some-built-installer-${{ github.run_number }}.sh
+          curl -L ${MINIFORGE_URL} > /tmp/some-built-installer-${{ github.run_number }}.sh
       - uses: ./
         with:
           installer-url:
-            file:///tmp/some-built-installer-${{ github.run_number }}.sh
+            file:///tmp/some-built-installer-${{ github.run_number
+            }}.sh?foo=bar&baz#zzz
           allow-softlinks: true
           show-channel-urls: true
           use-only-tar-bz2: true
