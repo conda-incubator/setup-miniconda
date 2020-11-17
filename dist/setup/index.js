@@ -21524,8 +21524,8 @@ function downloadCustomInstaller(url) {
 function ensureLocalInstaller(options) {
     return __awaiter(this, void 0, void 0, function* () {
         core.startGroup("Ensuring Installer...");
-        const { pathname } = new url_1.URL(options.url);
-        const installerName = path.basename(pathname);
+        const url = new url_1.URL(options.url);
+        const installerName = path.basename(url.pathname);
         // as a URL, we assume posix paths
         const installerExtension = path.posix.extname(installerName);
         const tool = options.tool != null ? options.tool : installerName;
@@ -21534,13 +21534,19 @@ function ensureLocalInstaller(options) {
             ? options.version
             : "0.0.0-" +
                 crypto.createHash("sha256").update(options.url).digest("hex");
-        core.info(`Checking for cached ${tool}@${version}...`);
-        // Look for cache to use
-        let executablePath = tc.find(installerName, version);
-        if (executablePath !== "") {
-            core.info(`Found ${installerName} cache at ${executablePath}!`);
+        let executablePath = "";
+        if (url.protocol === "file:") {
+            core.info(`Local file specified, using in-place...`);
+            executablePath = url_1.fileURLToPath(options.url);
         }
-        else {
+        if (executablePath === "") {
+            core.info(`Checking for cached ${tool}@${version}...`);
+            executablePath = tc.find(installerName, version);
+            if (executablePath !== "") {
+                core.info(`Found ${installerName} cache at ${executablePath}!`);
+            }
+        }
+        if (executablePath === "") {
             core.info(`Did not find ${installerName} in cache, downloading...`);
             const rawDownloadPath = yield tc.downloadTool(options.url);
             core.info(`Downloaded ${installerName}, appending ${installerExtension}`);
@@ -21552,6 +21558,9 @@ function ensureLocalInstaller(options) {
             core.info(`Cached ${tool}@${version}: ${cacheResult}!`);
         }
         core.endGroup();
+        if (executablePath === "") {
+            throw Error("Could not determine an executable path from installer-url");
+        }
         return executablePath;
     });
 }

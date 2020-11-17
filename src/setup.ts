@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
-import { URL } from "url";
+import { URL, fileURLToPath } from "url";
 
 import * as core from "@actions/core";
 import * as exec from "@actions/exec";
@@ -292,8 +292,9 @@ async function ensureLocalInstaller(
 ): Promise<string> {
   core.startGroup("Ensuring Installer...");
 
-  const { pathname } = new URL(options.url);
-  const installerName = path.basename(pathname);
+  const url = new URL(options.url);
+
+  const installerName = path.basename(url.pathname);
   // as a URL, we assume posix paths
   const installerExtension = path.posix.extname(installerName);
   const tool = options.tool != null ? options.tool : installerName;
@@ -304,13 +305,22 @@ async function ensureLocalInstaller(
       : "0.0.0-" +
         crypto.createHash("sha256").update(options.url).digest("hex");
 
-  core.info(`Checking for cached ${tool}@${version}...`);
-  // Look for cache to use
-  let executablePath = tc.find(installerName, version);
+  let executablePath = "";
 
-  if (executablePath !== "") {
-    core.info(`Found ${installerName} cache at ${executablePath}!`);
-  } else {
+  if (url.protocol === "file:") {
+    core.info(`Local file specified, using in-place...`);
+    executablePath = fileURLToPath(options.url);
+  }
+
+  if (executablePath === "") {
+    core.info(`Checking for cached ${tool}@${version}...`);
+    executablePath = tc.find(installerName, version);
+    if (executablePath !== "") {
+      core.info(`Found ${installerName} cache at ${executablePath}!`);
+    }
+  }
+
+  if (executablePath === "") {
     core.info(`Did not find ${installerName} in cache, downloading...`);
     const rawDownloadPath = await tc.downloadTool(options.url);
     core.info(`Downloaded ${installerName}, appending ${installerExtension}`);
@@ -327,7 +337,12 @@ async function ensureLocalInstaller(
     );
     core.info(`Cached ${tool}@${version}: ${cacheResult}!`);
   }
+
   core.endGroup();
+
+  if (executablePath === "") {
+    throw Error("Could not determine an executable path from installer-url");
+  }
 
   return executablePath;
 }
