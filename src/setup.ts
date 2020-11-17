@@ -306,16 +306,14 @@ async function downloadCustomInstaller(url: string): Promise<Result> {
   } else {
     try {
       downloadPath = await tc.downloadTool(url);
+      const downloadWithExt = downloadPath + installerExtension;
+      await io.mv(downloadPath, downloadWithExt);
+      downloadPath = downloadWithExt;
       core.info(`Saving to cache...`);
       await tc.cacheFile(downloadPath, installerName, installerName, urlHash);
     } catch (err) {
       return { ok: false, error: err };
     }
-  }
-
-  if (!downloadPath.endsWith(installerExtension)) {
-    core.info(`Adding "${installerExtension}"...`);
-    downloadPath += installerExtension;
   }
 
   return { ok: true, data: downloadPath };
@@ -730,12 +728,17 @@ async function setupMiniconda(
           ),
         };
       }
-      utils.consoleLog("\n# Downloading Custom Installer...\n");
+
+      core.startGroup("Downloading Custom Installer...");
       useBundled = false;
       result = await downloadCustomInstaller(installerUrl);
+      core.endGroup();
+
       if (!result.ok) return result;
-      utils.consoleLog("Installing Custom Installer...");
+
+      core.startGroup("Installing Custom Installer...");
       result = await installMiniconda(result.data, useBundled);
+      core.endGroup();
     } else if (minicondaVersion !== "" || architecture !== "x64") {
       if (architecture !== "x64" && minicondaVersion === "") {
         return {

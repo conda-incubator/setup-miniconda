@@ -21540,16 +21540,15 @@ function downloadCustomInstaller(url) {
         else {
             try {
                 downloadPath = yield tc.downloadTool(url);
+                const downloadWithExt = downloadPath + installerExtension;
+                yield io.mv(downloadPath, downloadWithExt);
+                downloadPath = downloadWithExt;
                 core.info(`Saving to cache...`);
                 yield tc.cacheFile(downloadPath, installerName, installerName, urlHash);
             }
             catch (err) {
                 return { ok: false, error: err };
             }
-        }
-        if (!downloadPath.endsWith(installerExtension)) {
-            core.info(`Adding "${installerExtension}"...`);
-            downloadPath += installerExtension;
         }
         return { ok: true, data: downloadPath };
     });
@@ -21901,13 +21900,15 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                         error: new Error(`"installer-url" and "miniconda-version" were provided: pick one!`),
                     };
                 }
-                utils.consoleLog("\n# Downloading Custom Installer...\n");
+                core.startGroup("Downloading Custom Installer...");
                 useBundled = false;
                 result = yield downloadCustomInstaller(installerUrl);
+                core.endGroup();
                 if (!result.ok)
                     return result;
-                utils.consoleLog("Installing Custom Installer...");
+                core.startGroup("Installing Custom Installer...");
                 result = yield installMiniconda(result.data, useBundled);
+                core.endGroup();
             }
             else if (minicondaVersion !== "" || architecture !== "x64") {
                 if (architecture !== "x64" && minicondaVersion === "") {
