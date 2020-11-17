@@ -21999,15 +21999,17 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                         core.warning('"channels" set on the "environment-file" do not match "channels" set on the action!');
                     }
                 }
-                utils.consoleLog("Applying conda configuration...");
+                core.startGroup("Applying conda configuration...");
                 result = yield applyCondaConfiguration(condaConfig, useBundled);
+                core.endGroup();
                 // We do not fail because some options might not be available
                 // if (!result.ok) return result;
             }
-            utils.consoleLog("Setup Conda basic configuration...");
+            core.startGroup("Setup Conda basic configuration...");
             result = yield condaCommand("config --set always_yes yes --set changeps1 no", useBundled, useMamba);
             if (!result.ok)
                 return result;
+            core.endGroup();
             core.startGroup("Initialize Conda and fix ownership...");
             result = yield condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles);
             if (!result.ok)

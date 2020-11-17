@@ -844,19 +844,21 @@ async function setupMiniconda(
           );
         }
       }
-      utils.consoleLog("Applying conda configuration...");
+      core.startGroup("Applying conda configuration...");
       result = await applyCondaConfiguration(condaConfig, useBundled);
+      core.endGroup();
       // We do not fail because some options might not be available
       // if (!result.ok) return result;
     }
 
-    utils.consoleLog("Setup Conda basic configuration...");
+    core.startGroup("Setup Conda basic configuration...");
     result = await condaCommand(
       "config --set always_yes yes --set changeps1 no",
       useBundled,
       useMamba
     );
     if (!result.ok) return result;
+    core.endGroup();
 
     core.startGroup("Initialize Conda and fix ownership...");
     result = await condaInit(
