@@ -22017,11 +22017,19 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             if (mambaVersion) {
                 core.startGroup("Installing Mamba...");
                 core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
-                if (mambaVersion) {
-                    result = yield condaCommand(`install --name base mamba=${mambaVersion}`, useBundled, useMamba);
-                }
-                core.endGroup();
+                result = yield condaCommand(`install --name base mamba=${mambaVersion}`, useBundled, useMamba);
                 if (result.ok) {
+                    if (IS_WINDOWS) {
+                        // add bat-less forwarder for bash users on Windows
+                        const mambaBat = condaExecutable(useBundled, true).replace("\\", "/");
+                        const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
+                        try {
+                            fs.writeFileSync(mambaBat.slice(0, -4), contents);
+                        }
+                        catch (err) {
+                            return { ok: false, error: err };
+                        }
+                    }
                     useMamba = true;
                 }
                 else {
