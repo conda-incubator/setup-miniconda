@@ -4,7 +4,18 @@
 
 ## Fixes
 
-- [#97][] fixes `installer-url` on Windows
+- [#97][] fixes `installer-url` on Windows.
+- [#94][], [#95][] catches ignored errors when an environment file contains
+  invalid section names [#93][].
+- [#100][] fixes `mamba` not being available on Windows if using a `bash` shell
+  [#59][].
+
+[#59]: https://github.com/conda-incubator/setup-miniconda/pull/59
+[#93]: https://github.com/conda-incubator/setup-miniconda/pull/93
+[#94]: https://github.com/conda-incubator/setup-miniconda/pull/94
+[#95]: https://github.com/conda-incubator/setup-miniconda/pull/95
+[#97]: https://github.com/conda-incubator/setup-miniconda/pull/97
+[#100]: https://github.com/conda-incubator/setup-miniconda/pull/100
 
 ## [v2.0.0][] (2020-11-08)
 
@@ -27,7 +38,6 @@
 ### Fixes
 
 - [#64][] fixes a bug on post section with removing conda files.
-
 
 ### Features
 
@@ -54,6 +64,8 @@
 
 - [#46][] fixes conflicting channels on `environment.yml` files and the action
   input channels.
+
+[#46]: https://github.com/conda-incubator/setup-miniconda/pull/46
 
 ### Features
 
@@ -169,7 +181,6 @@
 [v1.1.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v1.1.0
 [#11]: https://github.com/conda-incubator/setup-miniconda/pull/11
 [#17]: https://github.com/conda-incubator/setup-miniconda/pull/17
-
 
 ## [v1.0.2][] (2019-12-23)
 
