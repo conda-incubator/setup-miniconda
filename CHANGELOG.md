@@ -65,6 +65,8 @@
 - [#46][] fixes conflicting channels on `environment.yml` files and the action
   input channels.
 
+[#46]: https://github.com/conda-incubator/setup-miniconda/pull/46
+
 ### Features
 
 - [#43][] adds support for custom installers, e.g. `miniforge`
