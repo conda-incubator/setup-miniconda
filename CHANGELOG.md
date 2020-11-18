@@ -4,11 +4,11 @@
 
 ## Fixes
 
-- [#97][] fixes `installer-url` on Windows
+- [#97][] fixes `installer-url` on Windows.
 - [#94][], [#95][] catches ignored errors when an environment file contains
-  invalid section names [#93][]
+  invalid section names [#93][].
 - [#100][] fixes `mamba` not being available on Windows if using a `bash` shell
-  [#59][]
+  [#59][].
 
 [#59]: https://github.com/conda-incubator/setup-miniconda/pull/59
 [#93]: https://github.com/conda-incubator/setup-miniconda/pull/93
