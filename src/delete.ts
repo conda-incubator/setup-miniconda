@@ -5,7 +5,7 @@ import * as path from "path";
 import * as core from "@actions/core";
 import * as io from "@actions/io";
 
-import * as utils from "./utils";
+import * as utils from "./_utils";
 
 async function run(): Promise<void> {
   try {
