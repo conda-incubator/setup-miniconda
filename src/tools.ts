@@ -1,4 +1,3 @@
-import { Result } from "./types";
 import { condaCommand } from "./conda";
 
 /**
@@ -9,7 +8,7 @@ export async function setupPython(
   pythonVersion: string,
   useBundled: boolean,
   useMamba: boolean
-): Promise<Result> {
+): Promise<void> {
   return await condaCommand(
     ["install", "--name", activateEnvironment, `python=${pythonVersion}`],
     useBundled,

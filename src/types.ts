@@ -1,15 +1,6 @@
 //-----------------------------------------------------------------------
 // Types & Interfaces
 //-----------------------------------------------------------------------
-export interface ISucceedResult {
-  ok: true;
-  data: string;
-}
-export interface IFailedResult {
-  ok: false;
-  error: Error;
-}
-export type Result = ISucceedResult | IFailedResult;
 
 export interface IArchitectures {
   [key: string]: string;

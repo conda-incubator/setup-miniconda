@@ -6,7 +6,7 @@ import * as core from "@actions/core";
 import * as io from "@actions/io";
 import * as tc from "@actions/tool-cache";
 
-import { ILocalInstallerOpts, Result } from "../types";
+import { ILocalInstallerOpts } from "../types";
 import { minicondaPath } from "../conda";
 import { execute } from "../utils";
 
@@ -89,7 +89,7 @@ export async function ensureLocalInstaller(
 export async function runInstaller(
   installerPath: string,
   useBundled: boolean
-): Promise<Result> {
+): Promise<void> {
   const outputPath: string = minicondaPath(useBundled);
   const installerExtension = path.extname(installerPath);
   let command: string[];
@@ -111,18 +111,10 @@ export async function runInstaller(
       command = ["bash", installerPath, "-f", "-b", "-p", outputPath];
       break;
     default:
-      return {
-        ok: false,
-        error: Error(`Unknown installer extension: ${installerExtension}`),
-      };
+      throw new Error(`Unknown installer extension: ${installerExtension}`);
   }
 
   core.info(`Install Command:\n\t${command}`);
 
-  try {
-    return await execute(command);
-  } catch (err) {
-    core.error(err);
-    return { ok: false, error: err };
-  }
+  return await execute(command);
 }

@@ -10,7 +10,7 @@ import * as core from "@actions/core";
 import * as io from "@actions/io";
 
 import { IS_LINUX, IS_MAC, IS_WINDOWS, MINICONDA_DIR_PATH } from "./constants";
-import { IShells, Result, TCondaConfig } from "./types";
+import { IShells, TCondaConfig } from "./types";
 import { execute } from "./utils";
 
 /**
@@ -51,7 +51,7 @@ export async function condaCommand(
   cmd: string[],
   useBundled: boolean,
   useMamba: boolean = false
-): Promise<Result> {
+): Promise<void> {
   const command = [condaExecutable(useBundled, useMamba), ...cmd];
   return await execute(command);
 }
@@ -62,49 +62,39 @@ export async function condaCommand(
 export async function applyCondaConfiguration(
   condaConfig: TCondaConfig,
   useBundled: boolean
-): Promise<Result> {
-  let result: Result;
-  try {
-    for (const key of Object.keys(condaConfig)) {
-      core.info(`"${key}": "${condaConfig[key]}"`);
-      if (condaConfig[key].length !== 0) {
-        if (key === "channels") {
-          // Split by comma and reverse order to preserve higher priority
-          // as listed in the option
-          let channels: Array<string> = condaConfig[key].split(",").reverse();
-          let channel: string;
-          for (channel of channels) {
-            result = await condaCommand(
-              ["config", "--add", key, channel],
-              useBundled,
-              false
-            );
-            if (!result.ok) return result;
-          }
-        } else {
-          result = await condaCommand(
+): Promise<void> {
+  for (const key of Object.keys(condaConfig)) {
+    core.info(`"${key}": "${condaConfig[key]}"`);
+    if (condaConfig[key].length !== 0) {
+      if (key === "channels") {
+        // Split by comma and reverse order to preserve higher priority
+        // as listed in the option
+        let channels: Array<string> = condaConfig[key].split(",").reverse();
+        let channel: string;
+        for (channel of channels) {
+          await condaCommand(
+            ["config", "--add", key, channel],
+            useBundled,
+            false
+          );
+        }
+      } else {
+        try {
+          await condaCommand(
             ["config", "--set", key, condaConfig[key]],
             useBundled,
             false
           );
-          if (!result.ok) return result;
+        } catch (err) {
+          core.warning(`Couldn't set conda configuration '${key}'`);
         }
       }
     }
-
-    result = await condaCommand(
-      ["config", "--show-sources"],
-      useBundled,
-      false
-    );
-    if (!result.ok) return result;
-
-    result = await condaCommand(["config", "--show"], useBundled, false);
-    if (!result.ok) return result;
-  } catch (err) {
-    return { ok: false, error: err };
   }
-  return { ok: true, data: "ok" };
+
+  await condaCommand(["config", "--show-sources"], useBundled, false);
+
+  await condaCommand(["config", "--show"], useBundled, false);
 }
 
 /**
@@ -115,8 +105,7 @@ export async function condaInit(
   useBundled: boolean,
   condaConfig: TCondaConfig,
   removeProfiles: string
-): Promise<Result> {
-  let result: Result;
+): Promise<void> {
   let ownPath: string;
   const isValidActivate: boolean =
     activateEnvironment !== "base" &&
@@ -130,7 +119,7 @@ export async function condaInit(
     if (IS_MAC) {
       core.startGroup("Fixing conda folders ownership");
       const userName: string = process.env.USER as string;
-      result = await execute([
+      await execute([
         "sudo",
         "chown",
         "-R",
@@ -138,7 +127,6 @@ export async function condaInit(
         minicondaPath(useBundled),
       ]);
       core.endGroup();
-      if (!result.ok) return result;
     } else if (IS_WINDOWS) {
       for (let folder of [
         "condabin/",
@@ -150,9 +138,8 @@ export async function condaInit(
         ownPath = path.join(minicondaPath(useBundled), folder);
         if (fs.existsSync(ownPath)) {
           core.startGroup(`Fixing ${folder} ownership`);
-          result = await execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
+          await execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
           core.endGroup();
-          if (!result.ok) return result;
         }
       }
     }
@@ -279,5 +266,4 @@ export async function condaInit(
       fs.appendFileSync(filePath, text);
     }
   });
-  return { ok: true, data: "ok" };
 }

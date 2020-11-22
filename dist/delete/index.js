@@ -1102,13 +1102,10 @@ function execute(command) {
                 },
             },
         };
-        try {
-            yield exec.exec(command[0], command.slice(1), options);
+        const rc = yield exec.exec(command[0], command.slice(1), options);
+        if (rc !== 0) {
+            throw new Error(`${command[0]} return error code ${rc}`);
         }
-        catch (err) {
-            return { ok: false, error: err };
-        }
-        return { ok: true, data: "ok" };
     });
 }
 exports.execute = execute;

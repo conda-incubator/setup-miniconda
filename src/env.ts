@@ -4,7 +4,6 @@ import * as path from "path";
 import * as core from "@actions/core";
 
 import { minicondaPath, condaCommand } from "./conda";
-import { Result } from "./types";
 
 /**
  * Check if a given conda environment exists
@@ -26,8 +25,7 @@ export async function createTestEnvironment(
   activateEnvironment: string,
   useBundled: boolean,
   useMamba: boolean
-): Promise<Result> {
-  let result: Result;
+): Promise<void> {
   if (
     activateEnvironment !== "root" &&
     activateEnvironment !== "base" &&
@@ -35,21 +33,16 @@ export async function createTestEnvironment(
   ) {
     if (!environmentExists(activateEnvironment, useBundled)) {
       core.startGroup("Create test environment...");
-      result = await condaCommand(
+      await condaCommand(
         ["create", "--name", activateEnvironment],
         useBundled,
         useMamba
       );
-      if (!result.ok) return result;
       core.endGroup();
     }
   } else {
-    return {
-      ok: false,
-      error: new Error(
-        'To activate "base" environment use the "auto-activate-base" action input!'
-      ),
-    };
+    throw new Error(
+      'To activate "base" environment use the "auto-activate-base" action input!'
+    );
   }
-  return { ok: true, data: "ok" };
 }
