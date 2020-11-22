@@ -14,7 +14,9 @@ on:
 jobs:
   example-8:
     # prevent cronjobs from running on forks
-    if: (github.event_name == 'schedule' && github.repository == 'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
     name: Ex8 (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
