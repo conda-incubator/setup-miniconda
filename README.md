@@ -9,7 +9,6 @@
 ![Caching Example](https://github.com/conda-incubator/setup-miniconda/workflows/Caching%20Example/badge.svg?branch=master)
 ![Linting](https://github.com/conda-incubator/setup-miniconda/workflows/Linting/badge.svg?branch=master)
 
-
 This action sets up a
 [Miniconda](https://docs.conda.io/en/latest/miniconda.html) installation to use
 the [Conda](https://docs.conda.io/projects/conda/en/latest/) package and
@@ -25,6 +24,36 @@ possibility of automatically activating the test environment on all shells.
 
 > See the **[IMPORTANT](#IMPORTANT)** notes on additional information on
 environment activation.
+
+## Environment activation
+
+This action will by default will not activate the `base`environment and activate an environment called `test`.
+This enforces the idea of not using the `base` environment to install packages used for the action and
+leave the `base` environment untouched, with only `conda` (or `mamba`) in it.
+
+### Use a different environment name
+
+You can change the default `test` environment to have a different name bu setting the
+`activate-environment` input option.
+
+```yaml
+ - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: whatever
+```
+
+### Activate `base` environment
+
+If your specific workflow still needs to activate and use `base` you will need to set the
+`activate-environment` input option to an empty string and also the `auto-activate-base`
+key to `true`.
+
+```yaml
+ - uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-activate-base: true
+          activate-environment: ""
+```
 
 ## Usage examples
 
@@ -400,7 +429,7 @@ jobs:
 
 - Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
   explicitely declared as `shell: bash -l {0}` on steps that need to be properly
-  activated. This is because bash shells are executed with
+  activated (or use a default shell). This is because bash shells are executed with
   `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash
   profile files made by `conda init bash`. See
   [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell)
@@ -408,12 +437,12 @@ jobs:
   [thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).
 - Sh shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
   explicitely declared as `shell: sh -l {0}` on steps that need to be properly
-  activated. This is because sh shells are executed with `sh -e {0}` thus
+  activated (or use a default shell). This is because sh shells are executed with `sh -e {0}` thus
   ignoring updated on bash profile files made by `conda init bash`. See
   [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
 - Cmd shells do not run `Autorun` commands so these shells need to be
   explicitely declared as `shell: cmd /C call {0}` on steps that need to be
-  properly activated. This is because cmd shells are executed with
+  properly activated (or use a default shell). This is because cmd shells are executed with
   `%ComSpec% /D /E:ON /V:OFF /S /C "CALL "{0}""` and the `/D` flag disabled
   execution of `Command Processor/Autorun` windows registry keys, which is what
   `conda init cmd.exe` sets. See
@@ -428,7 +457,7 @@ jobs:
   the `channels` input in the action they must not conflict with what was
   defined in `environment.yaml`, otherwise the conda solver might find conflicts
   and result in very long install times.
-- Conda activation does not correctly work on `sh`. Please use `bash.
+- Conda activation does not correctly work on `sh`. Please use `bash`.
 
 ## Project History and Contributing
 
