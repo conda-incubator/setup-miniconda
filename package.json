@@ -1,6 +1,6 @@
 {
   "name": "action-setup-conda",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "GitHub action for setting up conda from default or custom installers",
   "main": "lib/main.js",
   "scripts": {
