@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [v2.1.0][] (Unreleased)
+## [v2.0.1][] (2020-11-29)
 
 ## Fixes
 
@@ -10,6 +10,7 @@
 - [#100][] fixes `mamba` not being available on Windows if using a `bash` shell
   [#59][].
 
+[v2.0.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v2.0.1
 [#59]: https://github.com/conda-incubator/setup-miniconda/pull/59
 [#93]: https://github.com/conda-incubator/setup-miniconda/pull/93
 [#94]: https://github.com/conda-incubator/setup-miniconda/pull/94
