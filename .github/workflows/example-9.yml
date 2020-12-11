@@ -1,0 +1,39 @@
+name: "Example 9: Empty Channels in file dont crash setup"
+
+on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - "master"
+  schedule:
+    # Note that cronjobs run on master/main by default
+    - cron: "0 0 * * *"
+
+jobs:
+  example-9:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Ex9 (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        python-version: ["3.7", "2.7"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+          environment-file: etc/example-empty-channels-environment.yml
+      - run: |
+          conda info
+          conda list
+          printenv | sort
