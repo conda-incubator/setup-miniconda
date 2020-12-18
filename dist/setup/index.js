@@ -418,609 +418,49 @@ module.exports = matchesStrictComparable;
 /* 7 */,
 /* 8 */,
 /* 9 */
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
+/***/ (function(module, __unusedexports, __webpack_require__) {
 
 "use strict";
 
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const os = __importStar(__webpack_require__(87));
-const events = __importStar(__webpack_require__(614));
-const child = __importStar(__webpack_require__(129));
-const path = __importStar(__webpack_require__(622));
-const io = __importStar(__webpack_require__(1));
-const ioUtil = __importStar(__webpack_require__(672));
-/* eslint-disable @typescript-eslint/unbound-method */
-const IS_WINDOWS = process.platform === 'win32';
-/*
- * Class for running command line tools. Handles quoting and arg parsing in a platform agnostic way.
- */
-class ToolRunner extends events.EventEmitter {
-    constructor(toolPath, args, options) {
-        super();
-        if (!toolPath) {
-            throw new Error("Parameter 'toolPath' cannot be null or empty.");
-        }
-        this.toolPath = toolPath;
-        this.args = args || [];
-        this.options = options || {};
-    }
-    _debug(message) {
-        if (this.options.listeners && this.options.listeners.debug) {
-            this.options.listeners.debug(message);
-        }
-    }
-    _getCommandString(options, noPrefix) {
-        const toolPath = this._getSpawnFileName();
-        const args = this._getSpawnArgs(options);
-        let cmd = noPrefix ? '' : '[command]'; // omit prefix when piped to a second tool
-        if (IS_WINDOWS) {
-            // Windows + cmd file
-            if (this._isCmdFile()) {
-                cmd += toolPath;
-                for (const a of args) {
-                    cmd += ` ${a}`;
-                }
-            }
-            // Windows + verbatim
-            else if (options.windowsVerbatimArguments) {
-                cmd += `"${toolPath}"`;
-                for (const a of args) {
-                    cmd += ` ${a}`;
-                }
-            }
-            // Windows (regular)
-            else {
-                cmd += this._windowsQuoteCmdArg(toolPath);
-                for (const a of args) {
-                    cmd += ` ${this._windowsQuoteCmdArg(a)}`;
-                }
-            }
-        }
-        else {
-            // OSX/Linux - this can likely be improved with some form of quoting.
-            // creating processes on Unix is fundamentally different than Windows.
-            // on Unix, execvp() takes an arg array.
-            cmd += toolPath;
-            for (const a of args) {
-                cmd += ` ${a}`;
-            }
-        }
-        return cmd;
-    }
-    _processLineBuffer(data, strBuffer, onLine) {
-        try {
-            let s = strBuffer + data.toString();
-            let n = s.indexOf(os.EOL);
-            while (n > -1) {
-                const line = s.substring(0, n);
-                onLine(line);
-                // the rest of the string ...
-                s = s.substring(n + os.EOL.length);
-                n = s.indexOf(os.EOL);
-            }
-            strBuffer = s;
-        }
-        catch (err) {
-            // streaming lines to console is best effort.  Don't fail a build.
-            this._debug(`error processing line. Failed with error ${err}`);
-        }
-    }
-    _getSpawnFileName() {
-        if (IS_WINDOWS) {
-            if (this._isCmdFile()) {
-                return process.env['COMSPEC'] || 'cmd.exe';
-            }
-        }
-        return this.toolPath;
-    }
-    _getSpawnArgs(options) {
-        if (IS_WINDOWS) {
-            if (this._isCmdFile()) {
-                let argline = `/D /S /C "${this._windowsQuoteCmdArg(this.toolPath)}`;
-                for (const a of this.args) {
-                    argline += ' ';
-                    argline += options.windowsVerbatimArguments
-                        ? a
-                        : this._windowsQuoteCmdArg(a);
-                }
-                argline += '"';
-                return [argline];
-            }
-        }
-        return this.args;
-    }
-    _endsWith(str, end) {
-        return str.endsWith(end);
-    }
-    _isCmdFile() {
-        const upperToolPath = this.toolPath.toUpperCase();
-        return (this._endsWith(upperToolPath, '.CMD') ||
-            this._endsWith(upperToolPath, '.BAT'));
-    }
-    _windowsQuoteCmdArg(arg) {
-        // for .exe, apply the normal quoting rules that libuv applies
-        if (!this._isCmdFile()) {
-            return this._uvQuoteCmdArg(arg);
-        }
-        // otherwise apply quoting rules specific to the cmd.exe command line parser.
-        // the libuv rules are generic and are not designed specifically for cmd.exe
-        // command line parser.
-        //
-        // for a detailed description of the cmd.exe command line parser, refer to
-        // http://stackoverflow.com/questions/4094699/how-does-the-windows-command-interpreter-cmd-exe-parse-scripts/7970912#7970912
-        // need quotes for empty arg
-        if (!arg) {
-            return '""';
-        }
-        // determine whether the arg needs to be quoted
-        const cmdSpecialChars = [
-            ' ',
-            '\t',
-            '&',
-            '(',
-            ')',
-            '[',
-            ']',
-            '{',
-            '}',
-            '^',
-            '=',
-            ';',
-            '!',
-            "'",
-            '+',
-            ',',
-            '`',
-            '~',
-            '|',
-            '<',
-            '>',
-            '"'
-        ];
-        let needsQuotes = false;
-        for (const char of arg) {
-            if (cmdSpecialChars.some(x => x === char)) {
-                needsQuotes = true;
-                break;
-            }
-        }
-        // short-circuit if quotes not needed
-        if (!needsQuotes) {
-            return arg;
-        }
-        // the following quoting rules are very similar to the rules that by libuv applies.
-        //
-        // 1) wrap the string in quotes
-        //
-        // 2) double-up quotes - i.e. " => ""
-        //
-        //    this is different from the libuv quoting rules. libuv replaces " with \", which unfortunately
-        //    doesn't work well with a cmd.exe command line.
-        //
-        //    note, replacing " with "" also works well if the arg is passed to a downstream .NET console app.
-        //    for example, the command line:
-        //          foo.exe "myarg:""my val"""
-        //    is parsed by a .NET console app into an arg array:
-        //          [ "myarg:\"my val\"" ]
-        //    which is the same end result when applying libuv quoting rules. although the actual
-        //    command line from libuv quoting rules would look like:
-        //          foo.exe "myarg:\"my val\""
-        //
-        // 3) double-up slashes that precede a quote,
-        //    e.g.  hello \world    => "hello \world"
-        //          hello\"world    => "hello\\""world"
-        //          hello\\"world   => "hello\\\\""world"
-        //          hello world\    => "hello world\\"
-        //
-        //    technically this is not required for a cmd.exe command line, or the batch argument parser.
-        //    the reasons for including this as a .cmd quoting rule are:
-        //
-        //    a) this is optimized for the scenario where the argument is passed from the .cmd file to an
-        //       external program. many programs (e.g. .NET console apps) rely on the slash-doubling rule.
-        //
-        //    b) it's what we've been doing previously (by deferring to node default behavior) and we
-        //       haven't heard any complaints about that aspect.
-        //
-        // note, a weakness of the quoting rules chosen here, is that % is not escaped. in fact, % cannot be
-        // escaped when used on the command line directly - even though within a .cmd file % can be escaped
-        // by using %%.
-        //
-        // the saving grace is, on the command line, %var% is left as-is if var is not defined. this contrasts
-        // the line parsing rules within a .cmd file, where if var is not defined it is replaced with nothing.
-        //
-        // one option that was explored was replacing % with ^% - i.e. %var% => ^%var^%. this hack would
-        // often work, since it is unlikely that var^ would exist, and the ^ character is removed when the
-        // variable is used. the problem, however, is that ^ is not removed when %* is used to pass the args
-        // to an external program.
-        //
-        // an unexplored potential solution for the % escaping problem, is to create a wrapper .cmd file.
-        // % can be escaped within a .cmd file.
-        let reverse = '"';
-        let quoteHit = true;
-        for (let i = arg.length; i > 0; i--) {
-            // walk the string in reverse
-            reverse += arg[i - 1];
-            if (quoteHit && arg[i - 1] === '\\') {
-                reverse += '\\'; // double the slash
-            }
-            else if (arg[i - 1] === '"') {
-                quoteHit = true;
-                reverse += '"'; // double the quote
-            }
-            else {
-                quoteHit = false;
-            }
-        }
-        reverse += '"';
-        return reverse
-            .split('')
-            .reverse()
-            .join('');
-    }
-    _uvQuoteCmdArg(arg) {
-        // Tool runner wraps child_process.spawn() and needs to apply the same quoting as
-        // Node in certain cases where the undocumented spawn option windowsVerbatimArguments
-        // is used.
-        //
-        // Since this function is a port of quote_cmd_arg from Node 4.x (technically, lib UV,
-        // see https://github.com/nodejs/node/blob/v4.x/deps/uv/src/win/process.c for details),
-        // pasting copyright notice from Node within this function:
-        //
-        //      Copyright Joyent, Inc. and other Node contributors. All rights reserved.
-        //
-        //      Permission is hereby granted, free of charge, to any person obtaining a copy
-        //      of this software and associated documentation files (the "Software"), to
-        //      deal in the Software without restriction, including without limitation the
-        //      rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-        //      sell copies of the Software, and to permit persons to whom the Software is
-        //      furnished to do so, subject to the following conditions:
-        //
-        //      The above copyright notice and this permission notice shall be included in
-        //      all copies or substantial portions of the Software.
-        //
-        //      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-        //      IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-        //      FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-        //      AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-        //      LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-        //      FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-        //      IN THE SOFTWARE.
-        if (!arg) {
-            // Need double quotation for empty argument
-            return '""';
-        }
-        if (!arg.includes(' ') && !arg.includes('\t') && !arg.includes('"')) {
-            // No quotation needed
-            return arg;
-        }
-        if (!arg.includes('"') && !arg.includes('\\')) {
-            // No embedded double quotes or backslashes, so I can just wrap
-            // quote marks around the whole thing.
-            return `"${arg}"`;
-        }
-        // Expected input/output:
-        //   input : hello"world
-        //   output: "hello\"world"
-        //   input : hello""world
-        //   output: "hello\"\"world"
-        //   input : hello\world
-        //   output: hello\world
-        //   input : hello\\world
-        //   output: hello\\world
-        //   input : hello\"world
-        //   output: "hello\\\"world"
-        //   input : hello\\"world
-        //   output: "hello\\\\\"world"
-        //   input : hello world\
-        //   output: "hello world\\" - note the comment in libuv actually reads "hello world\"
-        //                             but it appears the comment is wrong, it should be "hello world\\"
-        let reverse = '"';
-        let quoteHit = true;
-        for (let i = arg.length; i > 0; i--) {
-            // walk the string in reverse
-            reverse += arg[i - 1];
-            if (quoteHit && arg[i - 1] === '\\') {
-                reverse += '\\';
-            }
-            else if (arg[i - 1] === '"') {
-                quoteHit = true;
-                reverse += '\\';
-            }
-            else {
-                quoteHit = false;
-            }
-        }
-        reverse += '"';
-        return reverse
-            .split('')
-            .reverse()
-            .join('');
-    }
-    _cloneExecOptions(options) {
-        options = options || {};
-        const result = {
-            cwd: options.cwd || process.cwd(),
-            env: options.env || process.env,
-            silent: options.silent || false,
-            windowsVerbatimArguments: options.windowsVerbatimArguments || false,
-            failOnStdErr: options.failOnStdErr || false,
-            ignoreReturnCode: options.ignoreReturnCode || false,
-            delay: options.delay || 10000
-        };
-        result.outStream = options.outStream || process.stdout;
-        result.errStream = options.errStream || process.stderr;
-        return result;
-    }
-    _getSpawnOptions(options, toolPath) {
-        options = options || {};
-        const result = {};
-        result.cwd = options.cwd;
-        result.env = options.env;
-        result['windowsVerbatimArguments'] =
-            options.windowsVerbatimArguments || this._isCmdFile();
-        if (options.windowsVerbatimArguments) {
-            result.argv0 = `"${toolPath}"`;
-        }
-        return result;
-    }
-    /**
-     * Exec a tool.
-     * Output will be streamed to the live console.
-     * Returns promise with return code
-     *
-     * @param     tool     path to tool to exec
-     * @param     options  optional exec options.  See ExecOptions
-     * @returns   number
-     */
-    exec() {
-        return __awaiter(this, void 0, void 0, function* () {
-            // root the tool path if it is unrooted and contains relative pathing
-            if (!ioUtil.isRooted(this.toolPath) &&
-                (this.toolPath.includes('/') ||
-                    (IS_WINDOWS && this.toolPath.includes('\\')))) {
-                // prefer options.cwd if it is specified, however options.cwd may also need to be rooted
-                this.toolPath = path.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
-            }
-            // if the tool is only a file name, then resolve it from the PATH
-            // otherwise verify it exists (add extension on Windows if necessary)
-            this.toolPath = yield io.which(this.toolPath, true);
-            return new Promise((resolve, reject) => {
-                this._debug(`exec tool: ${this.toolPath}`);
-                this._debug('arguments:');
-                for (const arg of this.args) {
-                    this._debug(`   ${arg}`);
-                }
-                const optionsNonNull = this._cloneExecOptions(this.options);
-                if (!optionsNonNull.silent && optionsNonNull.outStream) {
-                    optionsNonNull.outStream.write(this._getCommandString(optionsNonNull) + os.EOL);
-                }
-                const state = new ExecState(optionsNonNull, this.toolPath);
-                state.on('debug', (message) => {
-                    this._debug(message);
-                });
-                const fileName = this._getSpawnFileName();
-                const cp = child.spawn(fileName, this._getSpawnArgs(optionsNonNull), this._getSpawnOptions(this.options, fileName));
-                const stdbuffer = '';
-                if (cp.stdout) {
-                    cp.stdout.on('data', (data) => {
-                        if (this.options.listeners && this.options.listeners.stdout) {
-                            this.options.listeners.stdout(data);
-                        }
-                        if (!optionsNonNull.silent && optionsNonNull.outStream) {
-                            optionsNonNull.outStream.write(data);
-                        }
-                        this._processLineBuffer(data, stdbuffer, (line) => {
-                            if (this.options.listeners && this.options.listeners.stdline) {
-                                this.options.listeners.stdline(line);
-                            }
-                        });
-                    });
-                }
-                const errbuffer = '';
-                if (cp.stderr) {
-                    cp.stderr.on('data', (data) => {
-                        state.processStderr = true;
-                        if (this.options.listeners && this.options.listeners.stderr) {
-                            this.options.listeners.stderr(data);
-                        }
-                        if (!optionsNonNull.silent &&
-                            optionsNonNull.errStream &&
-                            optionsNonNull.outStream) {
-                            const s = optionsNonNull.failOnStdErr
-                                ? optionsNonNull.errStream
-                                : optionsNonNull.outStream;
-                            s.write(data);
-                        }
-                        this._processLineBuffer(data, errbuffer, (line) => {
-                            if (this.options.listeners && this.options.listeners.errline) {
-                                this.options.listeners.errline(line);
-                            }
-                        });
-                    });
-                }
-                cp.on('error', (err) => {
-                    state.processError = err.message;
-                    state.processExited = true;
-                    state.processClosed = true;
-                    state.CheckComplete();
-                });
-                cp.on('exit', (code) => {
-                    state.processExitCode = code;
-                    state.processExited = true;
-                    this._debug(`Exit code ${code} received from tool '${this.toolPath}'`);
-                    state.CheckComplete();
-                });
-                cp.on('close', (code) => {
-                    state.processExitCode = code;
-                    state.processExited = true;
-                    state.processClosed = true;
-                    this._debug(`STDIO streams have closed for tool '${this.toolPath}'`);
-                    state.CheckComplete();
-                });
-                state.on('done', (error, exitCode) => {
-                    if (stdbuffer.length > 0) {
-                        this.emit('stdline', stdbuffer);
-                    }
-                    if (errbuffer.length > 0) {
-                        this.emit('errline', errbuffer);
-                    }
-                    cp.removeAllListeners();
-                    if (error) {
-                        reject(error);
-                    }
-                    else {
-                        resolve(exitCode);
-                    }
-                });
-                if (this.options.input) {
-                    if (!cp.stdin) {
-                        throw new Error('child process missing stdin');
-                    }
-                    cp.stdin.end(this.options.input);
-                }
-            });
-        });
-    }
+
+
+var loader = __webpack_require__(457);
+var dumper = __webpack_require__(685);
+
+
+function deprecated(name) {
+  return function () {
+    throw new Error('Function ' + name + ' is deprecated and cannot be used.');
+  };
 }
-exports.ToolRunner = ToolRunner;
-/**
- * Convert an arg string to an array of args. Handles escaping
- *
- * @param    argString   string of arguments
- * @returns  string[]    array of arguments
- */
-function argStringToArray(argString) {
-    const args = [];
-    let inQuotes = false;
-    let escaped = false;
-    let arg = '';
-    function append(c) {
-        // we only escape double quotes.
-        if (escaped && c !== '"') {
-            arg += '\\';
-        }
-        arg += c;
-        escaped = false;
-    }
-    for (let i = 0; i < argString.length; i++) {
-        const c = argString.charAt(i);
-        if (c === '"') {
-            if (!escaped) {
-                inQuotes = !inQuotes;
-            }
-            else {
-                append(c);
-            }
-            continue;
-        }
-        if (c === '\\' && escaped) {
-            append(c);
-            continue;
-        }
-        if (c === '\\' && inQuotes) {
-            escaped = true;
-            continue;
-        }
-        if (c === ' ' && !inQuotes) {
-            if (arg.length > 0) {
-                args.push(arg);
-                arg = '';
-            }
-            continue;
-        }
-        append(c);
-    }
-    if (arg.length > 0) {
-        args.push(arg.trim());
-    }
-    return args;
-}
-exports.argStringToArray = argStringToArray;
-class ExecState extends events.EventEmitter {
-    constructor(options, toolPath) {
-        super();
-        this.processClosed = false; // tracks whether the process has exited and stdio is closed
-        this.processError = '';
-        this.processExitCode = 0;
-        this.processExited = false; // tracks whether the process has exited
-        this.processStderr = false; // tracks whether stderr was written to
-        this.delay = 10000; // 10 seconds
-        this.done = false;
-        this.timeout = null;
-        if (!toolPath) {
-            throw new Error('toolPath must not be empty');
-        }
-        this.options = options;
-        this.toolPath = toolPath;
-        if (options.delay) {
-            this.delay = options.delay;
-        }
-    }
-    CheckComplete() {
-        if (this.done) {
-            return;
-        }
-        if (this.processClosed) {
-            this._setResult();
-        }
-        else if (this.processExited) {
-            this.timeout = setTimeout(ExecState.HandleTimeout, this.delay, this);
-        }
-    }
-    _debug(message) {
-        this.emit('debug', message);
-    }
-    _setResult() {
-        // determine whether there is an error
-        let error;
-        if (this.processExited) {
-            if (this.processError) {
-                error = new Error(`There was an error when attempting to execute the process '${this.toolPath}'. This may indicate the process failed to start. Error: ${this.processError}`);
-            }
-            else if (this.processExitCode !== 0 && !this.options.ignoreReturnCode) {
-                error = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);
-            }
-            else if (this.processStderr && this.options.failOnStdErr) {
-                error = new Error(`The process '${this.toolPath}' failed because one or more lines were written to the STDERR stream`);
-            }
-        }
-        // clear the timeout
-        if (this.timeout) {
-            clearTimeout(this.timeout);
-            this.timeout = null;
-        }
-        this.done = true;
-        this.emit('done', error, this.processExitCode);
-    }
-    static HandleTimeout(state) {
-        if (state.done) {
-            return;
-        }
-        if (!state.processClosed && state.processExited) {
-            const message = `The STDIO streams did not close within ${state.delay /
-                1000} seconds of the exit event from process '${state.toolPath}'. This may indicate a child process inherited the STDIO streams and has not yet exited.`;
-            state._debug(message);
-        }
-        state._setResult();
-    }
-}
-//# sourceMappingURL=toolrunner.js.map
+
+
+module.exports.Type                = __webpack_require__(945);
+module.exports.Schema              = __webpack_require__(43);
+module.exports.FAILSAFE_SCHEMA     = __webpack_require__(581);
+module.exports.JSON_SCHEMA         = __webpack_require__(23);
+module.exports.CORE_SCHEMA         = __webpack_require__(611);
+module.exports.DEFAULT_SAFE_SCHEMA = __webpack_require__(723);
+module.exports.DEFAULT_FULL_SCHEMA = __webpack_require__(910);
+module.exports.load                = loader.load;
+module.exports.loadAll             = loader.loadAll;
+module.exports.safeLoad            = loader.safeLoad;
+module.exports.safeLoadAll         = loader.safeLoadAll;
+module.exports.dump                = dumper.dump;
+module.exports.safeDump            = dumper.safeDump;
+module.exports.YAMLException       = __webpack_require__(556);
+
+// Deprecated schema names from JS-YAML 2.0.x
+module.exports.MINIMAL_SCHEMA = __webpack_require__(581);
+module.exports.SAFE_SCHEMA    = __webpack_require__(723);
+module.exports.DEFAULT_SCHEMA = __webpack_require__(910);
+
+// Deprecated functions from JS-YAML 1.x.x
+module.exports.scan           = deprecated('scan');
+module.exports.parse          = deprecated('parse');
+module.exports.compose        = deprecated('compose');
+module.exports.addConstructor = deprecated('addConstructor');
+
 
 /***/ }),
 /* 10 */
@@ -1195,7 +635,7 @@ module.exports = new Schema({
     __webpack_require__(809),
     __webpack_require__(228),
     __webpack_require__(44),
-    __webpack_require__(312)
+    __webpack_require__(417)
   ]
 });
 
@@ -1381,30 +821,7 @@ module.exports = some;
 /* 34 */
 /***/ (function(module) {
 
-/**
- * A specialized version of `_.indexOf` which performs strict equality
- * comparisons of values, i.e. `===`.
- *
- * @private
- * @param {Array} array The array to inspect.
- * @param {*} value The value to search for.
- * @param {number} fromIndex The index to search from.
- * @returns {number} Returns the index of the matched value, else `-1`.
- */
-function strictIndexOf(array, value, fromIndex) {
-  var index = fromIndex - 1,
-      length = array.length;
-
-  while (++index < length) {
-    if (array[index] === value) {
-      return index;
-    }
-  }
-  return -1;
-}
-
-module.exports = strictIndexOf;
-
+module.exports = require("https");
 
 /***/ }),
 /* 35 */,
@@ -6400,7 +5817,150 @@ module.exports = mapCacheHas;
 
 
 /***/ }),
-/* 122 */,
+/* 122 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.runInstaller = exports.ensureLocalInstaller = void 0;
+const crypto = __importStar(__webpack_require__(373));
+const path = __importStar(__webpack_require__(622));
+const url_1 = __webpack_require__(835);
+const core = __importStar(__webpack_require__(470));
+const io = __importStar(__webpack_require__(1));
+const tc = __importStar(__webpack_require__(533));
+const conda_1 = __webpack_require__(259);
+const utils_1 = __webpack_require__(163);
+/** Get the path for a locally-executable installer from cache, or as downloaded
+ *
+ * @returns the local path to the installer (with the correct extension)
+ *
+ * ### Notes
+ * Assume `url` at least ends with the correct executable extension
+ * for this platform, but don't make any other assumptions about `url`'s format:
+ * - might include GET params (?&) and hashes (#),
+ * - was not built with `constructor` (but still has the same CLI),
+ * - or has been renamed during a build process
+ */
+function ensureLocalInstaller(options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.startGroup("Ensuring Installer...");
+        const url = new url_1.URL(options.url);
+        const installerName = path.basename(url.pathname);
+        // as a URL, we assume posix paths
+        const installerExtension = path.posix.extname(installerName);
+        const tool = options.tool != null ? options.tool : installerName;
+        // create a fake version if neccessary
+        const version = options.version != null
+            ? options.version
+            : "0.0.0-" +
+                crypto.createHash("sha256").update(options.url).digest("hex");
+        let executablePath = "";
+        if (url.protocol === "file:") {
+            core.info(`Local file specified, using in-place...`);
+            executablePath = url_1.fileURLToPath(options.url);
+        }
+        if (executablePath === "") {
+            core.info(`Checking for cached ${tool}@${version}...`);
+            executablePath = tc.find(installerName, version);
+            if (executablePath !== "") {
+                core.info(`Found ${installerName} cache at ${executablePath}!`);
+            }
+        }
+        if (executablePath === "") {
+            core.info(`Did not find ${installerName} in cache, downloading...`);
+            const rawDownloadPath = yield tc.downloadTool(options.url);
+            core.info(`Downloaded ${installerName}, appending ${installerExtension}`);
+            // always ensure the installer ends with a known path
+            executablePath = rawDownloadPath + installerExtension;
+            yield io.mv(rawDownloadPath, executablePath);
+            core.info(`Caching ${tool}@${version}...`);
+            const cacheResult = yield tc.cacheFile(executablePath, installerName, tool, version, ...(options.arch ? [options.arch] : []));
+            core.info(`Cached ${tool}@${version}: ${cacheResult}!`);
+        }
+        core.endGroup();
+        if (executablePath === "") {
+            throw Error("Could not determine an executable path from installer-url");
+        }
+        return executablePath;
+    });
+}
+exports.ensureLocalInstaller = ensureLocalInstaller;
+/**
+ * Install Miniconda
+ *
+ * @param installerPath must have an appropriate extension for this platform
+ */
+function runInstaller(installerPath, useBundled) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const outputPath = conda_1.minicondaPath(useBundled);
+        const installerExtension = path.extname(installerPath);
+        let command;
+        switch (installerExtension) {
+            case ".exe":
+                /* From https://docs.anaconda.com/anaconda/install/silent-mode/
+                    /D=<installation path> - Destination installation path.
+                                            - Must be the last argument.
+                                            - Do not wrap in quotation marks.
+                                            - Required if you use /S.
+                    For the above reasons, this is treated a monolithic arg
+                  */
+                command = [
+                    `"${installerPath}" /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`,
+                ];
+                break;
+            case ".sh":
+                command = ["bash", installerPath, "-f", "-b", "-p", outputPath];
+                break;
+            default:
+                return {
+                    ok: false,
+                    error: Error(`Unknown installer extension: ${installerExtension}`),
+                };
+        }
+        core.info(`Install Command:\n\t${command}`);
+        try {
+            return yield utils_1.execute(command);
+        }
+        catch (err) {
+            core.error(err);
+            return { ok: false, error: err };
+        }
+    });
+}
+exports.runInstaller = runInstaller;
+
+
+/***/ }),
 /* 123 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -6511,7 +6071,7 @@ var parse       = __webpack_require__(442),
     isTag       = DomUtils.isTag,
     Rules       = __webpack_require__(123),
     sortRules   = __webpack_require__(642),
-    BaseFuncs   = __webpack_require__(142),
+    BaseFuncs   = __webpack_require__(312),
     trueFunc    = BaseFuncs.trueFunc,
     falseFunc   = BaseFuncs.falseFunc,
     procedure   = __webpack_require__(926);
@@ -6700,7 +6260,7 @@ filters.matches = function(next, token, options, context){
 var DomUtils  = __webpack_require__(104),
     hasAttrib = DomUtils.hasAttrib,
     getAttributeValue = DomUtils.getAttributeValue,
-    falseFunc = __webpack_require__(142).falseFunc;
+    falseFunc = __webpack_require__(312).falseFunc;
 
 //https://github.com/slevithan/XRegExp/blob/master/src/xregexp.js#L469
 var reChars = /[-[\]{}()*+?.,\\^$|#\s]/g;
@@ -7107,7 +6667,7 @@ module.exports = memoizeCapped;
 // Unique ID creation requires a high quality random # generator.  In node.js
 // this is pretty straight-forward - we use the crypto API.
 
-var crypto = __webpack_require__(417);
+var crypto = __webpack_require__(373);
 
 module.exports = function nodeRNG() {
   return crypto.randomBytes(16);
@@ -7216,7 +6776,7 @@ exports.isHtml = function(str) {
 var net = __webpack_require__(631);
 var tls = __webpack_require__(16);
 var http = __webpack_require__(605);
-var https = __webpack_require__(211);
+var https = __webpack_require__(34);
 var events = __webpack_require__(614);
 var assert = __webpack_require__(357);
 var util = __webpack_require__(669);
@@ -7478,19 +7038,7 @@ exports.debug = debug; // for test
 
 
 /***/ }),
-/* 142 */
-/***/ (function(module) {
-
-module.exports = {
-	trueFunc: function trueFunc(){
-		return true;
-	},
-	falseFunc: function falseFunc(){
-		return false;
-	}
-};
-
-/***/ }),
+/* 142 */,
 /* 143 */
 /***/ (function(module) {
 
@@ -7863,24 +7411,147 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cacheFolder = exports.ENV_VAR_CONDA_PKGS = void 0;
+exports.execute = exports.cacheFolder = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
-/** Where to put files. Should eventually be configurable */
-const CONDA_CACHE_FOLDER = "conda_pkgs_dir";
-/** the environment variable exported */
-exports.ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+const stream = __importStar(__webpack_require__(413));
+const exec = __importStar(__webpack_require__(986));
+const core = __importStar(__webpack_require__(470));
+const constants_1 = __webpack_require__(211);
 function cacheFolder() {
-    return path.join(os.homedir(), CONDA_CACHE_FOLDER);
+    return path.join(os.homedir(), constants_1.CONDA_CACHE_FOLDER);
 }
 exports.cacheFolder = cacheFolder;
+/**
+ * Run exec.exec with error handling
+ */
+function execute(command) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let options = {
+            errStream: new stream.Writable(),
+            listeners: {
+                stdout: (data) => {
+                    const stringData = data.toString();
+                    for (const forced_error of constants_1.FORCED_ERRORS) {
+                        if (stringData.includes(forced_error)) {
+                            throw new Error(`"${command}" failed with "${forced_error}"`);
+                        }
+                    }
+                    return data;
+                },
+                stderr: (data) => {
+                    const stringData = data.toString();
+                    for (const ignore of constants_1.IGNORED_WARNINGS) {
+                        if (stringData.includes(ignore)) {
+                            return;
+                        }
+                    }
+                    core.warning(stringData);
+                },
+            },
+        };
+        try {
+            yield exec.exec(command[0], command.slice(1), options);
+        }
+        catch (err) {
+            return { ok: false, error: err };
+        }
+        return { ok: true, data: "ok" };
+    });
+}
+exports.execute = execute;
 
 
 /***/ }),
 /* 164 */,
 /* 165 */,
-/* 166 */,
+/* 166 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createTestEnvironment = exports.environmentExists = void 0;
+const fs = __importStar(__webpack_require__(747));
+const path = __importStar(__webpack_require__(622));
+const core = __importStar(__webpack_require__(470));
+const conda_1 = __webpack_require__(259);
+/**
+ * Check if a given conda environment exists
+ */
+function environmentExists(name, useBundled) {
+    const condaMetaPath = path.join(conda_1.minicondaPath(useBundled), "envs", name, "conda-meta");
+    return fs.existsSync(condaMetaPath);
+}
+exports.environmentExists = environmentExists;
+/**
+ * Create test environment
+ */
+function createTestEnvironment(activateEnvironment, useBundled, useMamba) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let result;
+        if (activateEnvironment !== "root" &&
+            activateEnvironment !== "base" &&
+            activateEnvironment !== "") {
+            if (!environmentExists(activateEnvironment, useBundled)) {
+                core.startGroup("Create test environment...");
+                result = yield conda_1.condaCommand(["create", "--name", activateEnvironment], useBundled, useMamba);
+                if (!result.ok)
+                    return result;
+                core.endGroup();
+            }
+        }
+        else {
+            return {
+                ok: false,
+                error: new Error('To activate "base" environment use the "auto-activate-base" action input!'),
+            };
+        }
+        return { ok: true, data: "ok" };
+    });
+}
+exports.createTestEnvironment = createTestEnvironment;
+
+
+/***/ }),
 /* 167 */,
 /* 168 */,
 /* 169 */,
@@ -9036,9 +8707,87 @@ module.exports = DataView;
 
 /***/ }),
 /* 211 */
-/***/ (function(module) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
-module.exports = require("https");
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.KNOWN_EXTENSIONS = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+const os = __importStar(__webpack_require__(87));
+const path = __importStar(__webpack_require__(622));
+//-----------------------------------------------------------------------
+// Constants
+//-----------------------------------------------------------------------
+exports.MINICONDA_DIR_PATH = process.env["CONDA"] || "";
+exports.IS_WINDOWS = process.platform === "win32";
+exports.IS_MAC = process.platform === "darwin";
+exports.IS_LINUX = process.platform === "linux";
+exports.IS_UNIX = exports.IS_MAC || exports.IS_LINUX;
+exports.MINICONDA_BASE_URL = "https://repo.anaconda.com/miniconda/";
+exports.ARCHITECTURES = {
+    x64: "x86_64",
+    x86: "x86",
+    ARM64: "aarch64",
+    ARM32: "armv7l",
+};
+exports.OS_NAMES = {
+    win32: "Windows",
+    darwin: "MacOSX",
+    linux: "Linux",
+};
+exports.KNOWN_EXTENSIONS = [".exe", ".sh"];
+/**
+ * errors that are always probably spurious
+ */
+exports.IGNORED_WARNINGS = [
+    // appear on win install, we can swallow them
+    `menuinst_win32`,
+    `Unable to register environment`,
+    `0%|`,
+    // appear on certain Linux/OSX installers
+    `Please run using "bash"`,
+    // old condas don't know what to do with these
+    `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
+];
+/**
+ * warnings that should be errors
+ */
+exports.FORCED_ERRORS = [
+    // conda env create will ignore invalid sections and move on
+    `EnvironmentSectionNotValid`,
+];
+/**
+ * avoid spurious conda warnings before we have a chance to update them
+ */
+exports.BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
+/**
+ * the conda config file
+ */
+exports.CONDARC_PATH = path.join(os.homedir(), ".condarc");
+/** Where to put files. Should eventually be configurable */
+exports.CONDA_CACHE_FOLDER = "conda_pkgs_dir";
+/** the environment variable exported */
+exports.ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+
 
 /***/ }),
 /* 212 */,
@@ -12493,7 +12242,303 @@ module.exports = isStrictComparable;
 
 
 /***/ }),
-/* 259 */,
+/* 259 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+//-----------------------------------------------------------------------
+// Conda helpers
+//-----------------------------------------------------------------------
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.condaInit = exports.applyCondaConfiguration = exports.condaCommand = exports.condaExecutable = exports.minicondaPath = void 0;
+const fs = __importStar(__webpack_require__(747));
+const path = __importStar(__webpack_require__(622));
+const os = __importStar(__webpack_require__(87));
+const core = __importStar(__webpack_require__(470));
+const io = __importStar(__webpack_require__(1));
+const constants_1 = __webpack_require__(211);
+const utils_1 = __webpack_require__(163);
+/**
+ * Provide current location of miniconda or location where it will be installed
+ */
+function minicondaPath(useBundled = true) {
+    let condaPath = constants_1.MINICONDA_DIR_PATH;
+    if (!useBundled) {
+        if (constants_1.IS_MAC) {
+            condaPath = "/Users/runner/miniconda3";
+        }
+        else {
+            condaPath += "3";
+        }
+    }
+    return condaPath;
+}
+exports.minicondaPath = minicondaPath;
+/**
+ * Provide cross platform location of conda/mamba executable
+ */
+function condaExecutable(useBundled, useMamba = false) {
+    const dir = minicondaPath(useBundled);
+    let condaExe;
+    let commandName;
+    commandName = useMamba ? "mamba" : "conda";
+    commandName = constants_1.IS_WINDOWS ? commandName + ".bat" : commandName;
+    condaExe = path.join(dir, "condabin", commandName);
+    return condaExe;
+}
+exports.condaExecutable = condaExecutable;
+/**
+ * Run Conda command
+ */
+function condaCommand(cmd, useBundled, useMamba = false) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const command = [condaExecutable(useBundled, useMamba), ...cmd];
+        return yield utils_1.execute(command);
+    });
+}
+exports.condaCommand = condaCommand;
+/**
+ * Setup Conda configuration
+ */
+function applyCondaConfiguration(condaConfig, useBundled) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let result;
+        try {
+            for (const key of Object.keys(condaConfig)) {
+                core.info(`"${key}": "${condaConfig[key]}"`);
+                if (condaConfig[key].length !== 0) {
+                    if (key === "channels") {
+                        // Split by comma and reverse order to preserve higher priority
+                        // as listed in the option
+                        let channels = condaConfig[key].split(",").reverse();
+                        let channel;
+                        for (channel of channels) {
+                            result = yield condaCommand(["config", "--add", key, channel], useBundled, false);
+                            if (!result.ok)
+                                return result;
+                        }
+                    }
+                    else {
+                        result = yield condaCommand(["config", "--set", key, condaConfig[key]], useBundled, false);
+                        if (!result.ok)
+                            return result;
+                    }
+                }
+            }
+            result = yield condaCommand(["config", "--show-sources"], useBundled, false);
+            if (!result.ok)
+                return result;
+            result = yield condaCommand(["config", "--show"], useBundled, false);
+            if (!result.ok)
+                return result;
+        }
+        catch (err) {
+            return { ok: false, error: err };
+        }
+        return { ok: true, data: "ok" };
+    });
+}
+exports.applyCondaConfiguration = applyCondaConfiguration;
+/**
+ * Initialize Conda
+ */
+function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let result;
+        let ownPath;
+        const isValidActivate = activateEnvironment !== "base" &&
+            activateEnvironment !== "root" &&
+            activateEnvironment !== "";
+        const autoActivateBase = condaConfig["auto_activate_base"] === "true";
+        // Fix ownership of folders
+        if (useBundled) {
+            if (constants_1.IS_MAC) {
+                core.startGroup("Fixing conda folders ownership");
+                const userName = process.env.USER;
+                result = yield utils_1.execute([
+                    "sudo",
+                    "chown",
+                    "-R",
+                    `${userName}:staff`,
+                    minicondaPath(useBundled),
+                ]);
+                core.endGroup();
+                if (!result.ok)
+                    return result;
+            }
+            else if (constants_1.IS_WINDOWS) {
+                for (let folder of [
+                    "condabin/",
+                    "Scripts/",
+                    "shell/",
+                    "etc/profile.d/",
+                    "/Lib/site-packages/xonsh/",
+                ]) {
+                    ownPath = path.join(minicondaPath(useBundled), folder);
+                    if (fs.existsSync(ownPath)) {
+                        core.startGroup(`Fixing ${folder} ownership`);
+                        result = yield utils_1.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
+                        core.endGroup();
+                        if (!result.ok)
+                            return result;
+                    }
+                }
+            }
+        }
+        // Remove profile files
+        if (removeProfiles == "true") {
+            for (let rc of [
+                ".bashrc",
+                ".bash_profile",
+                ".config/fish/config.fish",
+                ".profile",
+                ".tcshrc",
+                ".xonshrc",
+                ".zshrc",
+                ".config/powershell/profile.ps1",
+                "Documents/PowerShell/profile.ps1",
+                "Documents/WindowsPowerShell/profile.ps1",
+            ]) {
+                try {
+                    let file = path.join(os.homedir(), rc);
+                    if (fs.existsSync(file)) {
+                        core.info(`Removing "${file}"`);
+                        yield io.rmRF(file);
+                    }
+                }
+                catch (err) {
+                    core.warning(err);
+                }
+            }
+        }
+        // Run conda init
+        for (let cmd of ["--all"]) {
+            yield utils_1.execute([condaExecutable(useBundled, false), "init", cmd]);
+        }
+        // Rename files
+        if (constants_1.IS_LINUX) {
+            let source = "~/.bashrc".replace("~", os.homedir());
+            let dest = "~/.profile".replace("~", os.homedir());
+            core.info(`Renaming "${source}" to "${dest}"\n`);
+            yield io.mv(source, dest);
+        }
+        else if (constants_1.IS_MAC) {
+            let source = "~/.bash_profile".replace("~", os.homedir());
+            let dest = "~/.profile".replace("~", os.homedir());
+            core.info(`Renaming "${source}" to "${dest}"\n`);
+            yield io.mv(source, dest);
+        }
+        // PowerShell profiles
+        let powerExtraText = `
+  # ----------------------------------------------------------------------------`;
+        if (isValidActivate) {
+            powerExtraText += `
+  # Conda Setup Action: Custom activation
+  conda activate ${activateEnvironment}`;
+        }
+        powerExtraText += `
+  # ----------------------------------------------------------------------------`;
+        // Bash profiles
+        let bashExtraText = `
+  # ----------------------------------------------------------------------------
+  # Conda Setup Action: Basic configuration
+  set -eo pipefail`;
+        if (isValidActivate) {
+            bashExtraText += `
+  # Conda Setup Action: Custom activation
+  conda activate ${activateEnvironment}`;
+            bashExtraText += `
+  # ----------------------------------------------------------------------------`;
+        }
+        // Batch profiles
+        let batchExtraText = `
+  :: ---------------------------------------------------------------------------`;
+        if (autoActivateBase) {
+            batchExtraText += `
+  :: Conda Setup Action: Activate base
+  @CALL "%CONDA_BAT%" activate base`;
+        }
+        if (isValidActivate) {
+            batchExtraText += `
+  :: Conda Setup Action: Custom activation
+  @CALL "%CONDA_BAT%" activate ${activateEnvironment}`;
+        }
+        batchExtraText += `
+  :: Conda Setup Action: Basic configuration
+  @SETLOCAL EnableExtensions
+  @SETLOCAL DisableDelayedExpansion
+  :: ---------------------------------------------------------------------------`;
+        let extraShells;
+        const shells = {
+            "~/.bash_profile": bashExtraText,
+            "~/.profile": bashExtraText,
+            "~/.zshrc": bashExtraText,
+            "~/.config/fish/config.fish": bashExtraText,
+            "~/.tcshrc": bashExtraText,
+            "~/.xonshrc": bashExtraText,
+            "~/.config/powershell/profile.ps1": powerExtraText,
+            "~/Documents/PowerShell/profile.ps1": powerExtraText,
+            "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
+        };
+        if (useBundled) {
+            extraShells = {
+                "C:/Miniconda/etc/profile.d/conda.sh": bashExtraText,
+                "C:/Miniconda/etc/fish/conf.d/conda.fish": bashExtraText,
+                "C:/Miniconda/condabin/conda_hook.bat": batchExtraText,
+            };
+        }
+        else {
+            extraShells = {
+                "C:/Miniconda3/etc/profile.d/conda.sh": bashExtraText,
+                "C:/Miniconda3/etc/fish/conf.d/conda.fish": bashExtraText,
+                "C:/Miniconda3/condabin/conda_hook.bat": batchExtraText,
+            };
+        }
+        const allShells = Object.assign(Object.assign({}, shells), extraShells);
+        Object.keys(allShells).forEach((key) => {
+            let filePath = key.replace("~", os.homedir());
+            const text = allShells[key];
+            if (fs.existsSync(filePath)) {
+                core.info(`Append to "${filePath}":\n ${text} \n`);
+                fs.appendFileSync(filePath, text);
+            }
+        });
+        return { ok: true, data: "ok" };
+    });
+}
+exports.condaInit = condaInit;
+
+
+/***/ }),
 /* 260 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -14618,7 +14663,7 @@ function coerce (version, options) {
 var ElementType = __webpack_require__(855);
 
 var re_whitespace = /\s+/g;
-var NodePrototype = __webpack_require__(555);
+var NodePrototype = __webpack_require__(798);
 var ElementPrototype = __webpack_require__(402);
 
 function DomHandler(callback, options, elementCB){
@@ -15768,126 +15813,16 @@ module.exports = hasPath;
 /***/ }),
 /* 311 */,
 /* 312 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ (function(module) {
 
-"use strict";
-
-
-var common = __webpack_require__(740);
-var Type   = __webpack_require__(945);
-
-var YAML_FLOAT_PATTERN = new RegExp(
-  // 2.5e4, 2.5 and integers
-  '^(?:[-+]?(?:0|[1-9][0-9_]*)(?:\\.[0-9_]*)?(?:[eE][-+]?[0-9]+)?' +
-  // .2e4, .2
-  // special case, seems not from spec
-  '|\\.[0-9_]+(?:[eE][-+]?[0-9]+)?' +
-  // 20:59
-  '|[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*' +
-  // .inf
-  '|[-+]?\\.(?:inf|Inf|INF)' +
-  // .nan
-  '|\\.(?:nan|NaN|NAN))$');
-
-function resolveYamlFloat(data) {
-  if (data === null) return false;
-
-  if (!YAML_FLOAT_PATTERN.test(data) ||
-      // Quick hack to not allow integers end with `_`
-      // Probably should update regexp & check speed
-      data[data.length - 1] === '_') {
-    return false;
-  }
-
-  return true;
-}
-
-function constructYamlFloat(data) {
-  var value, sign, base, digits;
-
-  value  = data.replace(/_/g, '').toLowerCase();
-  sign   = value[0] === '-' ? -1 : 1;
-  digits = [];
-
-  if ('+-'.indexOf(value[0]) >= 0) {
-    value = value.slice(1);
-  }
-
-  if (value === '.inf') {
-    return (sign === 1) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-
-  } else if (value === '.nan') {
-    return NaN;
-
-  } else if (value.indexOf(':') >= 0) {
-    value.split(':').forEach(function (v) {
-      digits.unshift(parseFloat(v, 10));
-    });
-
-    value = 0.0;
-    base = 1;
-
-    digits.forEach(function (d) {
-      value += d * base;
-      base *= 60;
-    });
-
-    return sign * value;
-
-  }
-  return sign * parseFloat(value, 10);
-}
-
-
-var SCIENTIFIC_WITHOUT_DOT = /^[-+]?[0-9]+e/;
-
-function representYamlFloat(object, style) {
-  var res;
-
-  if (isNaN(object)) {
-    switch (style) {
-      case 'lowercase': return '.nan';
-      case 'uppercase': return '.NAN';
-      case 'camelcase': return '.NaN';
-    }
-  } else if (Number.POSITIVE_INFINITY === object) {
-    switch (style) {
-      case 'lowercase': return '.inf';
-      case 'uppercase': return '.INF';
-      case 'camelcase': return '.Inf';
-    }
-  } else if (Number.NEGATIVE_INFINITY === object) {
-    switch (style) {
-      case 'lowercase': return '-.inf';
-      case 'uppercase': return '-.INF';
-      case 'camelcase': return '-.Inf';
-    }
-  } else if (common.isNegativeZero(object)) {
-    return '-0.0';
-  }
-
-  res = object.toString(10);
-
-  // JS stringifier can build scientific format without dots: 5e-100,
-  // while YAML requres dot: 5.e-100. Fix it with simple hack
-
-  return SCIENTIFIC_WITHOUT_DOT.test(res) ? res.replace('e', '.e') : res;
-}
-
-function isFloat(object) {
-  return (Object.prototype.toString.call(object) === '[object Number]') &&
-         (object % 1 !== 0 || common.isNegativeZero(object));
-}
-
-module.exports = new Type('tag:yaml.org,2002:float', {
-  kind: 'scalar',
-  resolve: resolveYamlFloat,
-  construct: constructYamlFloat,
-  predicate: isFloat,
-  represent: representYamlFloat,
-  defaultStyle: 'lowercase'
-});
-
+module.exports = {
+	trueFunc: function trueFunc(){
+		return true;
+	},
+	falseFunc: function falseFunc(){
+		return false;
+	}
+};
 
 /***/ }),
 /* 313 */,
@@ -16824,7 +16759,12 @@ module.exports = assignValue;
 /* 370 */,
 /* 371 */,
 /* 372 */,
-/* 373 */,
+/* 373 */
+/***/ (function(module) {
+
+module.exports = require("crypto");
+
+/***/ }),
 /* 374 */,
 /* 375 */,
 /* 376 */,
@@ -16866,7 +16806,7 @@ module.exports = defineProperty;
 /* 384 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-var LazyWrapper = __webpack_require__(798),
+var LazyWrapper = __webpack_require__(922),
     getData = __webpack_require__(418),
     getFuncName = __webpack_require__(202),
     lodash = __webpack_require__(751);
@@ -17165,7 +17105,7 @@ ParserStream.prototype._scriptHandler = function (scriptElement) {
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 // DOM-Level-1-compliant structure
-var NodePrototype = __webpack_require__(555);
+var NodePrototype = __webpack_require__(798);
 var ElementPrototype = module.exports = Object.create(NodePrototype);
 
 var domLvl1 = {
@@ -17332,7 +17272,7 @@ module.exports = require("stream");
 
 
 
-var yaml = __webpack_require__(819);
+var yaml = __webpack_require__(9);
 
 
 module.exports = yaml;
@@ -17342,9 +17282,126 @@ module.exports = yaml;
 /* 415 */,
 /* 416 */,
 /* 417 */
-/***/ (function(module) {
+/***/ (function(module, __unusedexports, __webpack_require__) {
 
-module.exports = require("crypto");
+"use strict";
+
+
+var common = __webpack_require__(740);
+var Type   = __webpack_require__(945);
+
+var YAML_FLOAT_PATTERN = new RegExp(
+  // 2.5e4, 2.5 and integers
+  '^(?:[-+]?(?:0|[1-9][0-9_]*)(?:\\.[0-9_]*)?(?:[eE][-+]?[0-9]+)?' +
+  // .2e4, .2
+  // special case, seems not from spec
+  '|\\.[0-9_]+(?:[eE][-+]?[0-9]+)?' +
+  // 20:59
+  '|[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*' +
+  // .inf
+  '|[-+]?\\.(?:inf|Inf|INF)' +
+  // .nan
+  '|\\.(?:nan|NaN|NAN))$');
+
+function resolveYamlFloat(data) {
+  if (data === null) return false;
+
+  if (!YAML_FLOAT_PATTERN.test(data) ||
+      // Quick hack to not allow integers end with `_`
+      // Probably should update regexp & check speed
+      data[data.length - 1] === '_') {
+    return false;
+  }
+
+  return true;
+}
+
+function constructYamlFloat(data) {
+  var value, sign, base, digits;
+
+  value  = data.replace(/_/g, '').toLowerCase();
+  sign   = value[0] === '-' ? -1 : 1;
+  digits = [];
+
+  if ('+-'.indexOf(value[0]) >= 0) {
+    value = value.slice(1);
+  }
+
+  if (value === '.inf') {
+    return (sign === 1) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+
+  } else if (value === '.nan') {
+    return NaN;
+
+  } else if (value.indexOf(':') >= 0) {
+    value.split(':').forEach(function (v) {
+      digits.unshift(parseFloat(v, 10));
+    });
+
+    value = 0.0;
+    base = 1;
+
+    digits.forEach(function (d) {
+      value += d * base;
+      base *= 60;
+    });
+
+    return sign * value;
+
+  }
+  return sign * parseFloat(value, 10);
+}
+
+
+var SCIENTIFIC_WITHOUT_DOT = /^[-+]?[0-9]+e/;
+
+function representYamlFloat(object, style) {
+  var res;
+
+  if (isNaN(object)) {
+    switch (style) {
+      case 'lowercase': return '.nan';
+      case 'uppercase': return '.NAN';
+      case 'camelcase': return '.NaN';
+    }
+  } else if (Number.POSITIVE_INFINITY === object) {
+    switch (style) {
+      case 'lowercase': return '.inf';
+      case 'uppercase': return '.INF';
+      case 'camelcase': return '.Inf';
+    }
+  } else if (Number.NEGATIVE_INFINITY === object) {
+    switch (style) {
+      case 'lowercase': return '-.inf';
+      case 'uppercase': return '-.INF';
+      case 'camelcase': return '-.Inf';
+    }
+  } else if (common.isNegativeZero(object)) {
+    return '-0.0';
+  }
+
+  res = object.toString(10);
+
+  // JS stringifier can build scientific format without dots: 5e-100,
+  // while YAML requres dot: 5.e-100. Fix it with simple hack
+
+  return SCIENTIFIC_WITHOUT_DOT.test(res) ? res.replace('e', '.e') : res;
+}
+
+function isFloat(object) {
+  return (Object.prototype.toString.call(object) === '[object Number]') &&
+         (object % 1 !== 0 || common.isNegativeZero(object));
+}
+
+module.exports = new Type('tag:yaml.org,2002:float', {
+  kind: 'scalar',
+  resolve: resolveYamlFloat,
+  construct: constructYamlFloat,
+  predicate: isFloat,
+  represent: representYamlFloat,
+  defaultStyle: 'lowercase'
+});
+
 
 /***/ }),
 /* 418 */
@@ -21291,594 +21348,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const crypto = __importStar(__webpack_require__(417));
 const fs = __importStar(__webpack_require__(747));
-const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
-const stream = __importStar(__webpack_require__(413));
 const url_1 = __webpack_require__(835);
 const core = __importStar(__webpack_require__(470));
-const exec = __importStar(__webpack_require__(986));
 const io = __importStar(__webpack_require__(1));
-const tc = __importStar(__webpack_require__(533));
 const yaml = __importStar(__webpack_require__(414));
-const get_hrefs_1 = __importDefault(__webpack_require__(222));
 const utils = __importStar(__webpack_require__(163));
-//-----------------------------------------------------------------------
-// Constants
-//-----------------------------------------------------------------------
-const MINICONDA_DIR_PATH = process.env["CONDA"] || "";
-const IS_WINDOWS = process.platform === "win32";
-const IS_MAC = process.platform === "darwin";
-const IS_LINUX = process.platform === "linux";
-const IS_UNIX = IS_MAC || IS_LINUX;
-const MINICONDA_BASE_URL = "https://repo.anaconda.com/miniconda/";
-const ARCHITECTURES = {
-    x64: "x86_64",
-    x86: "x86",
-    ARM64: "aarch64",
-    ARM32: "armv7l",
-};
-const OS_NAMES = {
-    win32: "Windows",
-    darwin: "MacOSX",
-    linux: "Linux",
-};
-const KNOWN_EXTENSIONS = [".exe", ".sh"];
-/**
- * errors that are always probably spurious
- */
-const IGNORED_WARNINGS = [
-    // appear on win install, we can swallow them
-    `menuinst_win32`,
-    `Unable to register environment`,
-    `0%|`,
-    // appear on certain Linux/OSX installers
-    `Please run using "bash"`,
-    // old condas don't know what to do with these
-    `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
-];
-/**
- * warnings that should be errors
- */
-const FORCED_ERRORS = [
-    // conda env create will ignore invalid sections and move on
-    `EnvironmentSectionNotValid`,
-];
-/**
- * avoid spurious conda warnings before we have a chance to update them
- */
-const BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
-/**
- * the conda config file
- */
-const CONDARC_PATH = path.join(os.homedir(), ".condarc");
-/**
- * Run exec.exec with error handling
- */
-function execute(command) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let options = {
-            errStream: new stream.Writable(),
-            listeners: {
-                stdout: (data) => {
-                    const stringData = data.toString();
-                    for (const forced_error of FORCED_ERRORS) {
-                        if (stringData.includes(forced_error)) {
-                            throw new Error(`"${command}" failed with "${forced_error}"`);
-                        }
-                    }
-                    return data;
-                },
-                stderr: (data) => {
-                    const stringData = data.toString();
-                    for (const ignore of IGNORED_WARNINGS) {
-                        if (stringData.includes(ignore)) {
-                            return;
-                        }
-                    }
-                    core.warning(stringData);
-                },
-            },
-        };
-        try {
-            yield exec.exec(command[0], command.slice(1), options);
-        }
-        catch (err) {
-            return { ok: false, error: err };
-        }
-        return { ok: true, data: "ok" };
-    });
-}
-//-----------------------------------------------------------------------
-// Conda helpers
-//-----------------------------------------------------------------------
-/**
- * Provide current location of miniconda or location where it will be installed
- */
-function minicondaPath(useBundled = true) {
-    let condaPath = MINICONDA_DIR_PATH;
-    if (!useBundled) {
-        if (IS_MAC) {
-            condaPath = "/Users/runner/miniconda3";
-        }
-        else {
-            condaPath += "3";
-        }
-    }
-    return condaPath;
-}
-/**
- * Provide cross platform location of conda/mamba executable
- */
-function condaExecutable(useBundled, useMamba = false) {
-    const dir = minicondaPath(useBundled);
-    let condaExe;
-    let commandName;
-    commandName = useMamba ? "mamba" : "conda";
-    commandName = IS_WINDOWS ? commandName + ".bat" : commandName;
-    condaExe = path.join(dir, "condabin", commandName);
-    return condaExe;
-}
-/**
- * Check if a given conda environment exists
- */
-function environmentExists(name, useBundled) {
-    const condaMetaPath = path.join(minicondaPath(useBundled), "envs", name, "conda-meta");
-    return fs.existsSync(condaMetaPath);
-}
-/**
- * List available Miniconda versions
- *
- * @param arch
- */
-function minicondaVersions(arch) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            let extension = IS_UNIX ? "sh" : "exe";
-            const downloadPath = yield tc.downloadTool(MINICONDA_BASE_URL);
-            const content = fs.readFileSync(downloadPath, "utf8");
-            let hrefs = get_hrefs_1.default(content);
-            hrefs = hrefs.filter((item) => item.startsWith("/Miniconda3"));
-            hrefs = hrefs.filter((item) => item.endsWith(`${arch}.${extension}`));
-            hrefs = hrefs.map((item) => item.substring(1));
-            return hrefs;
-        }
-        catch (err) {
-            core.warning(err);
-            return [];
-        }
-    });
-}
-/**
- * Download specific version miniconda defined by version, arch and python major version
- *
- * @param pythonMajorVersion
- * @param minicondaVersion
- * @param architecture
- */
-function downloadMiniconda(pythonMajorVersion, minicondaVersion, architecture) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // Check valid arch
-        const arch = ARCHITECTURES[architecture];
-        if (!arch) {
-            return { ok: false, error: new Error(`Invalid arch "${architecture}"!`) };
-        }
-        let extension = IS_UNIX ? "sh" : "exe";
-        let osName = OS_NAMES[process.platform];
-        const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
-        core.info(minicondaInstallerName);
-        // Check version name
-        let versions = yield minicondaVersions(arch);
-        if (versions) {
-            if (!versions.includes(minicondaInstallerName)) {
-                return {
-                    ok: false,
-                    error: new Error(`Invalid miniconda version!\n\nMust be among ${versions.toString()}`),
-                };
-            }
-        }
-        try {
-            const downloadPath = yield ensureLocalInstaller({
-                url: MINICONDA_BASE_URL + minicondaInstallerName,
-                tool: `Miniconda${pythonMajorVersion}`,
-                version: minicondaVersion,
-                arch: arch,
-            });
-            return { ok: true, data: downloadPath };
-        }
-        catch (error) {
-            return { ok: false, error };
-        }
-    });
-}
-/**
- * @param url A URL for a file with the CLI of a `constructor`-built artifact
- */
-function downloadCustomInstaller(url) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const downloadPath = yield ensureLocalInstaller({ url });
-            return { ok: true, data: downloadPath };
-        }
-        catch (error) {
-            return { ok: false, error };
-        }
-    });
-}
-/** Get the path for a locally-executable installer from cache, or as downloaded
- *
- * @returns the local path to the installer (with the correct extension)
- *
- * ### Notes
- * Assume `url` at least ends with the correct executable extension
- * for this platform, but don't make any other assumptions about `url`'s format:
- * - might include GET params (?&) and hashes (#),
- * - was not built with `constructor` (but still has the same CLI),
- * - or has been renamed during a build process
- */
-function ensureLocalInstaller(options) {
-    return __awaiter(this, void 0, void 0, function* () {
-        core.startGroup("Ensuring Installer...");
-        const url = new url_1.URL(options.url);
-        const installerName = path.basename(url.pathname);
-        // as a URL, we assume posix paths
-        const installerExtension = path.posix.extname(installerName);
-        const tool = options.tool != null ? options.tool : installerName;
-        // create a fake version if neccessary
-        const version = options.version != null
-            ? options.version
-            : "0.0.0-" +
-                crypto.createHash("sha256").update(options.url).digest("hex");
-        let executablePath = "";
-        if (url.protocol === "file:") {
-            core.info(`Local file specified, using in-place...`);
-            executablePath = url_1.fileURLToPath(options.url);
-        }
-        if (executablePath === "") {
-            core.info(`Checking for cached ${tool}@${version}...`);
-            executablePath = tc.find(installerName, version);
-            if (executablePath !== "") {
-                core.info(`Found ${installerName} cache at ${executablePath}!`);
-            }
-        }
-        if (executablePath === "") {
-            core.info(`Did not find ${installerName} in cache, downloading...`);
-            const rawDownloadPath = yield tc.downloadTool(options.url);
-            core.info(`Downloaded ${installerName}, appending ${installerExtension}`);
-            // always ensure the installer ends with a known path
-            executablePath = rawDownloadPath + installerExtension;
-            yield io.mv(rawDownloadPath, executablePath);
-            core.info(`Caching ${tool}@${version}...`);
-            const cacheResult = yield tc.cacheFile(executablePath, installerName, tool, version, ...(options.arch ? [options.arch] : []));
-            core.info(`Cached ${tool}@${version}: ${cacheResult}!`);
-        }
-        core.endGroup();
-        if (executablePath === "") {
-            throw Error("Could not determine an executable path from installer-url");
-        }
-        return executablePath;
-    });
-}
-/**
- * Install Miniconda
- *
- * @param installerPath must have an appropriate extension for this platform
- */
-function runInstaller(installerPath, useBundled) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const outputPath = minicondaPath(useBundled);
-        const installerExtension = path.extname(installerPath);
-        let command;
-        switch (installerExtension) {
-            case ".exe":
-                /* From https://docs.anaconda.com/anaconda/install/silent-mode/
-                  /D=<installation path> - Destination installation path.
-                                          - Must be the last argument.
-                                          - Do not wrap in quotation marks.
-                                          - Required if you use /S.
-                  For the above reasons, this is treated a monolithic arg
-                */
-                command = [
-                    `"${installerPath}" /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`,
-                ];
-                break;
-            case ".sh":
-                command = ["bash", installerPath, "-f", "-b", "-p", outputPath];
-                break;
-            default:
-                return {
-                    ok: false,
-                    error: Error(`Unknown installer extension: ${installerExtension}`),
-                };
-        }
-        core.info(`Install Command:\n\t${command}`);
-        try {
-            return yield execute(command);
-        }
-        catch (err) {
-            core.error(err);
-            return { ok: false, error: err };
-        }
-    });
-}
-/**
- * Run Conda command
- */
-function condaCommand(cmd, useBundled, useMamba = false) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const command = [condaExecutable(useBundled, useMamba), ...cmd];
-        return yield execute(command);
-    });
-}
-/**
- * Add Conda executable to PATH
- */
-function setVariables(useBundled) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            // Set environment variables
-            const condaBin = path.join(minicondaPath(useBundled), "condabin");
-            const conda = minicondaPath(useBundled);
-            core.info(`Add "${condaBin}" to PATH`);
-            core.addPath(condaBin);
-            if (!useBundled) {
-                core.info(`Set 'CONDA="${conda}"'`);
-                core.exportVariable("CONDA", conda);
-            }
-        }
-        catch (err) {
-            return { ok: false, error: err };
-        }
-        return { ok: true, data: "ok" };
-    });
-}
-/**
- * Create test environment
- */
-function createTestEnvironment(activateEnvironment, useBundled, useMamba) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let result;
-        if (activateEnvironment !== "root" &&
-            activateEnvironment !== "base" &&
-            activateEnvironment !== "") {
-            if (!environmentExists(activateEnvironment, useBundled)) {
-                core.startGroup("Create test environment...");
-                result = yield condaCommand(["create", "--name", activateEnvironment], useBundled, useMamba);
-                if (!result.ok)
-                    return result;
-                core.endGroup();
-            }
-        }
-        else {
-            return {
-                ok: false,
-                error: new Error('To activate "base" environment use the "auto-activate-base" action input!'),
-            };
-        }
-        return { ok: true, data: "ok" };
-    });
-}
-/**
- * Initialize Conda
- */
-function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let result;
-        let ownPath;
-        const isValidActivate = activateEnvironment !== "base" &&
-            activateEnvironment !== "root" &&
-            activateEnvironment !== "";
-        const autoActivateBase = condaConfig["auto_activate_base"] === "true";
-        // Fix ownership of folders
-        if (useBundled) {
-            if (IS_MAC) {
-                core.startGroup("Fixing conda folders ownership");
-                const userName = process.env.USER;
-                result = yield execute([
-                    "sudo",
-                    "chown",
-                    "-R",
-                    `${userName}:staff`,
-                    minicondaPath(useBundled),
-                ]);
-                core.endGroup();
-                if (!result.ok)
-                    return result;
-            }
-            else if (IS_WINDOWS) {
-                for (let folder of [
-                    "condabin/",
-                    "Scripts/",
-                    "shell/",
-                    "etc/profile.d/",
-                    "/Lib/site-packages/xonsh/",
-                ]) {
-                    ownPath = path.join(minicondaPath(useBundled), folder);
-                    if (fs.existsSync(ownPath)) {
-                        core.startGroup(`Fixing ${folder} ownership`);
-                        result = yield execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
-                        core.endGroup();
-                        if (!result.ok)
-                            return result;
-                    }
-                }
-            }
-        }
-        // Remove profile files
-        if (removeProfiles == "true") {
-            for (let rc of [
-                ".bashrc",
-                ".bash_profile",
-                ".config/fish/config.fish",
-                ".profile",
-                ".tcshrc",
-                ".xonshrc",
-                ".zshrc",
-                ".config/powershell/profile.ps1",
-                "Documents/PowerShell/profile.ps1",
-                "Documents/WindowsPowerShell/profile.ps1",
-            ]) {
-                try {
-                    let file = path.join(os.homedir(), rc);
-                    if (fs.existsSync(file)) {
-                        core.info(`Removing "${file}"`);
-                        yield io.rmRF(file);
-                    }
-                }
-                catch (err) {
-                    core.warning(err);
-                }
-            }
-        }
-        // Run conda init
-        for (let cmd of ["--all"]) {
-            yield execute([condaExecutable(useBundled, false), "init", cmd]);
-        }
-        // Rename files
-        if (IS_LINUX) {
-            let source = "~/.bashrc".replace("~", os.homedir());
-            let dest = "~/.profile".replace("~", os.homedir());
-            core.info(`Renaming "${source}" to "${dest}"\n`);
-            yield io.mv(source, dest);
-        }
-        else if (IS_MAC) {
-            let source = "~/.bash_profile".replace("~", os.homedir());
-            let dest = "~/.profile".replace("~", os.homedir());
-            core.info(`Renaming "${source}" to "${dest}"\n`);
-            yield io.mv(source, dest);
-        }
-        // PowerShell profiles
-        let powerExtraText = `
-# ----------------------------------------------------------------------------`;
-        if (isValidActivate) {
-            powerExtraText += `
-# Conda Setup Action: Custom activation
-conda activate ${activateEnvironment}`;
-        }
-        powerExtraText += `
-# ----------------------------------------------------------------------------`;
-        // Bash profiles
-        let bashExtraText = `
-# ----------------------------------------------------------------------------
-# Conda Setup Action: Basic configuration
-set -eo pipefail`;
-        if (isValidActivate) {
-            bashExtraText += `
-# Conda Setup Action: Custom activation
-conda activate ${activateEnvironment}`;
-            bashExtraText += `
-# ----------------------------------------------------------------------------`;
-        }
-        // Batch profiles
-        let batchExtraText = `
-:: ---------------------------------------------------------------------------`;
-        if (autoActivateBase) {
-            batchExtraText += `
-:: Conda Setup Action: Activate base
-@CALL "%CONDA_BAT%" activate base`;
-        }
-        if (isValidActivate) {
-            batchExtraText += `
-:: Conda Setup Action: Custom activation
-@CALL "%CONDA_BAT%" activate ${activateEnvironment}`;
-        }
-        batchExtraText += `
-:: Conda Setup Action: Basic configuration
-@SETLOCAL EnableExtensions
-@SETLOCAL DisableDelayedExpansion
-:: ---------------------------------------------------------------------------`;
-        let extraShells;
-        const shells = {
-            "~/.bash_profile": bashExtraText,
-            "~/.profile": bashExtraText,
-            "~/.zshrc": bashExtraText,
-            "~/.config/fish/config.fish": bashExtraText,
-            "~/.tcshrc": bashExtraText,
-            "~/.xonshrc": bashExtraText,
-            "~/.config/powershell/profile.ps1": powerExtraText,
-            "~/Documents/PowerShell/profile.ps1": powerExtraText,
-            "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
-        };
-        if (useBundled) {
-            extraShells = {
-                "C:/Miniconda/etc/profile.d/conda.sh": bashExtraText,
-                "C:/Miniconda/etc/fish/conf.d/conda.fish": bashExtraText,
-                "C:/Miniconda/condabin/conda_hook.bat": batchExtraText,
-            };
-        }
-        else {
-            extraShells = {
-                "C:/Miniconda3/etc/profile.d/conda.sh": bashExtraText,
-                "C:/Miniconda3/etc/fish/conf.d/conda.fish": bashExtraText,
-                "C:/Miniconda3/condabin/conda_hook.bat": batchExtraText,
-            };
-        }
-        const allShells = Object.assign(Object.assign({}, shells), extraShells);
-        Object.keys(allShells).forEach((key) => {
-            let filePath = key.replace("~", os.homedir());
-            const text = allShells[key];
-            if (fs.existsSync(filePath)) {
-                core.info(`Append to "${filePath}":\n ${text} \n`);
-                fs.appendFileSync(filePath, text);
-            }
-        });
-        return { ok: true, data: "ok" };
-    });
-}
-/**
- * Setup python test environment
- */
-function setupPython(activateEnvironment, pythonVersion, useBundled, useMamba) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return yield condaCommand(["install", "--name", activateEnvironment, `python=${pythonVersion}`], useBundled, useMamba);
-    });
-}
-/**
- * Setup Conda configuration
- */
-function applyCondaConfiguration(condaConfig, useBundled) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let result;
-        try {
-            for (const key of Object.keys(condaConfig)) {
-                core.info(`"${key}": "${condaConfig[key]}"`);
-                if (condaConfig[key].length !== 0) {
-                    if (key === "channels") {
-                        // Split by comma and reverse order to preserve higher priority
-                        // as listed in the option
-                        let channels = condaConfig[key].split(",").reverse();
-                        let channel;
-                        for (channel of channels) {
-                            result = yield condaCommand(["config", "--add", key, channel], useBundled, false);
-                            if (!result.ok)
-                                return result;
-                        }
-                    }
-                    else {
-                        result = yield condaCommand(["config", "--set", key, condaConfig[key]], useBundled, false);
-                        if (!result.ok)
-                            return result;
-                    }
-                }
-            }
-            result = yield condaCommand(["config", "--show-sources"], useBundled, false);
-            if (!result.ok)
-                return result;
-            result = yield condaCommand(["config", "--show"], useBundled, false);
-            if (!result.ok)
-                return result;
-        }
-        catch (err) {
-            return { ok: false, error: err };
-        }
-        return { ok: true, data: "ok" };
-    });
-}
+// TODO: move these to namespace imports
+const vars_1 = __webpack_require__(935);
+const installer_1 = __webpack_require__(555);
+const constants_1 = __webpack_require__(211);
+const conda_1 = __webpack_require__(259);
+const tools_1 = __webpack_require__(534);
+const env_1 = __webpack_require__(166);
 /**
  * Main conda setup method to handle all configuration options
  */
@@ -21913,10 +21397,10 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 }
                 const { pathname } = new url_1.URL(installerUrl);
                 const extname = path.posix.extname(pathname);
-                if (!KNOWN_EXTENSIONS.includes(extname)) {
+                if (!constants_1.KNOWN_EXTENSIONS.includes(extname)) {
                     return {
                         ok: false,
-                        error: new Error(`"installer-url" file name ends with ${extname}, must be one of ${KNOWN_EXTENSIONS}!`),
+                        error: new Error(`"installer-url" file name ends with ${extname}, must be one of ${constants_1.KNOWN_EXTENSIONS}!`),
                     };
                 }
             }
@@ -21927,7 +21411,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                         error: new Error(`"architecture" is set to something other than "x64" so "miniconda-version" must be set as well.`),
                     };
                 }
-                if (architecture === "x86" && IS_LINUX) {
+                if (architecture === "x86" && constants_1.IS_LINUX) {
                     return {
                         ok: false,
                         error: new Error(`32-bit Linux is not supported by recent versions of Miniconda`),
@@ -21936,8 +21420,8 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             }
             core.endGroup();
             try {
-                core.startGroup(`Creating bootstrap condarc file in ${CONDARC_PATH}...`);
-                yield fs.promises.writeFile(CONDARC_PATH, BOOTSTRAP_CONDARC);
+                core.startGroup(`Creating bootstrap condarc file in ${constants_1.CONDARC_PATH}...`);
+                yield fs.promises.writeFile(constants_1.CONDARC_PATH, constants_1.BOOTSTRAP_CONDARC);
             }
             catch (err) {
                 return { ok: false, error: err };
@@ -21945,45 +21429,45 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             core.endGroup();
             if (installerUrl !== "") {
                 useBundled = false;
-                result = yield downloadCustomInstaller(installerUrl);
+                result = yield installer_1.downloadCustomInstaller(installerUrl);
                 if (!result.ok)
                     return result;
                 core.startGroup("Installing Custom Installer...");
-                result = yield runInstaller(result.data, useBundled);
+                result = yield installer_1.runInstaller(result.data, useBundled);
                 core.endGroup();
             }
             else if (minicondaVersion !== "" || architecture !== "x64") {
                 core.startGroup("Downloading Miniconda...");
                 useBundled = false;
-                result = yield downloadMiniconda(3, minicondaVersion, architecture);
+                result = yield installer_1.downloadMiniconda(3, minicondaVersion, architecture);
                 if (!result.ok)
                     return result;
                 core.endGroup();
                 core.startGroup("Installing Miniconda...");
-                result = yield runInstaller(result.data, useBundled);
+                result = yield installer_1.runInstaller(result.data, useBundled);
                 if (!result.ok)
                     return result;
                 core.endGroup();
             }
             else {
                 core.startGroup("Locating Miniconda...");
-                core.info(minicondaPath());
-                if (!fs.existsSync(minicondaPath())) {
+                core.info(conda_1.minicondaPath());
+                if (!fs.existsSync(conda_1.minicondaPath())) {
                     return { ok: false, error: new Error("Bundled Miniconda not found!") };
                 }
                 core.endGroup();
             }
             core.startGroup("Setup environment variables...");
-            result = yield setVariables(useBundled);
+            result = yield vars_1.setVariables(useBundled);
             if (!result.ok)
                 return result;
             core.endGroup();
             if (condaConfigFile) {
                 core.startGroup("Copying condarc file...");
                 const sourcePath = path.join(process.env["GITHUB_WORKSPACE"] || "", condaConfigFile);
-                core.info(`"${sourcePath}" to "${CONDARC_PATH}"`);
+                core.info(`"${sourcePath}" to "${constants_1.CONDARC_PATH}"`);
                 try {
-                    yield io.cp(sourcePath, CONDARC_PATH);
+                    yield io.cp(sourcePath, constants_1.CONDARC_PATH);
                 }
                 catch (err) {
                     return { ok: false, error: err };
@@ -22014,10 +21498,10 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 environmentExplicit = false;
             }
             const cacheFolder = utils.cacheFolder();
-            result = yield condaCommand(["config", "--add", "pkgs_dirs", cacheFolder], useBundled, useMamba);
+            result = yield conda_1.condaCommand(["config", "--add", "pkgs_dirs", cacheFolder], useBundled, useMamba);
             if (!result.ok)
                 return result;
-            core.exportVariable(utils.ENV_VAR_CONDA_PKGS, cacheFolder);
+            core.exportVariable(constants_1.ENV_VAR_CONDA_PKGS, cacheFolder);
             if (condaConfig) {
                 if (environmentFile) {
                     let channels;
@@ -22030,37 +21514,37 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                     }
                 }
                 core.startGroup("Applying conda configuration...");
-                result = yield applyCondaConfiguration(condaConfig, useBundled);
+                result = yield conda_1.applyCondaConfiguration(condaConfig, useBundled);
                 core.endGroup();
                 // We do not fail because some options might not be available
                 // if (!result.ok) return result;
             }
             core.startGroup("Setup Conda basic configuration...");
-            result = yield condaCommand(["config", "--set", "always_yes", "yes", "--set", "changeps1", "no"], useBundled, useMamba);
+            result = yield conda_1.condaCommand(["config", "--set", "always_yes", "yes", "--set", "changeps1", "no"], useBundled, useMamba);
             if (!result.ok)
                 return result;
             core.endGroup();
             core.startGroup("Initialize Conda and fix ownership...");
-            result = yield condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles);
+            result = yield conda_1.condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles);
             if (!result.ok)
                 return result;
             core.endGroup();
             if (condaVersion) {
                 core.startGroup("Installing Conda...");
-                result = yield condaCommand(["install", "--name", "base", `conda=${condaVersion}`], useBundled, useMamba);
+                result = yield conda_1.condaCommand(["install", "--name", "base", `conda=${condaVersion}`], useBundled, useMamba);
                 if (!result.ok)
                     return result;
                 core.endGroup();
             }
             if (condaConfig["auto_update_conda"] == "true") {
                 core.startGroup("Updating conda...");
-                result = yield condaCommand(["update", "conda"], useBundled, useMamba);
+                result = yield conda_1.condaCommand(["update", "conda"], useBundled, useMamba);
                 if (!result.ok)
                     return result;
                 core.endGroup();
                 if (condaConfig) {
                     core.startGroup("Applying conda configuration after update...");
-                    result = yield applyCondaConfiguration(condaConfig, useBundled);
+                    result = yield conda_1.applyCondaConfiguration(condaConfig, useBundled);
                     if (!result.ok)
                         return result;
                     core.endGroup();
@@ -22070,11 +21554,11 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             if (mambaVersion) {
                 core.startGroup("Installing Mamba...");
                 core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
-                result = yield condaCommand(["install", "--name", "base", `mamba=${mambaVersion}`], useBundled, useMamba);
+                result = yield conda_1.condaCommand(["install", "--name", "base", `mamba=${mambaVersion}`], useBundled, useMamba);
                 if (result.ok) {
-                    if (IS_WINDOWS) {
+                    if (constants_1.IS_WINDOWS) {
                         // add bat-less forwarder for bash users on Windows
-                        const mambaBat = condaExecutable(useBundled, true).replace("\\", "/");
+                        const mambaBat = conda_1.condaExecutable(useBundled, true).replace("\\", "/");
                         const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
                         try {
                             fs.writeFileSync(mambaBat.slice(0, -4), contents);
@@ -22091,19 +21575,19 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
             }
             if (condaBuildVersion) {
                 core.startGroup("Installing Conda Build...");
-                result = yield condaCommand(["install", "--name", "base", `conda-build=${condaBuildVersion}`], useBundled, useMamba);
+                result = yield conda_1.condaCommand(["install", "--name", "base", `conda-build=${condaBuildVersion}`], useBundled, useMamba);
                 if (!result.ok)
                     return result;
                 core.endGroup();
             }
             if (activateEnvironment) {
-                result = yield createTestEnvironment(activateEnvironment, useBundled, useMamba);
+                result = yield env_1.createTestEnvironment(activateEnvironment, useBundled, useMamba);
                 if (!result.ok)
                     return result;
             }
             if (pythonVersion && activateEnvironment) {
                 core.startGroup(`Installing Python="${pythonVersion}" on "${activateEnvironment}" environment...`);
-                result = yield setupPython(activateEnvironment, pythonVersion, useBundled, useMamba);
+                result = yield tools_1.setupPython(activateEnvironment, pythonVersion, useBundled, useMamba);
                 if (!result.ok)
                     return result;
                 core.endGroup();
@@ -22154,7 +21638,7 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                     condaAction = ["env", "create"];
                 }
                 core.startGroup(group.length ? group : `Running ${condaAction.join(" ")}`);
-                result = yield condaCommand([
+                result = yield conda_1.condaCommand([
                     ...condaAction,
                     "--file",
                     environmentFile,
@@ -22847,8 +22331,64 @@ function _unique(values) {
 //# sourceMappingURL=tool-cache.js.map
 
 /***/ }),
-/* 534 */,
-/* 535 */,
+/* 534 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.setupPython = void 0;
+const conda_1 = __webpack_require__(259);
+/**
+ * Setup python test environment
+ */
+function setupPython(activateEnvironment, pythonVersion, useBundled, useMamba) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield conda_1.condaCommand(["install", "--name", activateEnvironment, `python=${pythonVersion}`], useBundled, useMamba);
+    });
+}
+exports.setupPython = setupPython;
+
+
+/***/ }),
+/* 535 */
+/***/ (function(module) {
+
+/**
+ * A specialized version of `_.indexOf` which performs strict equality
+ * comparisons of values, i.e. `===`.
+ *
+ * @private
+ * @param {Array} array The array to inspect.
+ * @param {*} value The value to search for.
+ * @param {number} fromIndex The index to search from.
+ * @returns {number} Returns the index of the matched value, else `-1`.
+ */
+function strictIndexOf(array, value, fromIndex) {
+  var index = fromIndex - 1,
+      length = array.length;
+
+  while (++index < length) {
+    if (array[index] === value) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+module.exports = strictIndexOf;
+
+
+/***/ }),
 /* 536 */,
 /* 537 */,
 /* 538 */,
@@ -22860,7 +22400,7 @@ function _unique(values) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const url = __webpack_require__(835);
 const http = __webpack_require__(605);
-const https = __webpack_require__(211);
+const https = __webpack_require__(34);
 const pm = __webpack_require__(950);
 let tunnel;
 var HttpCodes;
@@ -23584,52 +23124,24 @@ module.exports = baseTimes;
 /***/ }),
 /* 554 */,
 /* 555 */
-/***/ (function(module) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
-// This object will be used as the prototype for Nodes when creating a
-// DOM-Level-1-compliant structure.
-var NodePrototype = module.exports = {
-	get firstChild() {
-		var children = this.children;
-		return children && children[0] || null;
-	},
-	get lastChild() {
-		var children = this.children;
-		return children && children[children.length - 1] || null;
-	},
-	get nodeType() {
-		return nodeTypes[this.type] || nodeTypes.element;
-	}
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) __createBinding(exports, m, p);
 };
-
-var domLvl1 = {
-	tagName: "name",
-	childNodes: "children",
-	parentNode: "parent",
-	previousSibling: "prev",
-	nextSibling: "next",
-	nodeValue: "data"
-};
-
-var nodeTypes = {
-	element: 1,
-	text: 3,
-	cdata: 4,
-	comment: 8
-};
-
-Object.keys(domLvl1).forEach(function(key) {
-	var shorthand = domLvl1[key];
-	Object.defineProperty(NodePrototype, key, {
-		get: function() {
-			return this[shorthand] || null;
-		},
-		set: function(val) {
-			this[shorthand] = val;
-			return val;
-		}
-	});
-});
+Object.defineProperty(exports, "__esModule", { value: true });
+__exportStar(__webpack_require__(122), exports);
+__exportStar(__webpack_require__(768), exports);
+__exportStar(__webpack_require__(815), exports);
 
 
 /***/ }),
@@ -23844,7 +23356,7 @@ module.exports = stackClear;
 
 var baseFindIndex = __webpack_require__(288),
     baseIsNaN = __webpack_require__(455),
-    strictIndexOf = __webpack_require__(34);
+    strictIndexOf = __webpack_require__(535);
 
 /**
  * The base implementation of `_.indexOf` without `fromIndex` bounds checks.
@@ -24308,7 +23820,7 @@ var DomUtils    = __webpack_require__(104),
     getAttribute= DomUtils.getAttributeValue,
     getNCheck   = __webpack_require__(79),
     checkAttrib = __webpack_require__(126).rules.equals,
-    BaseFuncs   = __webpack_require__(142),
+    BaseFuncs   = __webpack_require__(312),
     trueFunc    = BaseFuncs.trueFunc,
     falseFunc   = BaseFuncs.falseFunc;
 
@@ -27358,7 +26870,612 @@ module.exports.safeDump = safeDump;
 
 
 /***/ }),
-/* 686 */,
+/* 686 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const os = __importStar(__webpack_require__(87));
+const events = __importStar(__webpack_require__(614));
+const child = __importStar(__webpack_require__(129));
+const path = __importStar(__webpack_require__(622));
+const io = __importStar(__webpack_require__(1));
+const ioUtil = __importStar(__webpack_require__(672));
+/* eslint-disable @typescript-eslint/unbound-method */
+const IS_WINDOWS = process.platform === 'win32';
+/*
+ * Class for running command line tools. Handles quoting and arg parsing in a platform agnostic way.
+ */
+class ToolRunner extends events.EventEmitter {
+    constructor(toolPath, args, options) {
+        super();
+        if (!toolPath) {
+            throw new Error("Parameter 'toolPath' cannot be null or empty.");
+        }
+        this.toolPath = toolPath;
+        this.args = args || [];
+        this.options = options || {};
+    }
+    _debug(message) {
+        if (this.options.listeners && this.options.listeners.debug) {
+            this.options.listeners.debug(message);
+        }
+    }
+    _getCommandString(options, noPrefix) {
+        const toolPath = this._getSpawnFileName();
+        const args = this._getSpawnArgs(options);
+        let cmd = noPrefix ? '' : '[command]'; // omit prefix when piped to a second tool
+        if (IS_WINDOWS) {
+            // Windows + cmd file
+            if (this._isCmdFile()) {
+                cmd += toolPath;
+                for (const a of args) {
+                    cmd += ` ${a}`;
+                }
+            }
+            // Windows + verbatim
+            else if (options.windowsVerbatimArguments) {
+                cmd += `"${toolPath}"`;
+                for (const a of args) {
+                    cmd += ` ${a}`;
+                }
+            }
+            // Windows (regular)
+            else {
+                cmd += this._windowsQuoteCmdArg(toolPath);
+                for (const a of args) {
+                    cmd += ` ${this._windowsQuoteCmdArg(a)}`;
+                }
+            }
+        }
+        else {
+            // OSX/Linux - this can likely be improved with some form of quoting.
+            // creating processes on Unix is fundamentally different than Windows.
+            // on Unix, execvp() takes an arg array.
+            cmd += toolPath;
+            for (const a of args) {
+                cmd += ` ${a}`;
+            }
+        }
+        return cmd;
+    }
+    _processLineBuffer(data, strBuffer, onLine) {
+        try {
+            let s = strBuffer + data.toString();
+            let n = s.indexOf(os.EOL);
+            while (n > -1) {
+                const line = s.substring(0, n);
+                onLine(line);
+                // the rest of the string ...
+                s = s.substring(n + os.EOL.length);
+                n = s.indexOf(os.EOL);
+            }
+            strBuffer = s;
+        }
+        catch (err) {
+            // streaming lines to console is best effort.  Don't fail a build.
+            this._debug(`error processing line. Failed with error ${err}`);
+        }
+    }
+    _getSpawnFileName() {
+        if (IS_WINDOWS) {
+            if (this._isCmdFile()) {
+                return process.env['COMSPEC'] || 'cmd.exe';
+            }
+        }
+        return this.toolPath;
+    }
+    _getSpawnArgs(options) {
+        if (IS_WINDOWS) {
+            if (this._isCmdFile()) {
+                let argline = `/D /S /C "${this._windowsQuoteCmdArg(this.toolPath)}`;
+                for (const a of this.args) {
+                    argline += ' ';
+                    argline += options.windowsVerbatimArguments
+                        ? a
+                        : this._windowsQuoteCmdArg(a);
+                }
+                argline += '"';
+                return [argline];
+            }
+        }
+        return this.args;
+    }
+    _endsWith(str, end) {
+        return str.endsWith(end);
+    }
+    _isCmdFile() {
+        const upperToolPath = this.toolPath.toUpperCase();
+        return (this._endsWith(upperToolPath, '.CMD') ||
+            this._endsWith(upperToolPath, '.BAT'));
+    }
+    _windowsQuoteCmdArg(arg) {
+        // for .exe, apply the normal quoting rules that libuv applies
+        if (!this._isCmdFile()) {
+            return this._uvQuoteCmdArg(arg);
+        }
+        // otherwise apply quoting rules specific to the cmd.exe command line parser.
+        // the libuv rules are generic and are not designed specifically for cmd.exe
+        // command line parser.
+        //
+        // for a detailed description of the cmd.exe command line parser, refer to
+        // http://stackoverflow.com/questions/4094699/how-does-the-windows-command-interpreter-cmd-exe-parse-scripts/7970912#7970912
+        // need quotes for empty arg
+        if (!arg) {
+            return '""';
+        }
+        // determine whether the arg needs to be quoted
+        const cmdSpecialChars = [
+            ' ',
+            '\t',
+            '&',
+            '(',
+            ')',
+            '[',
+            ']',
+            '{',
+            '}',
+            '^',
+            '=',
+            ';',
+            '!',
+            "'",
+            '+',
+            ',',
+            '`',
+            '~',
+            '|',
+            '<',
+            '>',
+            '"'
+        ];
+        let needsQuotes = false;
+        for (const char of arg) {
+            if (cmdSpecialChars.some(x => x === char)) {
+                needsQuotes = true;
+                break;
+            }
+        }
+        // short-circuit if quotes not needed
+        if (!needsQuotes) {
+            return arg;
+        }
+        // the following quoting rules are very similar to the rules that by libuv applies.
+        //
+        // 1) wrap the string in quotes
+        //
+        // 2) double-up quotes - i.e. " => ""
+        //
+        //    this is different from the libuv quoting rules. libuv replaces " with \", which unfortunately
+        //    doesn't work well with a cmd.exe command line.
+        //
+        //    note, replacing " with "" also works well if the arg is passed to a downstream .NET console app.
+        //    for example, the command line:
+        //          foo.exe "myarg:""my val"""
+        //    is parsed by a .NET console app into an arg array:
+        //          [ "myarg:\"my val\"" ]
+        //    which is the same end result when applying libuv quoting rules. although the actual
+        //    command line from libuv quoting rules would look like:
+        //          foo.exe "myarg:\"my val\""
+        //
+        // 3) double-up slashes that precede a quote,
+        //    e.g.  hello \world    => "hello \world"
+        //          hello\"world    => "hello\\""world"
+        //          hello\\"world   => "hello\\\\""world"
+        //          hello world\    => "hello world\\"
+        //
+        //    technically this is not required for a cmd.exe command line, or the batch argument parser.
+        //    the reasons for including this as a .cmd quoting rule are:
+        //
+        //    a) this is optimized for the scenario where the argument is passed from the .cmd file to an
+        //       external program. many programs (e.g. .NET console apps) rely on the slash-doubling rule.
+        //
+        //    b) it's what we've been doing previously (by deferring to node default behavior) and we
+        //       haven't heard any complaints about that aspect.
+        //
+        // note, a weakness of the quoting rules chosen here, is that % is not escaped. in fact, % cannot be
+        // escaped when used on the command line directly - even though within a .cmd file % can be escaped
+        // by using %%.
+        //
+        // the saving grace is, on the command line, %var% is left as-is if var is not defined. this contrasts
+        // the line parsing rules within a .cmd file, where if var is not defined it is replaced with nothing.
+        //
+        // one option that was explored was replacing % with ^% - i.e. %var% => ^%var^%. this hack would
+        // often work, since it is unlikely that var^ would exist, and the ^ character is removed when the
+        // variable is used. the problem, however, is that ^ is not removed when %* is used to pass the args
+        // to an external program.
+        //
+        // an unexplored potential solution for the % escaping problem, is to create a wrapper .cmd file.
+        // % can be escaped within a .cmd file.
+        let reverse = '"';
+        let quoteHit = true;
+        for (let i = arg.length; i > 0; i--) {
+            // walk the string in reverse
+            reverse += arg[i - 1];
+            if (quoteHit && arg[i - 1] === '\\') {
+                reverse += '\\'; // double the slash
+            }
+            else if (arg[i - 1] === '"') {
+                quoteHit = true;
+                reverse += '"'; // double the quote
+            }
+            else {
+                quoteHit = false;
+            }
+        }
+        reverse += '"';
+        return reverse
+            .split('')
+            .reverse()
+            .join('');
+    }
+    _uvQuoteCmdArg(arg) {
+        // Tool runner wraps child_process.spawn() and needs to apply the same quoting as
+        // Node in certain cases where the undocumented spawn option windowsVerbatimArguments
+        // is used.
+        //
+        // Since this function is a port of quote_cmd_arg from Node 4.x (technically, lib UV,
+        // see https://github.com/nodejs/node/blob/v4.x/deps/uv/src/win/process.c for details),
+        // pasting copyright notice from Node within this function:
+        //
+        //      Copyright Joyent, Inc. and other Node contributors. All rights reserved.
+        //
+        //      Permission is hereby granted, free of charge, to any person obtaining a copy
+        //      of this software and associated documentation files (the "Software"), to
+        //      deal in the Software without restriction, including without limitation the
+        //      rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+        //      sell copies of the Software, and to permit persons to whom the Software is
+        //      furnished to do so, subject to the following conditions:
+        //
+        //      The above copyright notice and this permission notice shall be included in
+        //      all copies or substantial portions of the Software.
+        //
+        //      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        //      IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        //      FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        //      AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        //      LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+        //      FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+        //      IN THE SOFTWARE.
+        if (!arg) {
+            // Need double quotation for empty argument
+            return '""';
+        }
+        if (!arg.includes(' ') && !arg.includes('\t') && !arg.includes('"')) {
+            // No quotation needed
+            return arg;
+        }
+        if (!arg.includes('"') && !arg.includes('\\')) {
+            // No embedded double quotes or backslashes, so I can just wrap
+            // quote marks around the whole thing.
+            return `"${arg}"`;
+        }
+        // Expected input/output:
+        //   input : hello"world
+        //   output: "hello\"world"
+        //   input : hello""world
+        //   output: "hello\"\"world"
+        //   input : hello\world
+        //   output: hello\world
+        //   input : hello\\world
+        //   output: hello\\world
+        //   input : hello\"world
+        //   output: "hello\\\"world"
+        //   input : hello\\"world
+        //   output: "hello\\\\\"world"
+        //   input : hello world\
+        //   output: "hello world\\" - note the comment in libuv actually reads "hello world\"
+        //                             but it appears the comment is wrong, it should be "hello world\\"
+        let reverse = '"';
+        let quoteHit = true;
+        for (let i = arg.length; i > 0; i--) {
+            // walk the string in reverse
+            reverse += arg[i - 1];
+            if (quoteHit && arg[i - 1] === '\\') {
+                reverse += '\\';
+            }
+            else if (arg[i - 1] === '"') {
+                quoteHit = true;
+                reverse += '\\';
+            }
+            else {
+                quoteHit = false;
+            }
+        }
+        reverse += '"';
+        return reverse
+            .split('')
+            .reverse()
+            .join('');
+    }
+    _cloneExecOptions(options) {
+        options = options || {};
+        const result = {
+            cwd: options.cwd || process.cwd(),
+            env: options.env || process.env,
+            silent: options.silent || false,
+            windowsVerbatimArguments: options.windowsVerbatimArguments || false,
+            failOnStdErr: options.failOnStdErr || false,
+            ignoreReturnCode: options.ignoreReturnCode || false,
+            delay: options.delay || 10000
+        };
+        result.outStream = options.outStream || process.stdout;
+        result.errStream = options.errStream || process.stderr;
+        return result;
+    }
+    _getSpawnOptions(options, toolPath) {
+        options = options || {};
+        const result = {};
+        result.cwd = options.cwd;
+        result.env = options.env;
+        result['windowsVerbatimArguments'] =
+            options.windowsVerbatimArguments || this._isCmdFile();
+        if (options.windowsVerbatimArguments) {
+            result.argv0 = `"${toolPath}"`;
+        }
+        return result;
+    }
+    /**
+     * Exec a tool.
+     * Output will be streamed to the live console.
+     * Returns promise with return code
+     *
+     * @param     tool     path to tool to exec
+     * @param     options  optional exec options.  See ExecOptions
+     * @returns   number
+     */
+    exec() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // root the tool path if it is unrooted and contains relative pathing
+            if (!ioUtil.isRooted(this.toolPath) &&
+                (this.toolPath.includes('/') ||
+                    (IS_WINDOWS && this.toolPath.includes('\\')))) {
+                // prefer options.cwd if it is specified, however options.cwd may also need to be rooted
+                this.toolPath = path.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
+            }
+            // if the tool is only a file name, then resolve it from the PATH
+            // otherwise verify it exists (add extension on Windows if necessary)
+            this.toolPath = yield io.which(this.toolPath, true);
+            return new Promise((resolve, reject) => {
+                this._debug(`exec tool: ${this.toolPath}`);
+                this._debug('arguments:');
+                for (const arg of this.args) {
+                    this._debug(`   ${arg}`);
+                }
+                const optionsNonNull = this._cloneExecOptions(this.options);
+                if (!optionsNonNull.silent && optionsNonNull.outStream) {
+                    optionsNonNull.outStream.write(this._getCommandString(optionsNonNull) + os.EOL);
+                }
+                const state = new ExecState(optionsNonNull, this.toolPath);
+                state.on('debug', (message) => {
+                    this._debug(message);
+                });
+                const fileName = this._getSpawnFileName();
+                const cp = child.spawn(fileName, this._getSpawnArgs(optionsNonNull), this._getSpawnOptions(this.options, fileName));
+                const stdbuffer = '';
+                if (cp.stdout) {
+                    cp.stdout.on('data', (data) => {
+                        if (this.options.listeners && this.options.listeners.stdout) {
+                            this.options.listeners.stdout(data);
+                        }
+                        if (!optionsNonNull.silent && optionsNonNull.outStream) {
+                            optionsNonNull.outStream.write(data);
+                        }
+                        this._processLineBuffer(data, stdbuffer, (line) => {
+                            if (this.options.listeners && this.options.listeners.stdline) {
+                                this.options.listeners.stdline(line);
+                            }
+                        });
+                    });
+                }
+                const errbuffer = '';
+                if (cp.stderr) {
+                    cp.stderr.on('data', (data) => {
+                        state.processStderr = true;
+                        if (this.options.listeners && this.options.listeners.stderr) {
+                            this.options.listeners.stderr(data);
+                        }
+                        if (!optionsNonNull.silent &&
+                            optionsNonNull.errStream &&
+                            optionsNonNull.outStream) {
+                            const s = optionsNonNull.failOnStdErr
+                                ? optionsNonNull.errStream
+                                : optionsNonNull.outStream;
+                            s.write(data);
+                        }
+                        this._processLineBuffer(data, errbuffer, (line) => {
+                            if (this.options.listeners && this.options.listeners.errline) {
+                                this.options.listeners.errline(line);
+                            }
+                        });
+                    });
+                }
+                cp.on('error', (err) => {
+                    state.processError = err.message;
+                    state.processExited = true;
+                    state.processClosed = true;
+                    state.CheckComplete();
+                });
+                cp.on('exit', (code) => {
+                    state.processExitCode = code;
+                    state.processExited = true;
+                    this._debug(`Exit code ${code} received from tool '${this.toolPath}'`);
+                    state.CheckComplete();
+                });
+                cp.on('close', (code) => {
+                    state.processExitCode = code;
+                    state.processExited = true;
+                    state.processClosed = true;
+                    this._debug(`STDIO streams have closed for tool '${this.toolPath}'`);
+                    state.CheckComplete();
+                });
+                state.on('done', (error, exitCode) => {
+                    if (stdbuffer.length > 0) {
+                        this.emit('stdline', stdbuffer);
+                    }
+                    if (errbuffer.length > 0) {
+                        this.emit('errline', errbuffer);
+                    }
+                    cp.removeAllListeners();
+                    if (error) {
+                        reject(error);
+                    }
+                    else {
+                        resolve(exitCode);
+                    }
+                });
+                if (this.options.input) {
+                    if (!cp.stdin) {
+                        throw new Error('child process missing stdin');
+                    }
+                    cp.stdin.end(this.options.input);
+                }
+            });
+        });
+    }
+}
+exports.ToolRunner = ToolRunner;
+/**
+ * Convert an arg string to an array of args. Handles escaping
+ *
+ * @param    argString   string of arguments
+ * @returns  string[]    array of arguments
+ */
+function argStringToArray(argString) {
+    const args = [];
+    let inQuotes = false;
+    let escaped = false;
+    let arg = '';
+    function append(c) {
+        // we only escape double quotes.
+        if (escaped && c !== '"') {
+            arg += '\\';
+        }
+        arg += c;
+        escaped = false;
+    }
+    for (let i = 0; i < argString.length; i++) {
+        const c = argString.charAt(i);
+        if (c === '"') {
+            if (!escaped) {
+                inQuotes = !inQuotes;
+            }
+            else {
+                append(c);
+            }
+            continue;
+        }
+        if (c === '\\' && escaped) {
+            append(c);
+            continue;
+        }
+        if (c === '\\' && inQuotes) {
+            escaped = true;
+            continue;
+        }
+        if (c === ' ' && !inQuotes) {
+            if (arg.length > 0) {
+                args.push(arg);
+                arg = '';
+            }
+            continue;
+        }
+        append(c);
+    }
+    if (arg.length > 0) {
+        args.push(arg.trim());
+    }
+    return args;
+}
+exports.argStringToArray = argStringToArray;
+class ExecState extends events.EventEmitter {
+    constructor(options, toolPath) {
+        super();
+        this.processClosed = false; // tracks whether the process has exited and stdio is closed
+        this.processError = '';
+        this.processExitCode = 0;
+        this.processExited = false; // tracks whether the process has exited
+        this.processStderr = false; // tracks whether stderr was written to
+        this.delay = 10000; // 10 seconds
+        this.done = false;
+        this.timeout = null;
+        if (!toolPath) {
+            throw new Error('toolPath must not be empty');
+        }
+        this.options = options;
+        this.toolPath = toolPath;
+        if (options.delay) {
+            this.delay = options.delay;
+        }
+    }
+    CheckComplete() {
+        if (this.done) {
+            return;
+        }
+        if (this.processClosed) {
+            this._setResult();
+        }
+        else if (this.processExited) {
+            this.timeout = setTimeout(ExecState.HandleTimeout, this.delay, this);
+        }
+    }
+    _debug(message) {
+        this.emit('debug', message);
+    }
+    _setResult() {
+        // determine whether there is an error
+        let error;
+        if (this.processExited) {
+            if (this.processError) {
+                error = new Error(`There was an error when attempting to execute the process '${this.toolPath}'. This may indicate the process failed to start. Error: ${this.processError}`);
+            }
+            else if (this.processExitCode !== 0 && !this.options.ignoreReturnCode) {
+                error = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);
+            }
+            else if (this.processStderr && this.options.failOnStdErr) {
+                error = new Error(`The process '${this.toolPath}' failed because one or more lines were written to the STDERR stream`);
+            }
+        }
+        // clear the timeout
+        if (this.timeout) {
+            clearTimeout(this.timeout);
+            this.timeout = null;
+        }
+        this.done = true;
+        this.emit('done', error, this.processExitCode);
+    }
+    static HandleTimeout(state) {
+        if (state.done) {
+            return;
+        }
+        if (!state.processClosed && state.processExited) {
+            const message = `The STDIO streams did not close within ${state.delay /
+                1000} seconds of the exit event from process '${state.toolPath}'. This may indicate a child process inherited the STDIO streams and has not yet exited.`;
+            state._debug(message);
+        }
+        state._setResult();
+    }
+}
+//# sourceMappingURL=toolrunner.js.map
+
+/***/ }),
 /* 687 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -27811,7 +27928,7 @@ var Pseudos       = __webpack_require__(589),
     findAll       = DomUtils.findAll,
     getChildren   = DomUtils.getChildren,
     removeSubsets = DomUtils.removeSubsets,
-    falseFunc     = __webpack_require__(142).falseFunc,
+    falseFunc     = __webpack_require__(312).falseFunc,
     compile       = __webpack_require__(124),
     compileUnsafe = compile.compileUnsafe,
     compileToken  = compile.compileToken;
@@ -28568,7 +28685,7 @@ Serializer.prototype._serializeDocumentTypeNode = function (node) {
 /* 751 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-var LazyWrapper = __webpack_require__(798),
+var LazyWrapper = __webpack_require__(922),
     LodashWrapper = __webpack_require__(204),
     baseLodash = __webpack_require__(180),
     isArray = __webpack_require__(143),
@@ -29292,13 +29409,125 @@ module.exports = defaults;
 
 
 /***/ }),
-/* 768 */,
+/* 768 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.downloadMiniconda = void 0;
+const fs = __importStar(__webpack_require__(747));
+const core = __importStar(__webpack_require__(470));
+const tc = __importStar(__webpack_require__(533));
+const get_hrefs_1 = __importDefault(__webpack_require__(222));
+const base_1 = __webpack_require__(122);
+const constants_1 = __webpack_require__(211);
+/**
+ * List available Miniconda versions
+ *
+ * @param arch
+ */
+function minicondaVersions(arch) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            let extension = constants_1.IS_UNIX ? "sh" : "exe";
+            const downloadPath = yield tc.downloadTool(constants_1.MINICONDA_BASE_URL);
+            const content = fs.readFileSync(downloadPath, "utf8");
+            let hrefs = get_hrefs_1.default(content);
+            hrefs = hrefs.filter((item) => item.startsWith("/Miniconda3"));
+            hrefs = hrefs.filter((item) => item.endsWith(`${arch}.${extension}`));
+            hrefs = hrefs.map((item) => item.substring(1));
+            return hrefs;
+        }
+        catch (err) {
+            core.warning(err);
+            return [];
+        }
+    });
+}
+/**
+ * Download specific version miniconda defined by version, arch and python major version
+ *
+ * @param pythonMajorVersion
+ * @param minicondaVersion
+ * @param architecture
+ */
+function downloadMiniconda(pythonMajorVersion, minicondaVersion, architecture) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Check valid arch
+        const arch = constants_1.ARCHITECTURES[architecture];
+        if (!arch) {
+            return { ok: false, error: new Error(`Invalid arch "${architecture}"!`) };
+        }
+        let extension = constants_1.IS_UNIX ? "sh" : "exe";
+        let osName = constants_1.OS_NAMES[process.platform];
+        const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
+        core.info(minicondaInstallerName);
+        // Check version name
+        let versions = yield minicondaVersions(arch);
+        if (versions) {
+            if (!versions.includes(minicondaInstallerName)) {
+                return {
+                    ok: false,
+                    error: new Error(`Invalid miniconda version!\n\nMust be among ${versions.toString()}`),
+                };
+            }
+        }
+        try {
+            const downloadPath = yield base_1.ensureLocalInstaller({
+                url: constants_1.MINICONDA_BASE_URL + minicondaInstallerName,
+                tool: `Miniconda${pythonMajorVersion}`,
+                version: minicondaVersion,
+                arch: arch,
+            });
+            return { ok: true, data: downloadPath };
+        }
+        catch (error) {
+            return { ok: false, error };
+        }
+    });
+}
+exports.downloadMiniconda = downloadMiniconda;
+
+
+/***/ }),
 /* 769 */,
 /* 770 */,
 /* 771 */
 /***/ (function(module) {
 
-module.exports = {"_args":[["cheerio@1.0.0-rc.3","/Users/goanpeca/Dropbox (Personal)/develop/conda-incubator/setup-miniconda"]],"_from":"cheerio@1.0.0-rc.3","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"cheerio@1.0.0-rc.3","name":"cheerio","escapedName":"cheerio","rawSpec":"1.0.0-rc.3","saveSpec":null,"fetchSpec":"1.0.0-rc.3"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_spec":"1.0.0-rc.3","_where":"/Users/goanpeca/Dropbox (Personal)/develop/conda-incubator/setup-miniconda","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
+module.exports = {"_args":[["cheerio@1.0.0-rc.3","/home/weg/projects/actions/setup-miniconda"]],"_from":"cheerio@1.0.0-rc.3","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"cheerio@1.0.0-rc.3","name":"cheerio","escapedName":"cheerio","rawSpec":"1.0.0-rc.3","saveSpec":null,"fetchSpec":"1.0.0-rc.3"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_spec":"1.0.0-rc.3","_where":"/home/weg/projects/actions/setup-miniconda","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
 
 /***/ }),
 /* 772 */
@@ -29705,36 +29934,52 @@ module.exports = createAssigner;
 
 /***/ }),
 /* 798 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ (function(module) {
 
-var baseCreate = __webpack_require__(782),
-    baseLodash = __webpack_require__(180);
+// This object will be used as the prototype for Nodes when creating a
+// DOM-Level-1-compliant structure.
+var NodePrototype = module.exports = {
+	get firstChild() {
+		var children = this.children;
+		return children && children[0] || null;
+	},
+	get lastChild() {
+		var children = this.children;
+		return children && children[children.length - 1] || null;
+	},
+	get nodeType() {
+		return nodeTypes[this.type] || nodeTypes.element;
+	}
+};
 
-/** Used as references for the maximum length and index of an array. */
-var MAX_ARRAY_LENGTH = 4294967295;
+var domLvl1 = {
+	tagName: "name",
+	childNodes: "children",
+	parentNode: "parent",
+	previousSibling: "prev",
+	nextSibling: "next",
+	nodeValue: "data"
+};
 
-/**
- * Creates a lazy wrapper object which wraps `value` to enable lazy evaluation.
- *
- * @private
- * @constructor
- * @param {*} value The value to wrap.
- */
-function LazyWrapper(value) {
-  this.__wrapped__ = value;
-  this.__actions__ = [];
-  this.__dir__ = 1;
-  this.__filtered__ = false;
-  this.__iteratees__ = [];
-  this.__takeCount__ = MAX_ARRAY_LENGTH;
-  this.__views__ = [];
-}
+var nodeTypes = {
+	element: 1,
+	text: 3,
+	cdata: 4,
+	comment: 8
+};
 
-// Ensure `LazyWrapper` is an instance of `baseLodash`.
-LazyWrapper.prototype = baseCreate(baseLodash.prototype);
-LazyWrapper.prototype.constructor = LazyWrapper;
-
-module.exports = LazyWrapper;
+Object.keys(domLvl1).forEach(function(key) {
+	var shorthand = domLvl1[key];
+	Object.defineProperty(NodePrototype, key, {
+		get: function() {
+			return this[shorthand] || null;
+		},
+		set: function(val) {
+			this[shorthand] = val;
+			return val;
+		}
+	});
+});
 
 
 /***/ }),
@@ -30621,7 +30866,41 @@ module.exports = toInteger;
 
 /***/ }),
 /* 814 */,
-/* 815 */,
+/* 815 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.downloadCustomInstaller = void 0;
+const base_1 = __webpack_require__(122);
+/**
+ * @param url A URL for a file with the CLI of a `constructor`-built artifact
+ */
+function downloadCustomInstaller(url) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const downloadPath = yield base_1.ensureLocalInstaller({ url });
+            return { ok: true, data: downloadPath };
+        }
+        catch (error) {
+            return { ok: false, error };
+        }
+    });
+}
+exports.downloadCustomInstaller = downloadCustomInstaller;
+
+
+/***/ }),
 /* 816 */,
 /* 817 */
 /***/ (function(module) {
@@ -30733,52 +31012,7 @@ module.exports = {
 
 
 /***/ }),
-/* 819 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-
-
-
-var loader = __webpack_require__(457);
-var dumper = __webpack_require__(685);
-
-
-function deprecated(name) {
-  return function () {
-    throw new Error('Function ' + name + ' is deprecated and cannot be used.');
-  };
-}
-
-
-module.exports.Type                = __webpack_require__(945);
-module.exports.Schema              = __webpack_require__(43);
-module.exports.FAILSAFE_SCHEMA     = __webpack_require__(581);
-module.exports.JSON_SCHEMA         = __webpack_require__(23);
-module.exports.CORE_SCHEMA         = __webpack_require__(611);
-module.exports.DEFAULT_SAFE_SCHEMA = __webpack_require__(723);
-module.exports.DEFAULT_FULL_SCHEMA = __webpack_require__(910);
-module.exports.load                = loader.load;
-module.exports.loadAll             = loader.loadAll;
-module.exports.safeLoad            = loader.safeLoad;
-module.exports.safeLoadAll         = loader.safeLoadAll;
-module.exports.dump                = dumper.dump;
-module.exports.safeDump            = dumper.safeDump;
-module.exports.YAMLException       = __webpack_require__(556);
-
-// Deprecated schema names from JS-YAML 2.0.x
-module.exports.MINIMAL_SCHEMA = __webpack_require__(581);
-module.exports.SAFE_SCHEMA    = __webpack_require__(723);
-module.exports.DEFAULT_SCHEMA = __webpack_require__(910);
-
-// Deprecated functions from JS-YAML 1.x.x
-module.exports.scan           = deprecated('scan');
-module.exports.parse          = deprecated('parse');
-module.exports.compose        = deprecated('compose');
-module.exports.addConstructor = deprecated('addConstructor');
-
-
-/***/ }),
+/* 819 */,
 /* 820 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -33623,7 +33857,40 @@ module.exports = new Type('tag:yaml.org,2002:seq', {
 
 
 /***/ }),
-/* 922 */,
+/* 922 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+var baseCreate = __webpack_require__(782),
+    baseLodash = __webpack_require__(180);
+
+/** Used as references for the maximum length and index of an array. */
+var MAX_ARRAY_LENGTH = 4294967295;
+
+/**
+ * Creates a lazy wrapper object which wraps `value` to enable lazy evaluation.
+ *
+ * @private
+ * @constructor
+ * @param {*} value The value to wrap.
+ */
+function LazyWrapper(value) {
+  this.__wrapped__ = value;
+  this.__actions__ = [];
+  this.__dir__ = 1;
+  this.__filtered__ = false;
+  this.__iteratees__ = [];
+  this.__takeCount__ = MAX_ARRAY_LENGTH;
+  this.__views__ = [];
+}
+
+// Ensure `LazyWrapper` is an instance of `baseLodash`.
+LazyWrapper.prototype = baseCreate(baseLodash.prototype);
+LazyWrapper.prototype.constructor = LazyWrapper;
+
+module.exports = LazyWrapper;
+
+
+/***/ }),
 /* 923 */,
 /* 924 */,
 /* 925 */
@@ -33968,7 +34235,70 @@ module.exports = toFinite;
 
 /***/ }),
 /* 934 */,
-/* 935 */,
+/* 935 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.setVariables = void 0;
+const path = __importStar(__webpack_require__(622));
+const core = __importStar(__webpack_require__(470));
+const conda_1 = __webpack_require__(259);
+/**
+ * Add Conda executable to PATH
+ */
+function setVariables(useBundled) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            // Set environment variables
+            const condaBin = path.join(conda_1.minicondaPath(useBundled), "condabin");
+            const conda = conda_1.minicondaPath(useBundled);
+            core.info(`Add "${condaBin}" to PATH`);
+            core.addPath(condaBin);
+            if (!useBundled) {
+                core.info(`Set 'CONDA="${conda}"'`);
+                core.exportVariable("CONDA", conda);
+            }
+        }
+        catch (err) {
+            return { ok: false, error: err };
+        }
+        return { ok: true, data: "ok" };
+    });
+}
+exports.setVariables = setVariables;
+
+
+/***/ }),
 /* 936 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -34421,7 +34751,7 @@ exports.checkBypass = checkBypass;
 /* 953 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-var LazyWrapper = __webpack_require__(798),
+var LazyWrapper = __webpack_require__(922),
     LodashWrapper = __webpack_require__(204),
     copyArray = __webpack_require__(239);
 
@@ -34671,7 +35001,7 @@ module.exports = baseMatches;
 
 module.exports = compile;
 
-var BaseFuncs = __webpack_require__(142),
+var BaseFuncs = __webpack_require__(312),
     trueFunc  = BaseFuncs.trueFunc,
     falseFunc = BaseFuncs.falseFunc;
 
@@ -34923,7 +35253,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const tr = __importStar(__webpack_require__(9));
+const tr = __importStar(__webpack_require__(686));
 /**
  * Exec a command.
  * Output will be streamed to the live console.
