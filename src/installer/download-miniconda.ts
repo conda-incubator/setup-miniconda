@@ -12,7 +12,6 @@ import {
   MINICONDA_BASE_URL,
   OS_NAMES,
 } from "../constants";
-import { Result } from "../types";
 
 /**
  * List available Miniconda versions
@@ -48,11 +47,11 @@ export async function downloadMiniconda(
   pythonMajorVersion: number,
   minicondaVersion: string,
   architecture: string
-): Promise<Result> {
+): Promise<string> {
   // Check valid arch
   const arch: string = ARCHITECTURES[architecture];
   if (!arch) {
-    return { ok: false, error: new Error(`Invalid arch "${architecture}"!`) };
+    throw new Error(`Invalid arch "${architecture}"!`);
   }
 
   let extension: string = IS_UNIX ? "sh" : "exe";
@@ -64,24 +63,16 @@ export async function downloadMiniconda(
   let versions: string[] = await minicondaVersions(arch);
   if (versions) {
     if (!versions.includes(minicondaInstallerName)) {
-      return {
-        ok: false,
-        error: new Error(
-          `Invalid miniconda version!\n\nMust be among ${versions.toString()}`
-        ),
-      };
+      throw new Error(
+        `Invalid miniconda version!\n\nMust be among ${versions.toString()}`
+      );
     }
   }
 
-  try {
-    const downloadPath = await ensureLocalInstaller({
-      url: MINICONDA_BASE_URL + minicondaInstallerName,
-      tool: `Miniconda${pythonMajorVersion}`,
-      version: minicondaVersion,
-      arch: arch,
-    });
-    return { ok: true, data: downloadPath };
-  } catch (error) {
-    return { ok: false, error };
-  }
+  return await ensureLocalInstaller({
+    url: MINICONDA_BASE_URL + minicondaInstallerName,
+    tool: `Miniconda${pythonMajorVersion}`,
+    version: minicondaVersion,
+    arch: arch,
+  });
 }

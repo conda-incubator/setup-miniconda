@@ -10,7 +10,6 @@ import {
   FORCED_ERRORS,
   IGNORED_WARNINGS,
 } from "./constants";
-import { Result } from "./types";
 
 export function cacheFolder() {
   return path.join(os.homedir(), CONDA_CACHE_FOLDER);
@@ -19,7 +18,7 @@ export function cacheFolder() {
 /**
  * Run exec.exec with error handling
  */
-export async function execute(command: string[]): Promise<Result> {
+export async function execute(command: string[]): Promise<void> {
   let options: exec.ExecOptions = {
     errStream: new stream.Writable(),
     listeners: {
@@ -44,11 +43,8 @@ export async function execute(command: string[]): Promise<Result> {
     },
   };
 
-  try {
-    await exec.exec(command[0], command.slice(1), options);
-  } catch (err) {
-    return { ok: false, error: err };
+  const rc = await exec.exec(command[0], command.slice(1), options);
+  if (rc !== 0) {
+    throw new Error(`${command[0]} return error code ${rc}`);
   }
-
-  return { ok: true, data: "ok" };
 }
