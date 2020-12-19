@@ -7,6 +7,7 @@ import * as io from "@actions/io";
 import * as yaml from "js-yaml";
 
 import * as utils from "./utils";
+import * as input from "./input";
 
 // TODO: move these to namespace imports
 import { setVariables } from "./vars";
@@ -16,7 +17,7 @@ import {
   downloadCustomInstaller,
 } from "./installer";
 
-import { TCondaConfig, TEnvironment } from "./types";
+import { IActionInputs, TEnvironment } from "./types";
 
 import {
   BOOTSTRAP_CONDARC,
@@ -42,20 +43,24 @@ import { createTestEnvironment } from "./env";
 /**
  * Main conda setup method to handle all configuration options
  */
-async function setupMiniconda(
-  installerUrl: string,
-  minicondaVersion: string,
-  architecture: string,
-  condaVersion: string,
-  condaBuildVersion: string,
-  pythonVersion: string,
-  activateEnvironment: string,
-  environmentFile: string,
-  condaConfigFile: string,
-  condaConfig: TCondaConfig,
-  removeProfiles: string,
-  mambaVersion: string
-): Promise<void> {
+async function setupMiniconda(inputs: IActionInputs): Promise<void> {
+  // The previous ordering of the constructor arguments
+  // TODO: remove this, use the `inputs` object members below
+  let {
+    installerUrl,
+    minicondaVersion,
+    architecture,
+    condaVersion,
+    condaBuildVersion,
+    pythonVersion,
+    activateEnvironment,
+    environmentFile,
+    condaConfigFile,
+    condaConfig,
+    removeProfiles,
+    mambaVersion,
+  } = inputs;
+
   let useBundled: boolean = true;
   let useMamba: boolean = false;
 
@@ -185,7 +190,8 @@ async function setupMiniconda(
       channels = environmentYaml["channels"];
 
       if (condaConfig["channels"] === "" && channels !== undefined) {
-        condaConfig["channels"] = channels.join(",");
+        // TODO: avoid mutating state
+        condaConfig = { ...condaConfig, channels: channels.join(",") };
       } else if (!environmentExplicit) {
         core.warning(
           '"channels" set on the "environment-file" do not match "channels" set on the action!'
@@ -350,62 +356,8 @@ async function setupMiniconda(
  */
 async function run(): Promise<void> {
   try {
-    let installerUrl: string = core.getInput("installer-url");
-    let minicondaVersion: string = core.getInput("miniconda-version");
-    let condaVersion: string = core.getInput("conda-version");
-    let condaBuildVersion: string = core.getInput("conda-build-version");
-    let pythonVersion: string = core.getInput("python-version");
-    let architecture: string = core.getInput("architecture");
-
-    // Environment behavior
-    let activateEnvironment: string = core.getInput("activate-environment");
-    let environmentFile: string = core.getInput("environment-file");
-
-    // Conda configuration
-    let addAnacondaToken: string = core.getInput("add-anaconda-token");
-    let addPipAsPythonDependency: string = core.getInput(
-      "add-pip-as-python-dependency"
-    );
-    let allowSoftlinks: string = core.getInput("allow-softlinks");
-    let autoActivateBase: string = core.getInput("auto-activate-base");
-    let autoUpdateConda: string = core.getInput("auto-update-conda");
-    let condaFile: string = core.getInput("condarc-file");
-    let channelAlias: string = core.getInput("channel-alias");
-    let channelPriority: string = core.getInput("channel-priority");
-    let channels: string = core.getInput("channels");
-    let removeProfiles: string = core.getInput("remove-profiles");
-    let showChannelUrls: string = core.getInput("show-channel-urls");
-    let useOnlyTarBz2: string = core.getInput("use-only-tar-bz2");
-
-    // Mamba
-    let mambaVersion: string = core.getInput("mamba-version");
-
-    const condaConfig: TCondaConfig = {
-      add_anaconda_token: addAnacondaToken,
-      add_pip_as_python_dependency: addPipAsPythonDependency,
-      allow_softlinks: allowSoftlinks,
-      auto_activate_base: autoActivateBase,
-      auto_update_conda: autoUpdateConda,
-      channel_alias: channelAlias,
-      channel_priority: channelPriority,
-      channels: channels,
-      show_channel_urls: showChannelUrls,
-      use_only_tar_bz2: useOnlyTarBz2,
-    };
-    await setupMiniconda(
-      installerUrl,
-      minicondaVersion,
-      architecture,
-      condaVersion,
-      condaBuildVersion,
-      pythonVersion,
-      activateEnvironment,
-      environmentFile,
-      condaFile,
-      condaConfig,
-      removeProfiles,
-      mambaVersion
-    );
+    const inputs = await core.group("Gathering Inputs...", input.parseInputs);
+    await setupMiniconda(inputs);
   } catch (err) {
     core.setFailed(err.message);
   }
