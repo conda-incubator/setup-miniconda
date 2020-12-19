@@ -12732,7 +12732,116 @@ FormattingElementList.prototype.getElementEntry = function (element) {
 /***/ }),
 /* 263 */,
 /* 264 */,
-/* 265 */,
+/* 265 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.parseInputs = void 0;
+const path = __importStar(__webpack_require__(622));
+const core = __importStar(__webpack_require__(470));
+const constants = __importStar(__webpack_require__(211));
+const urlExt = (url) => path.posix.extname(new URL(url).pathname);
+/**
+ *
+ */
+const RULES = [
+    (i, c) => !!(i.condaVersion && c.auto_update_conda === "true") &&
+        `only one of 'conda-version: ${i.condaVersion}' or 'auto-update-conda: true' may be provided`,
+    (i) => !!(i.pythonVersion && !i.activateEnvironment) &&
+        `'python-version: ${i.pythonVersion}' requires 'activate-environment: true'`,
+    (i, c) => !!(i.mambaVersion && !c.channels.includes("conda-forge")) &&
+        `'mamba-version: ${i.mambaVersion}' requires 'conda-forge' to be included in 'channels'`,
+    (i) => !!(i.installerUrl && i.minicondaVersion) &&
+        `only one of 'installer-url' and 'miniconda-version' may be provided`,
+    (i) => !!(i.installerUrl &&
+        !constants.KNOWN_EXTENSIONS.includes(urlExt(i.installerUrl))) &&
+        `'installer-url' extension '${urlExt(i.installerUrl)}' must be one of: ${constants.KNOWN_EXTENSIONS}`,
+    (i) => !!(i.minicondaVersion && i.architecture !== "x64") &&
+        `'architecture: ${i.architecture}' requires "miniconda-version"`,
+    (i) => !!(i.architecture === "x86" && constants.IS_LINUX) &&
+        `'architecture: ${i.architecture}' is not supported by recent versions of Miniconda`,
+];
+/*
+ * Parse, validate, and normalize string-ish inputs from `with`
+ */
+function parseInputs() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const inputs = Object.freeze({
+            activateEnvironment: core.getInput("activate-environment"),
+            architecture: core.getInput("architecture"),
+            condaBuildVersion: core.getInput("conda-build-version"),
+            condaConfigFile: core.getInput("condarc-file"),
+            condaVersion: core.getInput("conda-version"),
+            environmentFile: core.getInput("environment-file"),
+            installerUrl: core.getInput("installer-url"),
+            mambaVersion: core.getInput("mamba-version"),
+            minicondaVersion: core.getInput("miniconda-version"),
+            pythonVersion: core.getInput("python-version"),
+            removeProfiles: core.getInput("remove-profiles"),
+            condaConfig: Object.freeze({
+                add_anaconda_token: core.getInput("add-anaconda-token"),
+                add_pip_as_python_dependency: core.getInput("add-pip-as-python-dependency"),
+                allow_softlinks: core.getInput("allow-softlinks"),
+                auto_activate_base: core.getInput("auto-activate-base"),
+                auto_update_conda: core.getInput("auto-update-conda"),
+                channel_alias: core.getInput("channel-alias"),
+                channel_priority: core.getInput("channel-priority"),
+                channels: core.getInput("channels"),
+                show_channel_urls: core.getInput("show-channel-urls"),
+                use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
+                // these are always set to avoid terminal issues
+                always_yes: "true",
+                changeps1: "false",
+            }),
+        });
+        const errors = RULES.reduce((errors, rule) => {
+            const msg = rule(inputs, inputs.condaConfig);
+            if (msg) {
+                core.error(msg);
+                errors.push(msg);
+            }
+            return errors;
+        }, []);
+        if (errors.length) {
+            throw Error(`${errors.length} errors found in action inputs`);
+        }
+        return Object.freeze(inputs);
+    });
+}
+exports.parseInputs = parseInputs;
+
+
+/***/ }),
 /* 266 */,
 /* 267 */,
 /* 268 */
@@ -21321,6 +21430,7 @@ const core = __importStar(__webpack_require__(470));
 const io = __importStar(__webpack_require__(1));
 const yaml = __importStar(__webpack_require__(414));
 const utils = __importStar(__webpack_require__(163));
+const input = __importStar(__webpack_require__(265));
 // TODO: move these to namespace imports
 const vars_1 = __webpack_require__(935);
 const installer_1 = __webpack_require__(555);
@@ -21331,8 +21441,11 @@ const env_1 = __webpack_require__(166);
 /**
  * Main conda setup method to handle all configuration options
  */
-function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaConfigFile, condaConfig, removeProfiles, mambaVersion) {
+function setupMiniconda(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
+        // The previous ordering of the constructor arguments
+        // TODO: remove this, use the `inputs` object members below
+        let { installerUrl, minicondaVersion, architecture, condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaConfigFile, condaConfig, removeProfiles, mambaVersion, } = inputs;
         let useBundled = true;
         let useMamba = false;
         core.startGroup("Checking consistency...");
@@ -21427,7 +21540,8 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
                 let channels;
                 channels = environmentYaml["channels"];
                 if (condaConfig["channels"] === "" && channels !== undefined) {
-                    condaConfig["channels"] = channels.join(",");
+                    // TODO: avoid mutating state
+                    condaConfig = Object.assign(Object.assign({}, condaConfig), { channels: channels.join(",") });
                 }
                 else if (!environmentExplicit) {
                     core.warning('"channels" set on the "environment-file" do not match "channels" set on the action!');
@@ -21542,43 +21656,8 @@ function setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersi
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            let installerUrl = core.getInput("installer-url");
-            let minicondaVersion = core.getInput("miniconda-version");
-            let condaVersion = core.getInput("conda-version");
-            let condaBuildVersion = core.getInput("conda-build-version");
-            let pythonVersion = core.getInput("python-version");
-            let architecture = core.getInput("architecture");
-            // Environment behavior
-            let activateEnvironment = core.getInput("activate-environment");
-            let environmentFile = core.getInput("environment-file");
-            // Conda configuration
-            let addAnacondaToken = core.getInput("add-anaconda-token");
-            let addPipAsPythonDependency = core.getInput("add-pip-as-python-dependency");
-            let allowSoftlinks = core.getInput("allow-softlinks");
-            let autoActivateBase = core.getInput("auto-activate-base");
-            let autoUpdateConda = core.getInput("auto-update-conda");
-            let condaFile = core.getInput("condarc-file");
-            let channelAlias = core.getInput("channel-alias");
-            let channelPriority = core.getInput("channel-priority");
-            let channels = core.getInput("channels");
-            let removeProfiles = core.getInput("remove-profiles");
-            let showChannelUrls = core.getInput("show-channel-urls");
-            let useOnlyTarBz2 = core.getInput("use-only-tar-bz2");
-            // Mamba
-            let mambaVersion = core.getInput("mamba-version");
-            const condaConfig = {
-                add_anaconda_token: addAnacondaToken,
-                add_pip_as_python_dependency: addPipAsPythonDependency,
-                allow_softlinks: allowSoftlinks,
-                auto_activate_base: autoActivateBase,
-                auto_update_conda: autoUpdateConda,
-                channel_alias: channelAlias,
-                channel_priority: channelPriority,
-                channels: channels,
-                show_channel_urls: showChannelUrls,
-                use_only_tar_bz2: useOnlyTarBz2,
-            };
-            yield setupMiniconda(installerUrl, minicondaVersion, architecture, condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaFile, condaConfig, removeProfiles, mambaVersion);
+            const inputs = yield core.group("Gathering Inputs...", input.parseInputs);
+            yield setupMiniconda(inputs);
         }
         catch (err) {
             core.setFailed(err.message);
