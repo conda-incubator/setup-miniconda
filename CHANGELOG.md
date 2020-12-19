@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [v2.1.0][] ()
+
+## Tasks
+
+- [#115][] add extra information on default environment activation.
+
+[v2.1.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v2.1.0
+[#115]: https://github.com/conda-incubator/setup-miniconda/pull/115
+
 ## [v2.0.1][] (2020-11-29)
 
 ## Fixes
