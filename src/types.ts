@@ -28,6 +28,27 @@ export interface ILocalInstallerOpts {
 }
 
 /**
+ * Special case `dependencies` member for pip  in `environment.yml`
+ */
+export interface IPipSpec {
+  pip: string[];
+}
+
+/**
+ * Any valid member of `dependencies` in `environment.yml`.
+ */
+export type TYamlDependencies = (string | IPipSpec)[];
+
+/**
+ * A (partial) `environment.yml`
+ */
+export interface IEnvironment {
+  name?: string;
+  channels?: string[];
+  dependencies?: TYamlDependencies;
+}
+
+/**
  * A subset of the .condarc file options available as action inputs
  * https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html
  */
@@ -62,4 +83,22 @@ export interface IActionInputs {
   readonly minicondaVersion: string;
   readonly pythonVersion: string;
   readonly removeProfiles: string;
+}
+
+/**
+ * Options that may change during the course of discovery/installation/configuration
+ */
+export interface IDynamicOptions {
+  useBundled: boolean;
+  useMamba: boolean;
+  envSpec?: IEnvSpec;
+  condaConfig: TCondaConfig;
+}
+
+/**
+ * File contents describing an environment
+ */
+export interface IEnvSpec {
+  yaml?: IEnvironment;
+  explicit?: string;
 }

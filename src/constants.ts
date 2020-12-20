@@ -1,7 +1,7 @@
 import * as os from "os";
 import * as path from "path";
 
-import { IArchitectures, IOperatingSystems } from "./types";
+import * as types from "./types";
 
 //-----------------------------------------------------------------------
 // Constants
@@ -14,14 +14,14 @@ export const IS_UNIX: boolean = IS_MAC || IS_LINUX;
 export const MINICONDA_BASE_URL: string =
   "https://repo.anaconda.com/miniconda/";
 
-export const ARCHITECTURES: IArchitectures = {
+export const ARCHITECTURES: types.IArchitectures = {
   x64: "x86_64",
   x86: "x86",
   ARM64: "aarch64", // To be supported by github runners
   ARM32: "armv7l", // To be supported by github runners
 };
 
-export const OS_NAMES: IOperatingSystems = {
+export const OS_NAMES: types.IOperatingSystems = {
   win32: "Windows",
   darwin: "MacOSX",
   linux: "Linux",

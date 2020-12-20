@@ -10,15 +10,15 @@ import * as core from "@actions/core";
 import * as io from "@actions/io";
 
 import { IS_LINUX, IS_MAC, IS_WINDOWS, MINICONDA_DIR_PATH } from "./constants";
-import { IShells, TCondaConfig } from "./types";
 import { execute } from "./utils";
+import * as types from "./types";
 
 /**
  * Provide current location of miniconda or location where it will be installed
  */
-export function minicondaPath(useBundled: boolean = true): string {
+export function minicondaPath(options: types.IDynamicOptions): string {
   let condaPath: string = MINICONDA_DIR_PATH;
-  if (!useBundled) {
+  if (!options.useBundled) {
     if (IS_MAC) {
       condaPath = "/Users/runner/miniconda3";
     } else {
@@ -31,14 +31,11 @@ export function minicondaPath(useBundled: boolean = true): string {
 /**
  * Provide cross platform location of conda/mamba executable
  */
-export function condaExecutable(
-  useBundled: boolean,
-  useMamba: boolean = false
-): string {
-  const dir: string = minicondaPath(useBundled);
+export function condaExecutable(options: types.IDynamicOptions): string {
+  const dir: string = minicondaPath(options);
   let condaExe: string;
   let commandName: string;
-  commandName = useMamba ? "mamba" : "conda";
+  commandName = options.useMamba ? "mamba" : "conda";
   commandName = IS_WINDOWS ? commandName + ".bat" : commandName;
   condaExe = path.join(dir, "condabin", commandName);
   return condaExe;
@@ -49,10 +46,9 @@ export function condaExecutable(
  */
 export async function condaCommand(
   cmd: string[],
-  useBundled: boolean,
-  useMamba: boolean = false
+  options: types.IDynamicOptions
 ): Promise<void> {
-  const command = [condaExecutable(useBundled, useMamba), ...cmd];
+  const command = [condaExecutable(options), ...cmd];
   return await execute(command);
 }
 
@@ -60,30 +56,32 @@ export async function condaCommand(
  * Setup Conda configuration
  */
 export async function applyCondaConfiguration(
-  condaConfig: TCondaConfig,
-  useBundled: boolean
+  options: types.IDynamicOptions
 ): Promise<void> {
-  for (const key of Object.keys(condaConfig)) {
-    core.info(`"${key}": "${condaConfig[key]}"`);
-    if (condaConfig[key].length !== 0) {
+  // TODO: figure out a way to know a-priori if we have mamba for initial commands
+  const notMambaOptions = { ...options, useMamba: false };
+
+  for (const key of Object.keys(options.condaConfig)) {
+    core.info(`"${key}": "${options.condaConfig[key]}"`);
+    if (options.condaConfig[key].length !== 0) {
       if (key === "channels") {
         // Split by comma and reverse order to preserve higher priority
         // as listed in the option
-        let channels: Array<string> = condaConfig[key].split(",").reverse();
+        let channels: Array<string> = options.condaConfig[key]
+          .split(",")
+          .reverse();
         let channel: string;
         for (channel of channels) {
           await condaCommand(
             ["config", "--add", key, channel],
-            useBundled,
-            false
+            notMambaOptions
           );
         }
       } else {
         try {
           await condaCommand(
-            ["config", "--set", key, condaConfig[key]],
-            useBundled,
-            false
+            ["config", "--set", key, options.condaConfig[key]],
+            options
           );
         } catch (err) {
           core.warning(`Couldn't set conda configuration '${key}'`);
@@ -92,30 +90,28 @@ export async function applyCondaConfiguration(
     }
   }
 
-  await condaCommand(["config", "--show-sources"], useBundled, false);
+  await condaCommand(["config", "--show-sources"], notMambaOptions);
 
-  await condaCommand(["config", "--show"], useBundled, false);
+  await condaCommand(["config", "--show"], notMambaOptions);
 }
 
 /**
  * Initialize Conda
  */
 export async function condaInit(
-  activateEnvironment: string,
-  useBundled: boolean,
-  condaConfig: TCondaConfig,
-  removeProfiles: string
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions
 ): Promise<void> {
   let ownPath: string;
   const isValidActivate: boolean =
-    activateEnvironment !== "base" &&
-    activateEnvironment !== "root" &&
-    activateEnvironment !== "";
+    inputs.activateEnvironment !== "base" &&
+    inputs.activateEnvironment !== "root" &&
+    inputs.activateEnvironment !== "";
   const autoActivateBase: boolean =
-    condaConfig["auto_activate_base"] === "true";
+    options.condaConfig["auto_activate_base"] === "true";
 
   // Fix ownership of folders
-  if (useBundled) {
+  if (options.useBundled) {
     if (IS_MAC) {
       core.startGroup("Fixing conda folders ownership");
       const userName: string = process.env.USER as string;
@@ -124,7 +120,7 @@ export async function condaInit(
         "chown",
         "-R",
         `${userName}:staff`,
-        minicondaPath(useBundled),
+        minicondaPath(options),
       ]);
       core.endGroup();
     } else if (IS_WINDOWS) {
@@ -135,7 +131,7 @@ export async function condaInit(
         "etc/profile.d/",
         "/Lib/site-packages/xonsh/",
       ]) {
-        ownPath = path.join(minicondaPath(useBundled), folder);
+        ownPath = path.join(minicondaPath(options), folder);
         if (fs.existsSync(ownPath)) {
           core.startGroup(`Fixing ${folder} ownership`);
           await execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
@@ -146,7 +142,7 @@ export async function condaInit(
   }
 
   // Remove profile files
-  if (removeProfiles == "true") {
+  if (inputs.removeProfiles == "true") {
     for (let rc of [
       ".bashrc",
       ".bash_profile",
@@ -173,7 +169,12 @@ export async function condaInit(
 
   // Run conda init
   for (let cmd of ["--all"]) {
-    await execute([condaExecutable(useBundled, false), "init", cmd]);
+    // TODO: determine when it's safe to use mamba
+    await execute([
+      condaExecutable({ ...options, useMamba: false }),
+      "init",
+      cmd,
+    ]);
   }
 
   // Rename files
@@ -195,7 +196,7 @@ export async function condaInit(
   if (isValidActivate) {
     powerExtraText += `
   # Conda Setup Action: Custom activation
-  conda activate ${activateEnvironment}`;
+  conda activate ${inputs.activateEnvironment}`;
   }
   powerExtraText += `
   # ----------------------------------------------------------------------------`;
@@ -208,7 +209,7 @@ export async function condaInit(
   if (isValidActivate) {
     bashExtraText += `
   # Conda Setup Action: Custom activation
-  conda activate ${activateEnvironment}`;
+  conda activate ${inputs.activateEnvironment}`;
     bashExtraText += `
   # ----------------------------------------------------------------------------`;
   }
@@ -224,7 +225,7 @@ export async function condaInit(
   if (isValidActivate) {
     batchExtraText += `
   :: Conda Setup Action: Custom activation
-  @CALL "%CONDA_BAT%" activate ${activateEnvironment}`;
+  @CALL "%CONDA_BAT%" activate ${inputs.activateEnvironment}`;
   }
   batchExtraText += `
   :: Conda Setup Action: Basic configuration
@@ -232,8 +233,8 @@ export async function condaInit(
   @SETLOCAL DisableDelayedExpansion
   :: ---------------------------------------------------------------------------`;
 
-  let extraShells: IShells;
-  const shells: IShells = {
+  let extraShells: types.IShells;
+  const shells: types.IShells = {
     "~/.bash_profile": bashExtraText,
     "~/.profile": bashExtraText,
     "~/.zshrc": bashExtraText,
@@ -244,7 +245,7 @@ export async function condaInit(
     "~/Documents/PowerShell/profile.ps1": powerExtraText,
     "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
   };
-  if (useBundled) {
+  if (options.useBundled) {
     extraShells = {
       "C:/Miniconda/etc/profile.d/conda.sh": bashExtraText,
       "C:/Miniconda/etc/fish/conf.d/conda.fish": bashExtraText,
@@ -257,7 +258,7 @@ export async function condaInit(
       "C:/Miniconda3/condabin/conda_hook.bat": batchExtraText,
     };
   }
-  const allShells: IShells = { ...shells, ...extraShells };
+  const allShells: types.IShells = { ...shells, ...extraShells };
   Object.keys(allShells).forEach((key) => {
     let filePath: string = key.replace("~", os.homedir());
     const text = allShells[key];

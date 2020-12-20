@@ -4,15 +4,19 @@ import * as path from "path";
 import * as core from "@actions/core";
 
 import { minicondaPath, condaCommand } from "./conda";
+import * as types from "./types";
 
 /**
  * Check if a given conda environment exists
  */
-export function environmentExists(name: string, useBundled: boolean): boolean {
+export function environmentExists(
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions
+): boolean {
   const condaMetaPath: string = path.join(
-    minicondaPath(useBundled),
+    minicondaPath(options),
     "envs",
-    name,
+    inputs.activateEnvironment,
     "conda-meta"
   );
   return fs.existsSync(condaMetaPath);
@@ -22,21 +26,19 @@ export function environmentExists(name: string, useBundled: boolean): boolean {
  * Create test environment
  */
 export async function createTestEnvironment(
-  activateEnvironment: string,
-  useBundled: boolean,
-  useMamba: boolean
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions
 ): Promise<void> {
   if (
-    activateEnvironment !== "root" &&
-    activateEnvironment !== "base" &&
-    activateEnvironment !== ""
+    inputs.activateEnvironment !== "root" &&
+    inputs.activateEnvironment !== "base" &&
+    inputs.activateEnvironment !== ""
   ) {
-    if (!environmentExists(activateEnvironment, useBundled)) {
+    if (!environmentExists(inputs, options)) {
       core.startGroup("Create test environment...");
       await condaCommand(
-        ["create", "--name", activateEnvironment],
-        useBundled,
-        useMamba
+        ["create", "--name", inputs.activateEnvironment],
+        options
       );
       core.endGroup();
     }
