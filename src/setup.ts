@@ -16,7 +16,7 @@ import {
   downloadCustomInstaller,
 } from "./installer";
 
-import { IActionInputs, TEnvironment } from "./types";
+import * as types from "./types";
 
 import {
   BOOTSTRAP_CONDARC,
@@ -40,46 +40,43 @@ import { createTestEnvironment } from "./env";
 /**
  * Main conda setup method to handle all configuration options
  */
-async function setupMiniconda(inputs: IActionInputs): Promise<void> {
-  // TODO: derive runtime condaConfig from immutable input below
-  const condaConfig = { ...inputs.condaConfig };
-  let useBundled: boolean = true;
-  let useMamba: boolean = false;
+async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
+  let options: types.IDynamicOptions = {
+    useBundled: true,
+    useMamba: false,
+    condaConfig: { ...inputs.condaConfig },
+  };
 
   core.startGroup(`Creating bootstrap condarc file in ${CONDARC_PATH}...`);
   await fs.promises.writeFile(CONDARC_PATH, BOOTSTRAP_CONDARC);
   core.endGroup();
 
   if (inputs.installerUrl !== "") {
-    useBundled = false;
-    const installerPath = await downloadCustomInstaller(inputs.installerUrl);
+    options.useBundled = false;
+    const installerPath = await downloadCustomInstaller(inputs);
     core.startGroup("Installing Custom Installer...");
-    await runInstaller(installerPath, useBundled);
+    await runInstaller(installerPath, options);
     core.endGroup();
   } else if (inputs.minicondaVersion !== "" || inputs.architecture !== "x64") {
     core.startGroup("Downloading Miniconda...");
-    useBundled = false;
-    const installerPath = await downloadMiniconda(
-      3,
-      inputs.minicondaVersion,
-      inputs.architecture
-    );
+    options.useBundled = false;
+    const installerPath = await downloadMiniconda(3, inputs);
     core.endGroup();
 
     core.startGroup("Installing Miniconda...");
-    await runInstaller(installerPath, useBundled);
+    await runInstaller(installerPath, options);
     core.endGroup();
   } else {
     core.startGroup("Locating Miniconda...");
-    core.info(minicondaPath());
-    if (!fs.existsSync(minicondaPath())) {
+    core.info(minicondaPath(options));
+    if (!fs.existsSync(minicondaPath(options))) {
       throw new Error("Bundled Miniconda not found!");
     }
     core.endGroup();
   }
 
   core.startGroup("Setup environment variables...");
-  await setVariables(useBundled);
+  await setVariables(options);
   core.endGroup();
 
   if (inputs.condaConfigFile) {
@@ -116,21 +113,17 @@ async function setupMiniconda(inputs: IActionInputs): Promise<void> {
   }
 
   const cacheFolder = utils.cacheFolder();
-  await condaCommand(
-    ["config", "--add", "pkgs_dirs", cacheFolder],
-    useBundled,
-    useMamba
-  );
+  await condaCommand(["config", "--add", "pkgs_dirs", cacheFolder], options);
   core.exportVariable(ENV_VAR_CONDA_PKGS, cacheFolder);
 
-  if (condaConfig) {
+  if (options.condaConfig) {
     if (inputs.environmentFile) {
       let channels: Array<string> | undefined;
       channels = environmentYaml["channels"];
 
-      if (condaConfig["channels"] === "" && channels !== undefined) {
+      if (options.condaConfig["channels"] === "" && channels !== undefined) {
         // TODO: avoid mutating state
-        condaConfig["channels"] = channels.join(",");
+        options.condaConfig["channels"] = channels.join(",");
       } else if (!environmentExplicit) {
         core.warning(
           '"channels" set on the "environment-file" do not match "channels" set on the action!'
@@ -138,45 +131,38 @@ async function setupMiniconda(inputs: IActionInputs): Promise<void> {
       }
     }
     core.startGroup("Applying conda configuration...");
-    await applyCondaConfiguration(condaConfig, useBundled);
+    await applyCondaConfiguration(options);
     core.endGroup();
   }
 
   core.startGroup("Setup Conda basic configuration...");
   await condaCommand(
     ["config", "--set", "always_yes", "yes", "--set", "changeps1", "no"],
-    useBundled,
-    useMamba
+    options
   );
   core.endGroup();
 
   core.startGroup("Initialize Conda and fix ownership...");
-  await condaInit(
-    inputs.activateEnvironment,
-    useBundled,
-    condaConfig,
-    inputs.removeProfiles
-  );
+  await condaInit(inputs, options);
   core.endGroup();
 
   if (inputs.condaVersion) {
     core.startGroup("Installing Conda...");
     await condaCommand(
       ["install", "--name", "base", `conda=${inputs.condaVersion}`],
-      useBundled,
-      useMamba
+      options
     );
     core.endGroup();
   }
 
-  if (condaConfig["auto_update_conda"] == "true") {
+  if (options.condaConfig["auto_update_conda"] == "true") {
     core.startGroup("Updating conda...");
-    await condaCommand(["update", "conda"], useBundled, useMamba);
+    await condaCommand(["update", "conda"], options);
     core.endGroup();
 
-    if (condaConfig) {
+    if (options.condaConfig) {
       core.startGroup("Applying conda configuration after update...");
-      await applyCondaConfiguration(condaConfig, useBundled);
+      await applyCondaConfiguration(options);
       core.endGroup();
     }
   }
@@ -190,53 +176,45 @@ async function setupMiniconda(inputs: IActionInputs): Promise<void> {
 
     await condaCommand(
       ["install", "--name", "base", `mamba=${inputs.mambaVersion}`],
-      useBundled,
-      useMamba
+      options
     );
 
     if (IS_WINDOWS) {
       // add bat-less forwarder for bash users on Windows
-      const mambaBat = condaExecutable(useBundled, true).replace("\\", "/");
+      const mambaBat = condaExecutable({ ...options, useMamba: true }).replace(
+        "\\",
+        "/"
+      );
       const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
       fs.writeFileSync(mambaBat.slice(0, -4), contents);
     }
 
-    useMamba = true;
+    options.useMamba = true;
   }
 
   if (inputs.condaBuildVersion) {
     core.startGroup("Installing Conda Build...");
     await condaCommand(
       ["install", "--name", "base", `conda-build=${inputs.condaBuildVersion}`],
-      useBundled,
-      useMamba
+      options
     );
     core.endGroup();
   }
 
   if (inputs.activateEnvironment) {
-    await createTestEnvironment(
-      inputs.activateEnvironment,
-      useBundled,
-      useMamba
-    );
+    await createTestEnvironment(inputs, options);
   }
 
   if (inputs.pythonVersion && inputs.activateEnvironment) {
     core.startGroup(
       `Installing Python="${inputs.pythonVersion}" on "${inputs.activateEnvironment}" environment...`
     );
-    await setupPython(
-      inputs.activateEnvironment,
-      inputs.pythonVersion,
-      useBundled,
-      useMamba
-    );
+    await setupPython(inputs, options);
     core.endGroup();
   }
 
   if (inputs.environmentFile) {
-    let environmentYaml: TEnvironment;
+    let environmentYaml: types.TEnvironment;
     let condaAction: string[];
     let activateEnvironmentToUse: string;
 
@@ -300,8 +278,7 @@ async function setupMiniconda(inputs: IActionInputs): Promise<void> {
         "--name",
         activateEnvironmentToUse,
       ],
-      useBundled,
-      useMamba
+      options
     );
     core.endGroup();
   }

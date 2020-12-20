@@ -5920,9 +5920,9 @@ exports.ensureLocalInstaller = ensureLocalInstaller;
  *
  * @param installerPath must have an appropriate extension for this platform
  */
-function runInstaller(installerPath, useBundled) {
+function runInstaller(installerPath, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        const outputPath = conda_1.minicondaPath(useBundled);
+        const outputPath = conda_1.minicondaPath(options);
         const installerExtension = path.extname(installerPath);
         let command;
         switch (installerExtension) {
@@ -7505,22 +7505,22 @@ const conda_1 = __webpack_require__(259);
 /**
  * Check if a given conda environment exists
  */
-function environmentExists(name, useBundled) {
-    const condaMetaPath = path.join(conda_1.minicondaPath(useBundled), "envs", name, "conda-meta");
+function environmentExists(inputs, options) {
+    const condaMetaPath = path.join(conda_1.minicondaPath(options), "envs", inputs.activateEnvironment, "conda-meta");
     return fs.existsSync(condaMetaPath);
 }
 exports.environmentExists = environmentExists;
 /**
  * Create test environment
  */
-function createTestEnvironment(activateEnvironment, useBundled, useMamba) {
+function createTestEnvironment(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        if (activateEnvironment !== "root" &&
-            activateEnvironment !== "base" &&
-            activateEnvironment !== "") {
-            if (!environmentExists(activateEnvironment, useBundled)) {
+        if (inputs.activateEnvironment !== "root" &&
+            inputs.activateEnvironment !== "base" &&
+            inputs.activateEnvironment !== "") {
+            if (!environmentExists(inputs, options)) {
                 core.startGroup("Create test environment...");
-                yield conda_1.condaCommand(["create", "--name", activateEnvironment], useBundled, useMamba);
+                yield conda_1.condaCommand(["create", "--name", inputs.activateEnvironment], options);
                 core.endGroup();
             }
         }
@@ -12271,9 +12271,9 @@ const utils_1 = __webpack_require__(163);
 /**
  * Provide current location of miniconda or location where it will be installed
  */
-function minicondaPath(useBundled = true) {
+function minicondaPath(options) {
     let condaPath = constants_1.MINICONDA_DIR_PATH;
-    if (!useBundled) {
+    if (!options.useBundled) {
         if (constants_1.IS_MAC) {
             condaPath = "/Users/runner/miniconda3";
         }
@@ -12287,11 +12287,11 @@ exports.minicondaPath = minicondaPath;
 /**
  * Provide cross platform location of conda/mamba executable
  */
-function condaExecutable(useBundled, useMamba = false) {
-    const dir = minicondaPath(useBundled);
+function condaExecutable(options) {
+    const dir = minicondaPath(options);
     let condaExe;
     let commandName;
-    commandName = useMamba ? "mamba" : "conda";
+    commandName = options.useMamba ? "mamba" : "conda";
     commandName = constants_1.IS_WINDOWS ? commandName + ".bat" : commandName;
     condaExe = path.join(dir, "condabin", commandName);
     return condaExe;
@@ -12300,9 +12300,9 @@ exports.condaExecutable = condaExecutable;
 /**
  * Run Conda command
  */
-function condaCommand(cmd, useBundled, useMamba = false) {
+function condaCommand(cmd, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        const command = [condaExecutable(useBundled, useMamba), ...cmd];
+        const command = [condaExecutable(options), ...cmd];
         return yield utils_1.execute(command);
     });
 }
@@ -12310,23 +12310,27 @@ exports.condaCommand = condaCommand;
 /**
  * Setup Conda configuration
  */
-function applyCondaConfiguration(condaConfig, useBundled) {
+function applyCondaConfiguration(options) {
     return __awaiter(this, void 0, void 0, function* () {
-        for (const key of Object.keys(condaConfig)) {
-            core.info(`"${key}": "${condaConfig[key]}"`);
-            if (condaConfig[key].length !== 0) {
+        // TODO: figure out a way to know a-priori if we have mamba for initial commands
+        const notMambaOptions = Object.assign(Object.assign({}, options), { useMamba: false });
+        for (const key of Object.keys(options.condaConfig)) {
+            core.info(`"${key}": "${options.condaConfig[key]}"`);
+            if (options.condaConfig[key].length !== 0) {
                 if (key === "channels") {
                     // Split by comma and reverse order to preserve higher priority
                     // as listed in the option
-                    let channels = condaConfig[key].split(",").reverse();
+                    let channels = options.condaConfig[key]
+                        .split(",")
+                        .reverse();
                     let channel;
                     for (channel of channels) {
-                        yield condaCommand(["config", "--add", key, channel], useBundled, false);
+                        yield condaCommand(["config", "--add", key, channel], notMambaOptions);
                     }
                 }
                 else {
                     try {
-                        yield condaCommand(["config", "--set", key, condaConfig[key]], useBundled, false);
+                        yield condaCommand(["config", "--set", key, options.condaConfig[key]], options);
                     }
                     catch (err) {
                         core.warning(`Couldn't set conda configuration '${key}'`);
@@ -12334,23 +12338,23 @@ function applyCondaConfiguration(condaConfig, useBundled) {
                 }
             }
         }
-        yield condaCommand(["config", "--show-sources"], useBundled, false);
-        yield condaCommand(["config", "--show"], useBundled, false);
+        yield condaCommand(["config", "--show-sources"], notMambaOptions);
+        yield condaCommand(["config", "--show"], notMambaOptions);
     });
 }
 exports.applyCondaConfiguration = applyCondaConfiguration;
 /**
  * Initialize Conda
  */
-function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles) {
+function condaInit(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         let ownPath;
-        const isValidActivate = activateEnvironment !== "base" &&
-            activateEnvironment !== "root" &&
-            activateEnvironment !== "";
-        const autoActivateBase = condaConfig["auto_activate_base"] === "true";
+        const isValidActivate = inputs.activateEnvironment !== "base" &&
+            inputs.activateEnvironment !== "root" &&
+            inputs.activateEnvironment !== "";
+        const autoActivateBase = options.condaConfig["auto_activate_base"] === "true";
         // Fix ownership of folders
-        if (useBundled) {
+        if (options.useBundled) {
             if (constants_1.IS_MAC) {
                 core.startGroup("Fixing conda folders ownership");
                 const userName = process.env.USER;
@@ -12359,7 +12363,7 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
                     "chown",
                     "-R",
                     `${userName}:staff`,
-                    minicondaPath(useBundled),
+                    minicondaPath(options),
                 ]);
                 core.endGroup();
             }
@@ -12371,7 +12375,7 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
                     "etc/profile.d/",
                     "/Lib/site-packages/xonsh/",
                 ]) {
-                    ownPath = path.join(minicondaPath(useBundled), folder);
+                    ownPath = path.join(minicondaPath(options), folder);
                     if (fs.existsSync(ownPath)) {
                         core.startGroup(`Fixing ${folder} ownership`);
                         yield utils_1.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
@@ -12381,7 +12385,7 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
             }
         }
         // Remove profile files
-        if (removeProfiles == "true") {
+        if (inputs.removeProfiles == "true") {
             for (let rc of [
                 ".bashrc",
                 ".bash_profile",
@@ -12408,7 +12412,12 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
         }
         // Run conda init
         for (let cmd of ["--all"]) {
-            yield utils_1.execute([condaExecutable(useBundled, false), "init", cmd]);
+            // TODO: determine when it's safe to use mamba
+            yield utils_1.execute([
+                condaExecutable(Object.assign(Object.assign({}, options), { useMamba: false })),
+                "init",
+                cmd,
+            ]);
         }
         // Rename files
         if (constants_1.IS_LINUX) {
@@ -12429,7 +12438,7 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
         if (isValidActivate) {
             powerExtraText += `
   # Conda Setup Action: Custom activation
-  conda activate ${activateEnvironment}`;
+  conda activate ${inputs.activateEnvironment}`;
         }
         powerExtraText += `
   # ----------------------------------------------------------------------------`;
@@ -12441,7 +12450,7 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
         if (isValidActivate) {
             bashExtraText += `
   # Conda Setup Action: Custom activation
-  conda activate ${activateEnvironment}`;
+  conda activate ${inputs.activateEnvironment}`;
             bashExtraText += `
   # ----------------------------------------------------------------------------`;
         }
@@ -12456,7 +12465,7 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
         if (isValidActivate) {
             batchExtraText += `
   :: Conda Setup Action: Custom activation
-  @CALL "%CONDA_BAT%" activate ${activateEnvironment}`;
+  @CALL "%CONDA_BAT%" activate ${inputs.activateEnvironment}`;
         }
         batchExtraText += `
   :: Conda Setup Action: Basic configuration
@@ -12475,7 +12484,7 @@ function condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles)
             "~/Documents/PowerShell/profile.ps1": powerExtraText,
             "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
         };
-        if (useBundled) {
+        if (options.useBundled) {
             extraShells = {
                 "C:/Miniconda/etc/profile.d/conda.sh": bashExtraText,
                 "C:/Miniconda/etc/fish/conf.d/conda.fish": bashExtraText,
@@ -21442,39 +21451,40 @@ const env_1 = __webpack_require__(166);
  */
 function setupMiniconda(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
-        // TODO: derive runtime condaConfig from immutable input below
-        const condaConfig = Object.assign({}, inputs.condaConfig);
-        let useBundled = true;
-        let useMamba = false;
+        let options = {
+            useBundled: true,
+            useMamba: false,
+            condaConfig: Object.assign({}, inputs.condaConfig),
+        };
         core.startGroup(`Creating bootstrap condarc file in ${constants_1.CONDARC_PATH}...`);
         yield fs.promises.writeFile(constants_1.CONDARC_PATH, constants_1.BOOTSTRAP_CONDARC);
         core.endGroup();
         if (inputs.installerUrl !== "") {
-            useBundled = false;
-            const installerPath = yield installer_1.downloadCustomInstaller(inputs.installerUrl);
+            options.useBundled = false;
+            const installerPath = yield installer_1.downloadCustomInstaller(inputs);
             core.startGroup("Installing Custom Installer...");
-            yield installer_1.runInstaller(installerPath, useBundled);
+            yield installer_1.runInstaller(installerPath, options);
             core.endGroup();
         }
         else if (inputs.minicondaVersion !== "" || inputs.architecture !== "x64") {
             core.startGroup("Downloading Miniconda...");
-            useBundled = false;
-            const installerPath = yield installer_1.downloadMiniconda(3, inputs.minicondaVersion, inputs.architecture);
+            options.useBundled = false;
+            const installerPath = yield installer_1.downloadMiniconda(3, inputs);
             core.endGroup();
             core.startGroup("Installing Miniconda...");
-            yield installer_1.runInstaller(installerPath, useBundled);
+            yield installer_1.runInstaller(installerPath, options);
             core.endGroup();
         }
         else {
             core.startGroup("Locating Miniconda...");
-            core.info(conda_1.minicondaPath());
-            if (!fs.existsSync(conda_1.minicondaPath())) {
+            core.info(conda_1.minicondaPath(options));
+            if (!fs.existsSync(conda_1.minicondaPath(options))) {
                 throw new Error("Bundled Miniconda not found!");
             }
             core.endGroup();
         }
         core.startGroup("Setup environment variables...");
-        yield vars_1.setVariables(useBundled);
+        yield vars_1.setVariables(options);
         core.endGroup();
         if (inputs.condaConfigFile) {
             core.startGroup("Copying condarc file...");
@@ -21502,42 +21512,42 @@ function setupMiniconda(inputs) {
             environmentExplicit = false;
         }
         const cacheFolder = utils.cacheFolder();
-        yield conda_1.condaCommand(["config", "--add", "pkgs_dirs", cacheFolder], useBundled, useMamba);
+        yield conda_1.condaCommand(["config", "--add", "pkgs_dirs", cacheFolder], options);
         core.exportVariable(constants_1.ENV_VAR_CONDA_PKGS, cacheFolder);
-        if (condaConfig) {
+        if (options.condaConfig) {
             if (inputs.environmentFile) {
                 let channels;
                 channels = environmentYaml["channels"];
-                if (condaConfig["channels"] === "" && channels !== undefined) {
+                if (options.condaConfig["channels"] === "" && channels !== undefined) {
                     // TODO: avoid mutating state
-                    condaConfig["channels"] = channels.join(",");
+                    options.condaConfig["channels"] = channels.join(",");
                 }
                 else if (!environmentExplicit) {
                     core.warning('"channels" set on the "environment-file" do not match "channels" set on the action!');
                 }
             }
             core.startGroup("Applying conda configuration...");
-            yield conda_1.applyCondaConfiguration(condaConfig, useBundled);
+            yield conda_1.applyCondaConfiguration(options);
             core.endGroup();
         }
         core.startGroup("Setup Conda basic configuration...");
-        yield conda_1.condaCommand(["config", "--set", "always_yes", "yes", "--set", "changeps1", "no"], useBundled, useMamba);
+        yield conda_1.condaCommand(["config", "--set", "always_yes", "yes", "--set", "changeps1", "no"], options);
         core.endGroup();
         core.startGroup("Initialize Conda and fix ownership...");
-        yield conda_1.condaInit(inputs.activateEnvironment, useBundled, condaConfig, inputs.removeProfiles);
+        yield conda_1.condaInit(inputs, options);
         core.endGroup();
         if (inputs.condaVersion) {
             core.startGroup("Installing Conda...");
-            yield conda_1.condaCommand(["install", "--name", "base", `conda=${inputs.condaVersion}`], useBundled, useMamba);
+            yield conda_1.condaCommand(["install", "--name", "base", `conda=${inputs.condaVersion}`], options);
             core.endGroup();
         }
-        if (condaConfig["auto_update_conda"] == "true") {
+        if (options.condaConfig["auto_update_conda"] == "true") {
             core.startGroup("Updating conda...");
-            yield conda_1.condaCommand(["update", "conda"], useBundled, useMamba);
+            yield conda_1.condaCommand(["update", "conda"], options);
             core.endGroup();
-            if (condaConfig) {
+            if (options.condaConfig) {
                 core.startGroup("Applying conda configuration after update...");
-                yield conda_1.applyCondaConfiguration(condaConfig, useBundled);
+                yield conda_1.applyCondaConfiguration(options);
                 core.endGroup();
             }
         }
@@ -21545,26 +21555,26 @@ function setupMiniconda(inputs) {
         if (inputs.mambaVersion) {
             core.startGroup("Installing Mamba...");
             core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
-            yield conda_1.condaCommand(["install", "--name", "base", `mamba=${inputs.mambaVersion}`], useBundled, useMamba);
+            yield conda_1.condaCommand(["install", "--name", "base", `mamba=${inputs.mambaVersion}`], options);
             if (constants_1.IS_WINDOWS) {
                 // add bat-less forwarder for bash users on Windows
-                const mambaBat = conda_1.condaExecutable(useBundled, true).replace("\\", "/");
+                const mambaBat = conda_1.condaExecutable(Object.assign(Object.assign({}, options), { useMamba: true })).replace("\\", "/");
                 const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
                 fs.writeFileSync(mambaBat.slice(0, -4), contents);
             }
-            useMamba = true;
+            options.useMamba = true;
         }
         if (inputs.condaBuildVersion) {
             core.startGroup("Installing Conda Build...");
-            yield conda_1.condaCommand(["install", "--name", "base", `conda-build=${inputs.condaBuildVersion}`], useBundled, useMamba);
+            yield conda_1.condaCommand(["install", "--name", "base", `conda-build=${inputs.condaBuildVersion}`], options);
             core.endGroup();
         }
         if (inputs.activateEnvironment) {
-            yield env_1.createTestEnvironment(inputs.activateEnvironment, useBundled, useMamba);
+            yield env_1.createTestEnvironment(inputs, options);
         }
         if (inputs.pythonVersion && inputs.activateEnvironment) {
             core.startGroup(`Installing Python="${inputs.pythonVersion}" on "${inputs.activateEnvironment}" environment...`);
-            yield tools_1.setupPython(inputs.activateEnvironment, inputs.pythonVersion, useBundled, useMamba);
+            yield tools_1.setupPython(inputs, options);
             core.endGroup();
         }
         if (inputs.environmentFile) {
@@ -21615,7 +21625,7 @@ function setupMiniconda(inputs) {
                 inputs.environmentFile,
                 "--name",
                 activateEnvironmentToUse,
-            ], useBundled, useMamba);
+            ], options);
             core.endGroup();
         }
     });
@@ -22277,9 +22287,14 @@ const conda_1 = __webpack_require__(259);
 /**
  * Setup python test environment
  */
-function setupPython(activateEnvironment, pythonVersion, useBundled, useMamba) {
+function setupPython(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield conda_1.condaCommand(["install", "--name", activateEnvironment, `python=${pythonVersion}`], useBundled, useMamba);
+        return yield conda_1.condaCommand([
+            "install",
+            "--name",
+            inputs.activateEnvironment,
+            `python=${inputs.pythonVersion}`,
+        ], options);
     });
 }
 exports.setupPython = setupPython;
@@ -29409,16 +29424,16 @@ function minicondaVersions(arch) {
  * @param minicondaVersion
  * @param architecture
  */
-function downloadMiniconda(pythonMajorVersion, minicondaVersion, architecture) {
+function downloadMiniconda(pythonMajorVersion, inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         // Check valid arch
-        const arch = constants_1.ARCHITECTURES[architecture];
+        const arch = constants_1.ARCHITECTURES[inputs.architecture];
         if (!arch) {
-            throw new Error(`Invalid arch "${architecture}"!`);
+            throw new Error(`Invalid arch "${inputs.architecture}"!`);
         }
         let extension = constants_1.IS_UNIX ? "sh" : "exe";
         let osName = constants_1.OS_NAMES[process.platform];
-        const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
+        const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${inputs.minicondaVersion}-${osName}-${arch}.${extension}`;
         core.info(minicondaInstallerName);
         // Check version name
         let versions = yield minicondaVersions(arch);
@@ -29430,7 +29445,7 @@ function downloadMiniconda(pythonMajorVersion, minicondaVersion, architecture) {
         return yield base_1.ensureLocalInstaller({
             url: constants_1.MINICONDA_BASE_URL + minicondaInstallerName,
             tool: `Miniconda${pythonMajorVersion}`,
-            version: minicondaVersion,
+            version: inputs.minicondaVersion,
             arch: arch,
         });
     });
@@ -30803,9 +30818,9 @@ const base_1 = __webpack_require__(122);
 /**
  * @param url A URL for a file with the CLI of a `constructor`-built artifact
  */
-function downloadCustomInstaller(url) {
+function downloadCustomInstaller(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield base_1.ensureLocalInstaller({ url });
+        return yield base_1.ensureLocalInstaller({ url: inputs.installerUrl });
     });
 }
 exports.downloadCustomInstaller = downloadCustomInstaller;
@@ -34187,14 +34202,14 @@ const conda_1 = __webpack_require__(259);
 /**
  * Add Conda executable to PATH
  */
-function setVariables(useBundled) {
+function setVariables(options) {
     return __awaiter(this, void 0, void 0, function* () {
         // Set environment variables
-        const condaBin = path.join(conda_1.minicondaPath(useBundled), "condabin");
-        const conda = conda_1.minicondaPath(useBundled);
+        const condaBin = path.join(conda_1.minicondaPath(options), "condabin");
+        const conda = conda_1.minicondaPath(options);
         core.info(`Add "${condaBin}" to PATH`);
         core.addPath(condaBin);
-        if (!useBundled) {
+        if (!options.useBundled) {
             core.info(`Set 'CONDA="${conda}"'`);
             core.exportVariable("CONDA", conda);
         }

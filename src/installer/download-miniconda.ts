@@ -13,6 +13,8 @@ import {
   OS_NAMES,
 } from "../constants";
 
+import * as types from "../types";
+
 /**
  * List available Miniconda versions
  *
@@ -45,18 +47,17 @@ async function minicondaVersions(arch: string): Promise<string[]> {
  */
 export async function downloadMiniconda(
   pythonMajorVersion: number,
-  minicondaVersion: string,
-  architecture: string
+  inputs: types.IActionInputs
 ): Promise<string> {
   // Check valid arch
-  const arch: string = ARCHITECTURES[architecture];
+  const arch: string = ARCHITECTURES[inputs.architecture];
   if (!arch) {
-    throw new Error(`Invalid arch "${architecture}"!`);
+    throw new Error(`Invalid arch "${inputs.architecture}"!`);
   }
 
   let extension: string = IS_UNIX ? "sh" : "exe";
   let osName: string = OS_NAMES[process.platform];
-  const minicondaInstallerName: string = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
+  const minicondaInstallerName: string = `Miniconda${pythonMajorVersion}-${inputs.minicondaVersion}-${osName}-${arch}.${extension}`;
   core.info(minicondaInstallerName);
 
   // Check version name
@@ -72,7 +73,7 @@ export async function downloadMiniconda(
   return await ensureLocalInstaller({
     url: MINICONDA_BASE_URL + minicondaInstallerName,
     tool: `Miniconda${pythonMajorVersion}`,
-    version: minicondaVersion,
+    version: inputs.minicondaVersion,
     arch: arch,
   });
 }

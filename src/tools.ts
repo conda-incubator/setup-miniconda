@@ -1,17 +1,21 @@
 import { condaCommand } from "./conda";
 
+import * as types from "./types";
+
 /**
  * Setup python test environment
  */
 export async function setupPython(
-  activateEnvironment: string,
-  pythonVersion: string,
-  useBundled: boolean,
-  useMamba: boolean
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions
 ): Promise<void> {
   return await condaCommand(
-    ["install", "--name", activateEnvironment, `python=${pythonVersion}`],
-    useBundled,
-    useMamba
+    [
+      "install",
+      "--name",
+      inputs.activateEnvironment,
+      `python=${inputs.pythonVersion}`,
+    ],
+    options
   );
 }

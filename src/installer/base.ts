@@ -9,6 +9,7 @@ import * as tc from "@actions/tool-cache";
 import { ILocalInstallerOpts } from "../types";
 import { minicondaPath } from "../conda";
 import { execute } from "../utils";
+import * as types from "../types";
 
 /** Get the path for a locally-executable installer from cache, or as downloaded
  *
@@ -88,9 +89,9 @@ export async function ensureLocalInstaller(
  */
 export async function runInstaller(
   installerPath: string,
-  useBundled: boolean
+  options: types.IDynamicOptions
 ): Promise<void> {
-  const outputPath: string = minicondaPath(useBundled);
+  const outputPath: string = minicondaPath(options);
   const installerExtension = path.extname(installerPath);
   let command: string[];
 
