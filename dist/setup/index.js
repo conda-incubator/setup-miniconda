@@ -21425,7 +21425,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = __importStar(__webpack_require__(747));
 const path = __importStar(__webpack_require__(622));
-const url_1 = __webpack_require__(835);
 const core = __importStar(__webpack_require__(470));
 const io = __importStar(__webpack_require__(1));
 const yaml = __importStar(__webpack_require__(414));
@@ -21443,54 +21442,24 @@ const env_1 = __webpack_require__(166);
  */
 function setupMiniconda(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
-        // The previous ordering of the constructor arguments
-        // TODO: remove this, use the `inputs` object members below
-        let { installerUrl, minicondaVersion, architecture, condaVersion, condaBuildVersion, pythonVersion, activateEnvironment, environmentFile, condaConfigFile, condaConfig, removeProfiles, mambaVersion, } = inputs;
+        // TODO: derive runtime condaConfig from immutable input below
+        const condaConfig = Object.assign({}, inputs.condaConfig);
         let useBundled = true;
         let useMamba = false;
-        core.startGroup("Checking consistency...");
-        if (condaConfig["auto_update_conda"] == "true" && condaVersion) {
-            core.warning(`"conda-version=${condaVersion}" was provided but "auto-update-conda" is also enabled!`);
-        }
-        if (pythonVersion && activateEnvironment === "") {
-            throw new Error(`"python-version=${pythonVersion}" was provided but "activate-environment" is not defined!`);
-        }
-        if (!condaConfig["channels"].includes("conda-forge") && mambaVersion) {
-            throw new Error(`"mamba-version=${mambaVersion}" requires "conda-forge" to be included in "channels!"`);
-        }
-        if (installerUrl) {
-            if (minicondaVersion) {
-                throw new Error(`"installer-url" and "miniconda-version" were provided: pick one!`);
-            }
-            const { pathname } = new url_1.URL(installerUrl);
-            const extname = path.posix.extname(pathname);
-            if (!constants_1.KNOWN_EXTENSIONS.includes(extname)) {
-                throw new Error(`"installer-url" file name ends with ${extname}, must be one of ${constants_1.KNOWN_EXTENSIONS}!`);
-            }
-        }
-        else {
-            if (!minicondaVersion && architecture !== "x64") {
-                throw new Error(`"architecture" is set to something other than "x64" so "miniconda-version" must be set as well.`);
-            }
-            if (architecture === "x86" && constants_1.IS_LINUX) {
-                throw new Error(`32-bit Linux is not supported by recent versions of Miniconda`);
-            }
-        }
-        core.endGroup();
         core.startGroup(`Creating bootstrap condarc file in ${constants_1.CONDARC_PATH}...`);
         yield fs.promises.writeFile(constants_1.CONDARC_PATH, constants_1.BOOTSTRAP_CONDARC);
         core.endGroup();
-        if (installerUrl !== "") {
+        if (inputs.installerUrl !== "") {
             useBundled = false;
-            const installerPath = yield installer_1.downloadCustomInstaller(installerUrl);
+            const installerPath = yield installer_1.downloadCustomInstaller(inputs.installerUrl);
             core.startGroup("Installing Custom Installer...");
             yield installer_1.runInstaller(installerPath, useBundled);
             core.endGroup();
         }
-        else if (minicondaVersion !== "" || architecture !== "x64") {
+        else if (inputs.minicondaVersion !== "" || inputs.architecture !== "x64") {
             core.startGroup("Downloading Miniconda...");
             useBundled = false;
-            const installerPath = yield installer_1.downloadMiniconda(3, minicondaVersion, architecture);
+            const installerPath = yield installer_1.downloadMiniconda(3, inputs.minicondaVersion, inputs.architecture);
             core.endGroup();
             core.startGroup("Installing Miniconda...");
             yield installer_1.runInstaller(installerPath, useBundled);
@@ -21507,9 +21476,9 @@ function setupMiniconda(inputs) {
         core.startGroup("Setup environment variables...");
         yield vars_1.setVariables(useBundled);
         core.endGroup();
-        if (condaConfigFile) {
+        if (inputs.condaConfigFile) {
             core.startGroup("Copying condarc file...");
-            const sourcePath = path.join(process.env["GITHUB_WORKSPACE"] || "", condaConfigFile);
+            const sourcePath = path.join(process.env["GITHUB_WORKSPACE"] || "", inputs.condaConfigFile);
             core.info(`"${sourcePath}" to "${constants_1.CONDARC_PATH}"`);
             yield io.cp(sourcePath, constants_1.CONDARC_PATH);
             core.endGroup();
@@ -21517,8 +21486,8 @@ function setupMiniconda(inputs) {
         // Read the environment yaml to use channels if provided and avoid conda solver conflicts
         let environmentYaml;
         let environmentExplicit;
-        if (environmentFile) {
-            const sourceEnvironmentPath = path.join(process.env["GITHUB_WORKSPACE"] || "", environmentFile);
+        if (inputs.environmentFile) {
+            const sourceEnvironmentPath = path.join(process.env["GITHUB_WORKSPACE"] || "", inputs.environmentFile);
             environmentExplicit =
                 fs.readFileSync(sourceEnvironmentPath, "utf8").match(/^@EXPLICIT/m) !=
                     null;
@@ -21536,12 +21505,12 @@ function setupMiniconda(inputs) {
         yield conda_1.condaCommand(["config", "--add", "pkgs_dirs", cacheFolder], useBundled, useMamba);
         core.exportVariable(constants_1.ENV_VAR_CONDA_PKGS, cacheFolder);
         if (condaConfig) {
-            if (environmentFile) {
+            if (inputs.environmentFile) {
                 let channels;
                 channels = environmentYaml["channels"];
                 if (condaConfig["channels"] === "" && channels !== undefined) {
                     // TODO: avoid mutating state
-                    condaConfig = Object.assign(Object.assign({}, condaConfig), { channels: channels.join(",") });
+                    condaConfig["channels"] = channels.join(",");
                 }
                 else if (!environmentExplicit) {
                     core.warning('"channels" set on the "environment-file" do not match "channels" set on the action!');
@@ -21555,11 +21524,11 @@ function setupMiniconda(inputs) {
         yield conda_1.condaCommand(["config", "--set", "always_yes", "yes", "--set", "changeps1", "no"], useBundled, useMamba);
         core.endGroup();
         core.startGroup("Initialize Conda and fix ownership...");
-        yield conda_1.condaInit(activateEnvironment, useBundled, condaConfig, removeProfiles);
+        yield conda_1.condaInit(inputs.activateEnvironment, useBundled, condaConfig, inputs.removeProfiles);
         core.endGroup();
-        if (condaVersion) {
+        if (inputs.condaVersion) {
             core.startGroup("Installing Conda...");
-            yield conda_1.condaCommand(["install", "--name", "base", `conda=${condaVersion}`], useBundled, useMamba);
+            yield conda_1.condaCommand(["install", "--name", "base", `conda=${inputs.condaVersion}`], useBundled, useMamba);
             core.endGroup();
         }
         if (condaConfig["auto_update_conda"] == "true") {
@@ -21573,10 +21542,10 @@ function setupMiniconda(inputs) {
             }
         }
         // Any conda commands run here after init and setup
-        if (mambaVersion) {
+        if (inputs.mambaVersion) {
             core.startGroup("Installing Mamba...");
             core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
-            yield conda_1.condaCommand(["install", "--name", "base", `mamba=${mambaVersion}`], useBundled, useMamba);
+            yield conda_1.condaCommand(["install", "--name", "base", `mamba=${inputs.mambaVersion}`], useBundled, useMamba);
             if (constants_1.IS_WINDOWS) {
                 // add bat-less forwarder for bash users on Windows
                 const mambaBat = conda_1.condaExecutable(useBundled, true).replace("\\", "/");
@@ -21585,24 +21554,24 @@ function setupMiniconda(inputs) {
             }
             useMamba = true;
         }
-        if (condaBuildVersion) {
+        if (inputs.condaBuildVersion) {
             core.startGroup("Installing Conda Build...");
-            yield conda_1.condaCommand(["install", "--name", "base", `conda-build=${condaBuildVersion}`], useBundled, useMamba);
+            yield conda_1.condaCommand(["install", "--name", "base", `conda-build=${inputs.condaBuildVersion}`], useBundled, useMamba);
             core.endGroup();
         }
-        if (activateEnvironment) {
-            yield env_1.createTestEnvironment(activateEnvironment, useBundled, useMamba);
+        if (inputs.activateEnvironment) {
+            yield env_1.createTestEnvironment(inputs.activateEnvironment, useBundled, useMamba);
         }
-        if (pythonVersion && activateEnvironment) {
-            core.startGroup(`Installing Python="${pythonVersion}" on "${activateEnvironment}" environment...`);
-            yield tools_1.setupPython(activateEnvironment, pythonVersion, useBundled, useMamba);
+        if (inputs.pythonVersion && inputs.activateEnvironment) {
+            core.startGroup(`Installing Python="${inputs.pythonVersion}" on "${inputs.activateEnvironment}" environment...`);
+            yield tools_1.setupPython(inputs.activateEnvironment, inputs.pythonVersion, useBundled, useMamba);
             core.endGroup();
         }
-        if (environmentFile) {
+        if (inputs.environmentFile) {
             let environmentYaml;
             let condaAction;
             let activateEnvironmentToUse;
-            const sourceEnvironmentPath = path.join(process.env["GITHUB_WORKSPACE"] || "", environmentFile);
+            const sourceEnvironmentPath = path.join(process.env["GITHUB_WORKSPACE"] || "", inputs.environmentFile);
             if (environmentExplicit) {
                 environmentYaml = {};
             }
@@ -21612,37 +21581,38 @@ function setupMiniconda(inputs) {
             let group = "";
             if (environmentExplicit) {
                 condaAction = ["install"];
-                activateEnvironmentToUse = activateEnvironment;
+                activateEnvironmentToUse = inputs.activateEnvironment;
                 group = `Creating conda environment from explicit specs file...`;
             }
-            else if (activateEnvironment &&
+            else if (inputs.activateEnvironment &&
                 environmentYaml["name"] !== undefined &&
-                environmentYaml["name"] !== activateEnvironment) {
+                environmentYaml["name"] !== inputs.activateEnvironment) {
                 condaAction = ["env", "create"];
                 activateEnvironmentToUse = environmentYaml["name"];
                 group = `Creating conda environment from yaml file...`;
                 core.warning('The environment name on "environment-file" is not the same as "enviroment-activate", using "environment-file"!');
             }
-            else if (activateEnvironment &&
-                activateEnvironment === environmentYaml["name"]) {
+            else if (inputs.activateEnvironment &&
+                inputs.activateEnvironment === environmentYaml["name"]) {
                 group = `Updating conda environment from yaml file...`;
                 condaAction = ["env", "update"];
-                activateEnvironmentToUse = activateEnvironment;
+                activateEnvironmentToUse = inputs.activateEnvironment;
             }
-            else if (activateEnvironment && environmentYaml["name"] === undefined) {
+            else if (inputs.activateEnvironment &&
+                environmentYaml["name"] === undefined) {
                 core.warning('The environment name on "environment-file" is not defined, using "enviroment-activate"!');
                 condaAction = ["env", "update"];
-                activateEnvironmentToUse = activateEnvironment;
+                activateEnvironmentToUse = inputs.activateEnvironment;
             }
             else {
-                activateEnvironmentToUse = activateEnvironment;
+                activateEnvironmentToUse = inputs.activateEnvironment;
                 condaAction = ["env", "create"];
             }
             core.startGroup(group.length ? group : `Running ${condaAction.join(" ")}`);
             yield conda_1.condaCommand([
                 ...condaAction,
                 "--file",
-                environmentFile,
+                inputs.environmentFile,
                 "--name",
                 activateEnvironmentToUse,
             ], useBundled, useMamba);
