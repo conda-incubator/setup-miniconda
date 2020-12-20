@@ -6,7 +6,6 @@ import * as core from "@actions/core";
 import * as io from "@actions/io";
 import * as tc from "@actions/tool-cache";
 
-import { ILocalInstallerOpts } from "../types";
 import { minicondaPath } from "../conda";
 import { execute } from "../utils";
 import * as types from "../types";
@@ -23,7 +22,7 @@ import * as types from "../types";
  * - or has been renamed during a build process
  */
 export async function ensureLocalInstaller(
-  options: ILocalInstallerOpts
+  options: types.ILocalInstallerOpts
 ): Promise<string> {
   core.startGroup("Ensuring Installer...");
 

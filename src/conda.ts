@@ -10,7 +10,6 @@ import * as core from "@actions/core";
 import * as io from "@actions/io";
 
 import { IS_LINUX, IS_MAC, IS_WINDOWS, MINICONDA_DIR_PATH } from "./constants";
-import { IShells } from "./types";
 import { execute } from "./utils";
 import * as types from "./types";
 
@@ -234,8 +233,8 @@ export async function condaInit(
   @SETLOCAL DisableDelayedExpansion
   :: ---------------------------------------------------------------------------`;
 
-  let extraShells: IShells;
-  const shells: IShells = {
+  let extraShells: types.IShells;
+  const shells: types.IShells = {
     "~/.bash_profile": bashExtraText,
     "~/.profile": bashExtraText,
     "~/.zshrc": bashExtraText,
@@ -259,7 +258,7 @@ export async function condaInit(
       "C:/Miniconda3/condabin/conda_hook.bat": batchExtraText,
     };
   }
-  const allShells: IShells = { ...shells, ...extraShells };
+  const allShells: types.IShells = { ...shells, ...extraShells };
   Object.keys(allShells).forEach((key) => {
     let filePath: string = key.replace("~", os.homedir());
     const text = allShells[key];
