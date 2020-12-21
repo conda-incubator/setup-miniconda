@@ -5333,7 +5333,7 @@ module.exports = require("os");
 /* 90 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-var SetCache = __webpack_require__(405),
+var SetCache = __webpack_require__(727),
     arraySome = __webpack_require__(743),
     cacheHas = __webpack_require__(983);
 
@@ -5534,7 +5534,7 @@ exports.flatten = function(options) {
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
 var Symbol = __webpack_require__(498),
-    arrayMap = __webpack_require__(727),
+    arrayMap = __webpack_require__(766),
     isArray = __webpack_require__(143),
     isSymbol = __webpack_require__(186);
 
@@ -15264,7 +15264,7 @@ module.exports = baseIteratee;
 /* 297 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-var arrayMap = __webpack_require__(727),
+var arrayMap = __webpack_require__(766),
     baseIteratee = __webpack_require__(295),
     baseMap = __webpack_require__(852),
     isArray = __webpack_require__(143);
@@ -17222,35 +17222,75 @@ Object.keys(domLvl1).forEach(function(key) {
 /* 403 */,
 /* 404 */,
 /* 405 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
-var MapCache = __webpack_require__(978),
-    setCacheAdd = __webpack_require__(20),
-    setCacheHas = __webpack_require__(657);
+"use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.setCacheVariable = exports.setPathVariables = void 0;
 /**
- *
- * Creates an array cache object to store unique values.
- *
- * @private
- * @constructor
- * @param {Array} [values] The values to cache.
+ * Modify environment variables and action outputs.
  */
-function SetCache(values) {
-  var index = -1,
-      length = values == null ? 0 : values.length;
-
-  this.__data__ = new MapCache;
-  while (++index < length) {
-    this.add(values[index]);
-  }
+const path = __importStar(__webpack_require__(622));
+const core = __importStar(__webpack_require__(470));
+const constants = __importStar(__webpack_require__(211));
+const conda = __importStar(__webpack_require__(259));
+const utils = __importStar(__webpack_require__(163));
+/**
+ * Add Conda executable to PATH
+ */
+function setPathVariables(options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const condaBin = path.join(conda.condaBasePath(options), "condabin");
+        const condaPath = conda.condaBasePath(options);
+        core.info(`Add "${condaBin}" to PATH`);
+        core.addPath(condaBin);
+        if (!options.useBundled) {
+            core.info(`Set 'CONDA="${condaPath}"'`);
+            core.exportVariable("CONDA", condaPath);
+        }
+    });
 }
-
-// Add methods to `SetCache`.
-SetCache.prototype.add = SetCache.prototype.push = setCacheAdd;
-SetCache.prototype.has = setCacheHas;
-
-module.exports = SetCache;
+exports.setPathVariables = setPathVariables;
+/**
+ * Ensure the conda cache path is available as a variable
+ */
+function setCacheVariable(options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const folder = utils.cacheFolder();
+        yield conda.condaCommand(["config", "--add", "pkgs_dirs", folder], options);
+        core.exportVariable(constants.ENV_VAR_CONDA_PKGS, folder);
+    });
+}
+exports.setCacheVariable = setCacheVariable;
 
 
 /***/ }),
@@ -21486,12 +21526,10 @@ const path = __importStar(__webpack_require__(622));
 const core = __importStar(__webpack_require__(470));
 const io = __importStar(__webpack_require__(1));
 const yaml = __importStar(__webpack_require__(414));
-const utils = __importStar(__webpack_require__(163));
-const input = __importStar(__webpack_require__(265));
-// TODO: move these to namespace imports
-const vars_1 = __webpack_require__(935);
-const installer = __importStar(__webpack_require__(555));
 const constants = __importStar(__webpack_require__(211));
+const input = __importStar(__webpack_require__(265));
+const outputs = __importStar(__webpack_require__(405));
+const installer = __importStar(__webpack_require__(555));
 const conda = __importStar(__webpack_require__(259));
 const tools_1 = __webpack_require__(534);
 const env_1 = __webpack_require__(166);
@@ -21515,9 +21553,7 @@ function setupMiniconda(inputs) {
         if (!fs.existsSync(basePath)) {
             throw Error(`No installed conda 'base' enviroment found at ${basePath}`);
         }
-        core.startGroup("Setup environment variables...");
-        yield vars_1.setVariables(options);
-        core.endGroup();
+        yield core.group("Setup environment variables...", () => outputs.setPathVariables(options));
         if (inputs.condaConfigFile) {
             core.startGroup("Copying condarc file...");
             const sourcePath = path.join(process.env["GITHUB_WORKSPACE"] || "", inputs.condaConfigFile);
@@ -21543,9 +21579,7 @@ function setupMiniconda(inputs) {
         else {
             environmentExplicit = false;
         }
-        const cacheFolder = utils.cacheFolder();
-        yield conda.condaCommand(["config", "--add", "pkgs_dirs", cacheFolder], options);
-        core.exportVariable(constants.ENV_VAR_CONDA_PKGS, cacheFolder);
+        yield core.group("Configuring conda package cache...", () => outputs.setCacheVariable(options));
         if (options.condaConfig) {
             if (inputs.environmentFile) {
                 let channels;
@@ -28110,29 +28144,35 @@ module.exports = new Schema({
 /* 725 */,
 /* 726 */,
 /* 727 */
-/***/ (function(module) {
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+var MapCache = __webpack_require__(978),
+    setCacheAdd = __webpack_require__(20),
+    setCacheHas = __webpack_require__(657);
 
 /**
- * A specialized version of `_.map` for arrays without support for iteratee
- * shorthands.
+ *
+ * Creates an array cache object to store unique values.
  *
  * @private
- * @param {Array} [array] The array to iterate over.
- * @param {Function} iteratee The function invoked per iteration.
- * @returns {Array} Returns the new mapped array.
+ * @constructor
+ * @param {Array} [values] The values to cache.
  */
-function arrayMap(array, iteratee) {
+function SetCache(values) {
   var index = -1,
-      length = array == null ? 0 : array.length,
-      result = Array(length);
+      length = values == null ? 0 : values.length;
 
+  this.__data__ = new MapCache;
   while (++index < length) {
-    result[index] = iteratee(array[index], index, array);
+    this.add(values[index]);
   }
-  return result;
 }
 
-module.exports = arrayMap;
+// Add methods to `SetCache`.
+SetCache.prototype.add = SetCache.prototype.push = setCacheAdd;
+SetCache.prototype.has = setCacheHas;
+
+module.exports = SetCache;
 
 
 /***/ }),
@@ -29396,7 +29436,33 @@ exports.clone = function() {
 
 
 /***/ }),
-/* 766 */,
+/* 766 */
+/***/ (function(module) {
+
+/**
+ * A specialized version of `_.map` for arrays without support for iteratee
+ * shorthands.
+ *
+ * @private
+ * @param {Array} [array] The array to iterate over.
+ * @param {Function} iteratee The function invoked per iteration.
+ * @returns {Array} Returns the new mapped array.
+ */
+function arrayMap(array, iteratee) {
+  var index = -1,
+      length = array == null ? 0 : array.length,
+      result = Array(length);
+
+  while (++index < length) {
+    result[index] = iteratee(array[index], index, array);
+  }
+  return result;
+}
+
+module.exports = arrayMap;
+
+
+/***/ }),
 /* 767 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -34326,64 +34392,7 @@ module.exports = toFinite;
 
 /***/ }),
 /* 934 */,
-/* 935 */
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.setVariables = void 0;
-const path = __importStar(__webpack_require__(622));
-const core = __importStar(__webpack_require__(470));
-const conda = __importStar(__webpack_require__(259));
-/**
- * Add Conda executable to PATH
- */
-function setVariables(options) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // Set environment variables
-        const condaBin = path.join(conda.condaBasePath(options), "condabin");
-        const condaVar = conda.condaBasePath(options);
-        core.info(`Add "${condaBin}" to PATH`);
-        core.addPath(condaBin);
-        if (!options.useBundled) {
-            core.info(`Set 'CONDA="${condaVar}"'`);
-            core.exportVariable("CONDA", condaVar);
-        }
-    });
-}
-exports.setVariables = setVariables;
-
-
-/***/ }),
+/* 935 */,
 /* 936 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 

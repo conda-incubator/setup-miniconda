@@ -5,15 +5,11 @@ import * as core from "@actions/core";
 import * as io from "@actions/io";
 import * as yaml from "js-yaml";
 
-import * as utils from "./utils";
-import * as input from "./input";
-
-// TODO: move these to namespace imports
-import { setVariables } from "./vars";
-import * as installer from "./installer";
-
 import * as types from "./types";
 import * as constants from "./constants";
+import * as input from "./input";
+import * as outputs from "./outputs";
+import * as installer from "./installer";
 import * as conda from "./conda";
 
 import { setupPython } from "./tools";
@@ -53,9 +49,9 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     throw Error(`No installed conda 'base' enviroment found at ${basePath}`);
   }
 
-  core.startGroup("Setup environment variables...");
-  await setVariables(options);
-  core.endGroup();
+  await core.group("Setup environment variables...", () =>
+    outputs.setPathVariables(options)
+  );
 
   if (inputs.condaConfigFile) {
     core.startGroup("Copying condarc file...");
@@ -90,12 +86,9 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     environmentExplicit = false;
   }
 
-  const cacheFolder = utils.cacheFolder();
-  await conda.condaCommand(
-    ["config", "--add", "pkgs_dirs", cacheFolder],
-    options
+  await core.group("Configuring conda package cache...", () =>
+    outputs.setCacheVariable(options)
   );
-  core.exportVariable(constants.ENV_VAR_CONDA_PKGS, cacheFolder);
 
   if (options.condaConfig) {
     if (inputs.environmentFile) {
