@@ -66,3 +66,21 @@ export const CONDA_CACHE_FOLDER = "conda_pkgs_dir";
 
 /** the environment variable exported */
 export const ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+
+/**
+ * A regular expression for detecting whether a spec is the python package, not
+ * all of which are valid in all settings.
+ *
+ * ### Note
+ * Some examples:
+ * - python
+ * - python 3
+ * - python>3
+ * - python!=2
+ * - conda-forge::python
+ *
+ * TODO: this should be generalized, and, along with roundtrip parsing/generating
+ *       probably be a sub-package in its own right.
+ * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
+ */
+export const PYTHON_SPEC = /^(.*::)?python($|\s\=\<\>\!\|)/i;

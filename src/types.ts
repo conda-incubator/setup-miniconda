@@ -125,3 +125,24 @@ export interface IInstallerProvider {
     options: IDynamicOptions
   ) => Promise<IInstallerResult>;
 }
+
+/**
+ * A strategy for ensure an environment is up-to-date vs the action inputs
+ */
+export interface IEnvProvider {
+  label: string;
+  /**
+   * Whether this provider is requested by action inputs
+   */
+  provides: (
+    inputs: IActionInputs,
+    options: IDynamicOptions
+  ) => Promise<boolean>;
+  /**
+   * The args to conda/mamba, e.g. create, update
+   */
+  condaArgs: (
+    inputs: IActionInputs,
+    options: IDynamicOptions
+  ) => Promise<string[]>;
+}

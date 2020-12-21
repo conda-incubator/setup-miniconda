@@ -78,43 +78,47 @@ export async function copyConfig(inputs: types.IActionInputs) {
  * Setup Conda configuration
  */
 export async function applyCondaConfiguration(
+  inputs: types.IActionInputs,
   options: types.IDynamicOptions
 ): Promise<void> {
-  // TODO: figure out a way to know a-priori if we have mamba for initial commands
-  const notMambaOptions = { ...options, useMamba: false };
+  const configEntries = Object.entries(inputs.condaConfig) as [
+    keyof types.ICondaConfig,
+    string
+  ][];
 
-  for (const key of Object.keys(options.condaConfig)) {
-    core.info(`"${key}": "${options.condaConfig[key]}"`);
-    if (options.condaConfig[key].length !== 0) {
-      if (key === "channels") {
-        // Split by comma and reverse order to preserve higher priority
-        // as listed in the option
-        let channels: Array<string> = options.condaConfig[key]
-          .split(",")
-          .reverse();
-        let channel: string;
-        for (channel of channels) {
-          await condaCommand(
-            ["config", "--add", key, channel],
-            notMambaOptions
-          );
-        }
-      } else {
-        try {
-          await condaCommand(
-            ["config", "--set", key, options.condaConfig[key]],
-            options
-          );
-        } catch (err) {
-          core.warning(`Couldn't set conda configuration '${key}'`);
-        }
-      }
+  // channels are special: if specified as an action input, these take priority
+  let channels = inputs.condaConfig.channels
+    .trim()
+    .split(/[,\n]/)
+    .map((c) => c.trim())
+    .filter((c) => c.length);
+
+  if (!channels.length && options.envSpec?.yaml?.channels?.length) {
+    channels = options.envSpec.yaml.channels;
+  }
+
+  // LIFO: reverse order to preserve higher priority as listed in the option
+  for (const channel of channels.reverse()) {
+    core.info(`Adding channel '${channel}'`);
+    await condaCommand(["config", "--add", "channels", channel], options);
+  }
+
+  // all other options
+  for (const [key, value] of configEntries) {
+    if (value.trim().length === 0 || key === "channels") {
+      continue;
+    }
+    core.info(`${key}: ${value}`);
+    try {
+      await condaCommand(["config", "--set", key, value], options);
+    } catch (err) {
+      core.warning(err);
     }
   }
 
-  await condaCommand(["config", "--show-sources"], notMambaOptions);
-
-  await condaCommand(["config", "--show"], notMambaOptions);
+  // log all config
+  await condaCommand(["config", "--show-sources"], options);
+  await condaCommand(["config", "--show"], options);
 }
 
 /**

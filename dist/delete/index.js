@@ -1063,7 +1063,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.execute = exports.cacheFolder = void 0;
+exports.makeSpec = exports.execute = exports.cacheFolder = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 const stream = __importStar(__webpack_require__(413));
@@ -1109,6 +1109,21 @@ function execute(command) {
     });
 }
 exports.execute = execute;
+/**
+ * create a conda veersion spec string.
+ *
+ * ### Note
+ * Generally favors '=' unless specified more tightly.
+ */
+function makeSpec(pkg, spec) {
+    if (spec.match(/=<>!\|/)) {
+        return `${pkg}${spec}`;
+    }
+    else {
+        return `${pkg}=${spec}`;
+    }
+}
+exports.makeSpec = makeSpec;
 
 
 /***/ }),
@@ -1138,7 +1153,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.KNOWN_EXTENSIONS = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.PYTHON_SPEC = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.KNOWN_EXTENSIONS = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 //-----------------------------------------------------------------------
@@ -1194,6 +1209,23 @@ exports.CONDARC_PATH = path.join(os.homedir(), ".condarc");
 exports.CONDA_CACHE_FOLDER = "conda_pkgs_dir";
 /** the environment variable exported */
 exports.ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+/**
+ * A regular expression for detecting whether a spec is the python package, not
+ * all of which are valid in all settings.
+ *
+ * ### Note
+ * Some examples:
+ * - python
+ * - python 3
+ * - python>3
+ * - python!=2
+ * - conda-forge::python
+ *
+ * TODO: this should be generalized, and, along with roundtrip parsing/generating
+ *       probably be a sub-package in its own right.
+ * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
+ */
+exports.PYTHON_SPEC = /^(.*::)?python($|\s\=\<\>\!\|)/i;
 
 
 /***/ }),

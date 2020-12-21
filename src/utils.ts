@@ -48,3 +48,17 @@ export async function execute(command: string[]): Promise<void> {
     throw new Error(`${command[0]} return error code ${rc}`);
   }
 }
+
+/**
+ * create a conda veersion spec string.
+ *
+ * ### Note
+ * Generally favors '=' unless specified more tightly.
+ */
+export function makeSpec(pkg: string, spec: string) {
+  if (spec.match(/=<>!\|/)) {
+    return `${pkg}${spec}`;
+  } else {
+    return `${pkg}=${spec}`;
+  }
+}
