@@ -6,9 +6,9 @@ import * as core from "@actions/core";
 import * as io from "@actions/io";
 import * as tc from "@actions/tool-cache";
 
-import { minicondaPath } from "../conda";
-import { execute } from "../utils";
 import * as types from "../types";
+import * as utils from "../utils";
+import * as conda from "../conda";
 
 /** Get the path for a locally-executable installer from cache, or as downloaded
  *
@@ -90,7 +90,7 @@ export async function runInstaller(
   installerPath: string,
   options: types.IDynamicOptions
 ): Promise<void> {
-  const outputPath: string = minicondaPath(options);
+  const outputPath: string = conda.condaBasePath(options);
   const installerExtension = path.extname(installerPath);
   let command: string[];
 
@@ -116,5 +116,5 @@ export async function runInstaller(
 
   core.info(`Install Command:\n\t${command}`);
 
-  return await execute(command);
+  return await utils.execute(command);
 }

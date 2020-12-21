@@ -102,3 +102,26 @@ export interface IEnvSpec {
   yaml?: IEnvironment;
   explicit?: string;
 }
+
+/**
+ * The output of an installer: may update the dynamic options
+ */
+export interface IInstallerResult {
+  options: IDynamicOptions;
+  localInstallerPath: string;
+}
+
+/**
+ * A strategy for ensuring a locally-runnable provider (or no-op, if bundled)
+ */
+export interface IInstallerProvider {
+  label: string;
+  provides: (
+    inputs: IActionInputs,
+    options: IDynamicOptions
+  ) => Promise<boolean>;
+  installerPath: (
+    inputs: IActionInputs,
+    options: IDynamicOptions
+  ) => Promise<IInstallerResult>;
+}

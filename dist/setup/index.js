@@ -5858,8 +5858,8 @@ const url_1 = __webpack_require__(835);
 const core = __importStar(__webpack_require__(470));
 const io = __importStar(__webpack_require__(1));
 const tc = __importStar(__webpack_require__(533));
-const conda_1 = __webpack_require__(259);
-const utils_1 = __webpack_require__(163);
+const utils = __importStar(__webpack_require__(163));
+const conda = __importStar(__webpack_require__(259));
 /** Get the path for a locally-executable installer from cache, or as downloaded
  *
  * @returns the local path to the installer (with the correct extension)
@@ -5922,7 +5922,7 @@ exports.ensureLocalInstaller = ensureLocalInstaller;
  */
 function runInstaller(installerPath, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        const outputPath = conda_1.minicondaPath(options);
+        const outputPath = conda.condaBasePath(options);
         const installerExtension = path.extname(installerPath);
         let command;
         switch (installerExtension) {
@@ -5945,7 +5945,7 @@ function runInstaller(installerPath, options) {
                 throw new Error(`Unknown installer extension: ${installerExtension}`);
         }
         core.info(`Install Command:\n\t${command}`);
-        return yield utils_1.execute(command);
+        return yield utils.execute(command);
     });
 }
 exports.runInstaller = runInstaller;
@@ -7501,12 +7501,12 @@ exports.createTestEnvironment = exports.environmentExists = void 0;
 const fs = __importStar(__webpack_require__(747));
 const path = __importStar(__webpack_require__(622));
 const core = __importStar(__webpack_require__(470));
-const conda_1 = __webpack_require__(259);
+const conda = __importStar(__webpack_require__(259));
 /**
  * Check if a given conda environment exists
  */
 function environmentExists(inputs, options) {
-    const condaMetaPath = path.join(conda_1.minicondaPath(options), "envs", inputs.activateEnvironment, "conda-meta");
+    const condaMetaPath = path.join(conda.condaBasePath(options), "envs", inputs.activateEnvironment, "conda-meta");
     return fs.existsSync(condaMetaPath);
 }
 exports.environmentExists = environmentExists;
@@ -7520,7 +7520,7 @@ function createTestEnvironment(inputs, options) {
             inputs.activateEnvironment !== "") {
             if (!environmentExists(inputs, options)) {
                 core.startGroup("Create test environment...");
-                yield conda_1.condaCommand(["create", "--name", inputs.activateEnvironment], options);
+                yield conda.condaCommand(["create", "--name", inputs.activateEnvironment], options);
                 core.endGroup();
             }
         }
@@ -12260,21 +12260,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.condaInit = exports.applyCondaConfiguration = exports.condaCommand = exports.condaExecutable = exports.minicondaPath = void 0;
+exports.condaInit = exports.applyCondaConfiguration = exports.bootstrapConfig = exports.condaCommand = exports.condaExecutable = exports.condaBasePath = void 0;
 const fs = __importStar(__webpack_require__(747));
 const path = __importStar(__webpack_require__(622));
 const os = __importStar(__webpack_require__(87));
 const core = __importStar(__webpack_require__(470));
 const io = __importStar(__webpack_require__(1));
-const constants_1 = __webpack_require__(211);
-const utils_1 = __webpack_require__(163);
+const constants = __importStar(__webpack_require__(211));
+const utils = __importStar(__webpack_require__(163));
 /**
  * Provide current location of miniconda or location where it will be installed
  */
-function minicondaPath(options) {
-    let condaPath = constants_1.MINICONDA_DIR_PATH;
+function condaBasePath(options) {
+    let condaPath = constants.MINICONDA_DIR_PATH;
     if (!options.useBundled) {
-        if (constants_1.IS_MAC) {
+        if (constants.IS_MAC) {
             condaPath = "/Users/runner/miniconda3";
         }
         else {
@@ -12283,16 +12283,16 @@ function minicondaPath(options) {
     }
     return condaPath;
 }
-exports.minicondaPath = minicondaPath;
+exports.condaBasePath = condaBasePath;
 /**
  * Provide cross platform location of conda/mamba executable
  */
 function condaExecutable(options) {
-    const dir = minicondaPath(options);
+    const dir = condaBasePath(options);
     let condaExe;
     let commandName;
     commandName = options.useMamba ? "mamba" : "conda";
-    commandName = constants_1.IS_WINDOWS ? commandName + ".bat" : commandName;
+    commandName = constants.IS_WINDOWS ? commandName + ".bat" : commandName;
     condaExe = path.join(dir, "condabin", commandName);
     return condaExe;
 }
@@ -12303,10 +12303,19 @@ exports.condaExecutable = condaExecutable;
 function condaCommand(cmd, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const command = [condaExecutable(options), ...cmd];
-        return yield utils_1.execute(command);
+        return yield utils.execute(command);
     });
 }
 exports.condaCommand = condaCommand;
+/**
+ * Create a baseline .condarc
+ */
+function bootstrapConfig() {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield fs.promises.writeFile(constants.CONDARC_PATH, constants.BOOTSTRAP_CONDARC);
+    });
+}
+exports.bootstrapConfig = bootstrapConfig;
 /**
  * Setup Conda configuration
  */
@@ -12355,19 +12364,19 @@ function condaInit(inputs, options) {
         const autoActivateBase = options.condaConfig["auto_activate_base"] === "true";
         // Fix ownership of folders
         if (options.useBundled) {
-            if (constants_1.IS_MAC) {
+            if (constants.IS_MAC) {
                 core.startGroup("Fixing conda folders ownership");
                 const userName = process.env.USER;
-                yield utils_1.execute([
+                yield utils.execute([
                     "sudo",
                     "chown",
                     "-R",
                     `${userName}:staff`,
-                    minicondaPath(options),
+                    condaBasePath(options),
                 ]);
                 core.endGroup();
             }
-            else if (constants_1.IS_WINDOWS) {
+            else if (constants.IS_WINDOWS) {
                 for (let folder of [
                     "condabin/",
                     "Scripts/",
@@ -12375,10 +12384,10 @@ function condaInit(inputs, options) {
                     "etc/profile.d/",
                     "/Lib/site-packages/xonsh/",
                 ]) {
-                    ownPath = path.join(minicondaPath(options), folder);
+                    ownPath = path.join(condaBasePath(options), folder);
                     if (fs.existsSync(ownPath)) {
                         core.startGroup(`Fixing ${folder} ownership`);
-                        yield utils_1.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
+                        yield utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
                         core.endGroup();
                     }
                 }
@@ -12413,20 +12422,20 @@ function condaInit(inputs, options) {
         // Run conda init
         for (let cmd of ["--all"]) {
             // TODO: determine when it's safe to use mamba
-            yield utils_1.execute([
+            yield utils.execute([
                 condaExecutable(Object.assign(Object.assign({}, options), { useMamba: false })),
                 "init",
                 cmd,
             ]);
         }
         // Rename files
-        if (constants_1.IS_LINUX) {
+        if (constants.IS_LINUX) {
             let source = "~/.bashrc".replace("~", os.homedir());
             let dest = "~/.profile".replace("~", os.homedir());
             core.info(`Renaming "${source}" to "${dest}"\n`);
             yield io.mv(source, dest);
         }
-        else if (constants_1.IS_MAC) {
+        else if (constants.IS_MAC) {
             let source = "~/.bash_profile".replace("~", os.homedir());
             let dest = "~/.profile".replace("~", os.homedir());
             core.info(`Renaming "${source}" to "${dest}"\n`);
@@ -20078,7 +20087,47 @@ module.exports = isArguments;
 /* 465 */,
 /* 466 */,
 /* 467 */,
-/* 468 */,
+/* 468 */
+/***/ (function(__unusedmodule, exports) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.bundledMinicondaUser = void 0;
+/**
+ * Provide a path to the pre-bundled (but probably old) Miniconda base installation
+ *
+ * ### Note
+ * This is the "cheapest" provider: if miniconda is already on disk, it can be
+ * fastest to avoid the download/install and use what's already on the image.
+ */
+exports.bundledMinicondaUser = {
+    label: "use bundled Miniconda",
+    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        return (inputs.minicondaVersion === "" &&
+            inputs.architecture === "x64" &&
+            inputs.installerUrl === "");
+    }),
+    installerPath: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        // no-op
+        return {
+            localInstallerPath: "",
+            options: Object.assign(Object.assign({}, options), { useBundled: true }),
+        };
+    }),
+};
+
+
+/***/ }),
 /* 469 */,
 /* 470 */
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
@@ -21441,9 +21490,9 @@ const utils = __importStar(__webpack_require__(163));
 const input = __importStar(__webpack_require__(265));
 // TODO: move these to namespace imports
 const vars_1 = __webpack_require__(935);
-const installer_1 = __webpack_require__(555);
-const constants_1 = __webpack_require__(211);
-const conda_1 = __webpack_require__(259);
+const installer = __importStar(__webpack_require__(555));
+const constants = __importStar(__webpack_require__(211));
+const conda = __importStar(__webpack_require__(259));
 const tools_1 = __webpack_require__(534);
 const env_1 = __webpack_require__(166);
 /**
@@ -21456,32 +21505,15 @@ function setupMiniconda(inputs) {
             useMamba: false,
             condaConfig: Object.assign({}, inputs.condaConfig),
         };
-        core.startGroup(`Creating bootstrap condarc file in ${constants_1.CONDARC_PATH}...`);
-        yield fs.promises.writeFile(constants_1.CONDARC_PATH, constants_1.BOOTSTRAP_CONDARC);
-        core.endGroup();
-        if (inputs.installerUrl !== "") {
-            options.useBundled = false;
-            const installerPath = yield installer_1.downloadCustomInstaller(inputs);
-            core.startGroup("Installing Custom Installer...");
-            yield installer_1.runInstaller(installerPath, options);
-            core.endGroup();
+        yield core.group(`Creating bootstrap condarc file in ${constants.CONDARC_PATH}...`, conda.bootstrapConfig);
+        const installerInfo = yield core.group("Ensuring installer...", () => installer.getLocalInstallerPath(inputs, options));
+        options = Object.assign(Object.assign({}, options), installerInfo.options);
+        const basePath = conda.condaBasePath(options);
+        if (installerInfo.localInstallerPath && !options.useBundled) {
+            yield core.group("Running installer...", () => installer.runInstaller(installerInfo.localInstallerPath, basePath));
         }
-        else if (inputs.minicondaVersion !== "" || inputs.architecture !== "x64") {
-            core.startGroup("Downloading Miniconda...");
-            options.useBundled = false;
-            const installerPath = yield installer_1.downloadMiniconda(3, inputs);
-            core.endGroup();
-            core.startGroup("Installing Miniconda...");
-            yield installer_1.runInstaller(installerPath, options);
-            core.endGroup();
-        }
-        else {
-            core.startGroup("Locating Miniconda...");
-            core.info(conda_1.minicondaPath(options));
-            if (!fs.existsSync(conda_1.minicondaPath(options))) {
-                throw new Error("Bundled Miniconda not found!");
-            }
-            core.endGroup();
+        if (!fs.existsSync(basePath)) {
+            throw Error(`No installed conda 'base' enviroment found at ${basePath}`);
         }
         core.startGroup("Setup environment variables...");
         yield vars_1.setVariables(options);
@@ -21489,8 +21521,8 @@ function setupMiniconda(inputs) {
         if (inputs.condaConfigFile) {
             core.startGroup("Copying condarc file...");
             const sourcePath = path.join(process.env["GITHUB_WORKSPACE"] || "", inputs.condaConfigFile);
-            core.info(`"${sourcePath}" to "${constants_1.CONDARC_PATH}"`);
-            yield io.cp(sourcePath, constants_1.CONDARC_PATH);
+            core.info(`"${sourcePath}" to "${constants.CONDARC_PATH}"`);
+            yield io.cp(sourcePath, constants.CONDARC_PATH);
             core.endGroup();
         }
         // Read the environment yaml to use channels if provided and avoid conda solver conflicts
@@ -21512,8 +21544,8 @@ function setupMiniconda(inputs) {
             environmentExplicit = false;
         }
         const cacheFolder = utils.cacheFolder();
-        yield conda_1.condaCommand(["config", "--add", "pkgs_dirs", cacheFolder], options);
-        core.exportVariable(constants_1.ENV_VAR_CONDA_PKGS, cacheFolder);
+        yield conda.condaCommand(["config", "--add", "pkgs_dirs", cacheFolder], options);
+        core.exportVariable(constants.ENV_VAR_CONDA_PKGS, cacheFolder);
         if (options.condaConfig) {
             if (inputs.environmentFile) {
                 let channels;
@@ -21527,27 +21559,27 @@ function setupMiniconda(inputs) {
                 }
             }
             core.startGroup("Applying conda configuration...");
-            yield conda_1.applyCondaConfiguration(options);
+            yield conda.applyCondaConfiguration(options);
             core.endGroup();
         }
         core.startGroup("Setup Conda basic configuration...");
-        yield conda_1.condaCommand(["config", "--set", "always_yes", "yes", "--set", "changeps1", "no"], options);
+        yield conda.condaCommand(["config", "--set", "always_yes", "yes", "--set", "changeps1", "no"], options);
         core.endGroup();
         core.startGroup("Initialize Conda and fix ownership...");
-        yield conda_1.condaInit(inputs, options);
+        yield conda.condaInit(inputs, options);
         core.endGroup();
         if (inputs.condaVersion) {
             core.startGroup("Installing Conda...");
-            yield conda_1.condaCommand(["install", "--name", "base", `conda=${inputs.condaVersion}`], options);
+            yield conda.condaCommand(["install", "--name", "base", `conda=${inputs.condaVersion}`], options);
             core.endGroup();
         }
         if (options.condaConfig["auto_update_conda"] == "true") {
             core.startGroup("Updating conda...");
-            yield conda_1.condaCommand(["update", "conda"], options);
+            yield conda.condaCommand(["update", "conda"], options);
             core.endGroup();
             if (options.condaConfig) {
                 core.startGroup("Applying conda configuration after update...");
-                yield conda_1.applyCondaConfiguration(options);
+                yield conda.applyCondaConfiguration(options);
                 core.endGroup();
             }
         }
@@ -21555,10 +21587,12 @@ function setupMiniconda(inputs) {
         if (inputs.mambaVersion) {
             core.startGroup("Installing Mamba...");
             core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
-            yield conda_1.condaCommand(["install", "--name", "base", `mamba=${inputs.mambaVersion}`], options);
-            if (constants_1.IS_WINDOWS) {
+            yield conda.condaCommand(["install", "--name", "base", `mamba=${inputs.mambaVersion}`], options);
+            if (constants.IS_WINDOWS) {
                 // add bat-less forwarder for bash users on Windows
-                const mambaBat = conda_1.condaExecutable(Object.assign(Object.assign({}, options), { useMamba: true })).replace("\\", "/");
+                const mambaBat = conda
+                    .condaExecutable(Object.assign(Object.assign({}, options), { useMamba: true }))
+                    .replace("\\", "/");
                 const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
                 fs.writeFileSync(mambaBat.slice(0, -4), contents);
             }
@@ -21566,7 +21600,7 @@ function setupMiniconda(inputs) {
         }
         if (inputs.condaBuildVersion) {
             core.startGroup("Installing Conda Build...");
-            yield conda_1.condaCommand(["install", "--name", "base", `conda-build=${inputs.condaBuildVersion}`], options);
+            yield conda.condaCommand(["install", "--name", "base", `conda-build=${inputs.condaBuildVersion}`], options);
             core.endGroup();
         }
         if (inputs.activateEnvironment) {
@@ -21619,7 +21653,7 @@ function setupMiniconda(inputs) {
                 condaAction = ["env", "create"];
             }
             core.startGroup(group.length ? group : `Running ${condaAction.join(" ")}`);
-            yield conda_1.condaCommand([
+            yield conda.condaCommand([
                 ...condaAction,
                 "--file",
                 inputs.environmentFile,
@@ -23076,13 +23110,96 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) __createBinding(exports, m, p);
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-__exportStar(__webpack_require__(122), exports);
-__exportStar(__webpack_require__(768), exports);
-__exportStar(__webpack_require__(815), exports);
+exports.runInstaller = exports.getLocalInstallerPath = void 0;
+const path = __importStar(__webpack_require__(622));
+const core = __importStar(__webpack_require__(470));
+const utils = __importStar(__webpack_require__(163));
+const download_miniconda_1 = __webpack_require__(768);
+const download_url_1 = __webpack_require__(815);
+const bundled_miniconda_1 = __webpack_require__(468);
+/**
+ * Providers of `constructor`-compatible installers, ordered roughly by "cost".
+ *
+ * ### Note
+ * To add a new installer,
+ * - implement IInstallerProvider and add it here
+ * - add to `../../action.yaml`
+ * - any any new RULEs in ../input.ts, for example if the installer is not
+ *   compatible with some architectures
+ */
+const providers = [
+    bundled_miniconda_1.bundledMinicondaUser,
+    download_url_1.urlDownloader,
+    download_miniconda_1.minicondaDownloader,
+];
+/** See if any provider works with the given inputs and options */
+function getLocalInstallerPath(inputs, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        for (const provider of providers) {
+            core.info(`Can we ${provider.label}?`);
+            if (yield provider.provides(inputs, options)) {
+                core.info(`... will ${provider.label}`);
+                return provider.installerPath(inputs, options);
+            }
+        }
+        throw Error(`No installer could be found for the given inputs`);
+    });
+}
+exports.getLocalInstallerPath = getLocalInstallerPath;
+/**
+ * Run a `constructor`-generated installer, like Miniconda.
+ *
+ * @param installerPath must have an appropriate extension for this platform
+ */
+function runInstaller(installerPath, outputPath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const installerExtension = path.extname(installerPath);
+        let command;
+        switch (installerExtension) {
+            case ".exe":
+                /* From https://docs.anaconda.com/anaconda/install/silent-mode/
+                    /D=<installation path> - Destination installation path.
+                                            - Must be the last argument.
+                                            - Do not wrap in quotation marks.
+                                            - Required if you use /S.
+                    For the above reasons, this is treated a monolithic arg
+                  */
+                command = [
+                    `"${installerPath}" /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`,
+                ];
+                break;
+            case ".sh":
+                command = ["bash", installerPath, "-f", "-b", "-p", outputPath];
+                break;
+            default:
+                throw Error(`Unknown installer extension: ${installerExtension}`);
+        }
+        yield utils.execute(command);
+    });
+}
+exports.runInstaller = runInstaller;
 
 
 /***/ }),
@@ -29387,13 +29504,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.downloadMiniconda = void 0;
+exports.minicondaDownloader = exports.downloadMiniconda = void 0;
 const fs = __importStar(__webpack_require__(747));
 const core = __importStar(__webpack_require__(470));
 const tc = __importStar(__webpack_require__(533));
 const get_hrefs_1 = __importDefault(__webpack_require__(222));
-const base_1 = __webpack_require__(122);
-const constants_1 = __webpack_require__(211);
+const constants = __importStar(__webpack_require__(211));
+const base = __importStar(__webpack_require__(122));
 /**
  * List available Miniconda versions
  *
@@ -29402,8 +29519,8 @@ const constants_1 = __webpack_require__(211);
 function minicondaVersions(arch) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            let extension = constants_1.IS_UNIX ? "sh" : "exe";
-            const downloadPath = yield tc.downloadTool(constants_1.MINICONDA_BASE_URL);
+            let extension = constants.IS_UNIX ? "sh" : "exe";
+            const downloadPath = yield tc.downloadTool(constants.MINICONDA_BASE_URL);
             const content = fs.readFileSync(downloadPath, "utf8");
             let hrefs = get_hrefs_1.default(content);
             hrefs = hrefs.filter((item) => item.startsWith("/Miniconda3"));
@@ -29427,12 +29544,12 @@ function minicondaVersions(arch) {
 function downloadMiniconda(pythonMajorVersion, inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         // Check valid arch
-        const arch = constants_1.ARCHITECTURES[inputs.architecture];
+        const arch = constants.ARCHITECTURES[inputs.architecture];
         if (!arch) {
             throw new Error(`Invalid arch "${inputs.architecture}"!`);
         }
-        let extension = constants_1.IS_UNIX ? "sh" : "exe";
-        let osName = constants_1.OS_NAMES[process.platform];
+        let extension = constants.IS_UNIX ? "sh" : "exe";
+        let osName = constants.OS_NAMES[process.platform];
         const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${inputs.minicondaVersion}-${osName}-${arch}.${extension}`;
         core.info(minicondaInstallerName);
         // Check version name
@@ -29442,8 +29559,8 @@ function downloadMiniconda(pythonMajorVersion, inputs) {
                 throw new Error(`Invalid miniconda version!\n\nMust be among ${versions.toString()}`);
             }
         }
-        return yield base_1.ensureLocalInstaller({
-            url: constants_1.MINICONDA_BASE_URL + minicondaInstallerName,
+        return yield base.ensureLocalInstaller({
+            url: constants.MINICONDA_BASE_URL + minicondaInstallerName,
             tool: `Miniconda${pythonMajorVersion}`,
             version: inputs.minicondaVersion,
             arch: arch,
@@ -29451,6 +29568,25 @@ function downloadMiniconda(pythonMajorVersion, inputs) {
     });
 }
 exports.downloadMiniconda = downloadMiniconda;
+/**
+ * Provide a path to a Miniconda downloaded from repo.anaconda.com.
+ *
+ * ### Note
+ * Uses the well-known structure of the repo.anaconda.com to resolve and download
+ * a particular Miniconda installer.
+ */
+exports.minicondaDownloader = {
+    label: "download Miniconda",
+    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        return inputs.minicondaVersion !== "" && inputs.installerUrl === "";
+    }),
+    installerPath: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        return {
+            localInstallerPath: yield downloadMiniconda(3, inputs),
+            options: Object.assign(Object.assign({}, options), { useBundled: false }),
+        };
+    }),
+};
 
 
 /***/ }),
@@ -30803,6 +30939,25 @@ module.exports = toInteger;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -30813,17 +30968,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.downloadCustomInstaller = void 0;
-const base_1 = __webpack_require__(122);
+exports.urlDownloader = void 0;
+const base = __importStar(__webpack_require__(122));
 /**
- * @param url A URL for a file with the CLI of a `constructor`-built artifact
+ * Provide a path to a `constructor`-compatible installer downloaded from
+ * any URL, including `file://` URLs.
+ *
+ * ### Note
+ * The entire local URL is used as the cache key.
  */
-function downloadCustomInstaller(inputs) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return yield base_1.ensureLocalInstaller({ url: inputs.installerUrl });
-    });
-}
-exports.downloadCustomInstaller = downloadCustomInstaller;
+exports.urlDownloader = {
+    label: "download a custom installer by URL",
+    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return !!inputs.installerUrl; }),
+    installerPath: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        return {
+            localInstallerPath: yield base.ensureLocalInstaller({
+                url: inputs.installerUrl,
+            }),
+            options: Object.assign(Object.assign({}, options), { useBundled: false }),
+        };
+    }),
+};
 
 
 /***/ }),
@@ -34198,20 +34363,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.setVariables = void 0;
 const path = __importStar(__webpack_require__(622));
 const core = __importStar(__webpack_require__(470));
-const conda_1 = __webpack_require__(259);
+const conda = __importStar(__webpack_require__(259));
 /**
  * Add Conda executable to PATH
  */
 function setVariables(options) {
     return __awaiter(this, void 0, void 0, function* () {
         // Set environment variables
-        const condaBin = path.join(conda_1.minicondaPath(options), "condabin");
-        const conda = conda_1.minicondaPath(options);
+        const condaBin = path.join(conda.condaBasePath(options), "condabin");
+        const condaVar = conda.condaBasePath(options);
         core.info(`Add "${condaBin}" to PATH`);
         core.addPath(condaBin);
         if (!options.useBundled) {
-            core.info(`Set 'CONDA="${conda}"'`);
-            core.exportVariable("CONDA", conda);
+            core.info(`Set 'CONDA="${condaVar}"'`);
+            core.exportVariable("CONDA", condaVar);
         }
     });
 }

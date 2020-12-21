@@ -3,8 +3,8 @@ import * as path from "path";
 
 import * as core from "@actions/core";
 
-import { minicondaPath, condaCommand } from "./conda";
 import * as types from "./types";
+import * as conda from "./conda";
 
 /**
  * Check if a given conda environment exists
@@ -14,7 +14,7 @@ export function environmentExists(
   options: types.IDynamicOptions
 ): boolean {
   const condaMetaPath: string = path.join(
-    minicondaPath(options),
+    conda.condaBasePath(options),
     "envs",
     inputs.activateEnvironment,
     "conda-meta"
@@ -36,7 +36,7 @@ export async function createTestEnvironment(
   ) {
     if (!environmentExists(inputs, options)) {
       core.startGroup("Create test environment...");
-      await condaCommand(
+      await conda.condaCommand(
         ["create", "--name", inputs.activateEnvironment],
         options
       );
