@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as path from "path";
 
 import * as core from "@actions/core";
-import * as io from "@actions/io";
 import * as yaml from "js-yaml";
 
 import * as types from "./types";
@@ -11,10 +10,8 @@ import * as input from "./input";
 import * as outputs from "./outputs";
 import * as installer from "./installer";
 import * as conda from "./conda";
-
-import { setupPython } from "./tools";
-
-import { createTestEnvironment } from "./env";
+import * as env from "./env";
+import * as tools from "./tools";
 
 /**
  * Main conda setup method to handle all configuration options
@@ -54,14 +51,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
   );
 
   if (inputs.condaConfigFile) {
-    core.startGroup("Copying condarc file...");
-    const sourcePath: string = path.join(
-      process.env["GITHUB_WORKSPACE"] || "",
-      inputs.condaConfigFile
-    );
-    core.info(`"${sourcePath}" to "${constants.CONDARC_PATH}"`);
-    await io.cp(sourcePath, constants.CONDARC_PATH);
-    core.endGroup();
+    await core.group("Copying condarc file...", () => conda.copyConfig(inputs));
   }
 
   // Read the environment yaml to use channels if provided and avoid conda solver conflicts
@@ -175,14 +165,14 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
   }
 
   if (inputs.activateEnvironment) {
-    await createTestEnvironment(inputs, options);
+    await env.createTestEnvironment(inputs, options);
   }
 
   if (inputs.pythonVersion && inputs.activateEnvironment) {
     core.startGroup(
       `Installing Python="${inputs.pythonVersion}" on "${inputs.activateEnvironment}" environment...`
     );
-    await setupPython(inputs, options);
+    await tools.setupPython(inputs, options);
     core.endGroup();
   }
 

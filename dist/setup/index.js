@@ -12260,7 +12260,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.condaInit = exports.applyCondaConfiguration = exports.bootstrapConfig = exports.condaCommand = exports.condaExecutable = exports.condaBasePath = void 0;
+exports.condaInit = exports.applyCondaConfiguration = exports.copyConfig = exports.bootstrapConfig = exports.condaCommand = exports.condaExecutable = exports.condaBasePath = void 0;
 const fs = __importStar(__webpack_require__(747));
 const path = __importStar(__webpack_require__(622));
 const os = __importStar(__webpack_require__(87));
@@ -12316,6 +12316,17 @@ function bootstrapConfig() {
     });
 }
 exports.bootstrapConfig = bootstrapConfig;
+/**
+ * Copy the given condarc file into place
+ */
+function copyConfig(inputs) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const sourcePath = path.join(process.env["GITHUB_WORKSPACE"] || "", inputs.condaConfigFile);
+        core.info(`Copying "${sourcePath}" to "${constants.CONDARC_PATH}..."`);
+        yield io.cp(sourcePath, constants.CONDARC_PATH);
+    });
+}
+exports.copyConfig = copyConfig;
 /**
  * Setup Conda configuration
  */
@@ -21524,15 +21535,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs = __importStar(__webpack_require__(747));
 const path = __importStar(__webpack_require__(622));
 const core = __importStar(__webpack_require__(470));
-const io = __importStar(__webpack_require__(1));
 const yaml = __importStar(__webpack_require__(414));
 const constants = __importStar(__webpack_require__(211));
 const input = __importStar(__webpack_require__(265));
 const outputs = __importStar(__webpack_require__(405));
 const installer = __importStar(__webpack_require__(555));
 const conda = __importStar(__webpack_require__(259));
-const tools_1 = __webpack_require__(534);
-const env_1 = __webpack_require__(166);
+const env = __importStar(__webpack_require__(166));
+const tools = __importStar(__webpack_require__(534));
 /**
  * Main conda setup method to handle all configuration options
  */
@@ -21555,11 +21565,7 @@ function setupMiniconda(inputs) {
         }
         yield core.group("Setup environment variables...", () => outputs.setPathVariables(options));
         if (inputs.condaConfigFile) {
-            core.startGroup("Copying condarc file...");
-            const sourcePath = path.join(process.env["GITHUB_WORKSPACE"] || "", inputs.condaConfigFile);
-            core.info(`"${sourcePath}" to "${constants.CONDARC_PATH}"`);
-            yield io.cp(sourcePath, constants.CONDARC_PATH);
-            core.endGroup();
+            yield core.group("Copying condarc file...", () => conda.copyConfig(inputs));
         }
         // Read the environment yaml to use channels if provided and avoid conda solver conflicts
         let environmentYaml;
@@ -21638,11 +21644,11 @@ function setupMiniconda(inputs) {
             core.endGroup();
         }
         if (inputs.activateEnvironment) {
-            yield env_1.createTestEnvironment(inputs, options);
+            yield env.createTestEnvironment(inputs, options);
         }
         if (inputs.pythonVersion && inputs.activateEnvironment) {
             core.startGroup(`Installing Python="${inputs.pythonVersion}" on "${inputs.activateEnvironment}" environment...`);
-            yield tools_1.setupPython(inputs, options);
+            yield tools.setupPython(inputs, options);
             core.endGroup();
         }
         if (inputs.environmentFile) {

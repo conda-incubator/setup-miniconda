@@ -63,6 +63,18 @@ export async function bootstrapConfig(): Promise<void> {
 }
 
 /**
+ * Copy the given condarc file into place
+ */
+export async function copyConfig(inputs: types.IActionInputs) {
+  const sourcePath: string = path.join(
+    process.env["GITHUB_WORKSPACE"] || "",
+    inputs.condaConfigFile
+  );
+  core.info(`Copying "${sourcePath}" to "${constants.CONDARC_PATH}..."`);
+  await io.cp(sourcePath, constants.CONDARC_PATH);
+}
+
+/**
  * Setup Conda configuration
  */
 export async function applyCondaConfiguration(
