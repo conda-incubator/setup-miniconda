@@ -9,17 +9,17 @@ import * as os from "os";
 import * as core from "@actions/core";
 import * as io from "@actions/io";
 
-import { IS_LINUX, IS_MAC, IS_WINDOWS, MINICONDA_DIR_PATH } from "./constants";
-import { execute } from "./utils";
 import * as types from "./types";
+import * as constants from "./constants";
+import * as utils from "./utils";
 
 /**
  * Provide current location of miniconda or location where it will be installed
  */
-export function minicondaPath(options: types.IDynamicOptions): string {
-  let condaPath: string = MINICONDA_DIR_PATH;
+export function condaBasePath(options: types.IDynamicOptions): string {
+  let condaPath: string = constants.MINICONDA_DIR_PATH;
   if (!options.useBundled) {
-    if (IS_MAC) {
+    if (constants.IS_MAC) {
       condaPath = "/Users/runner/miniconda3";
     } else {
       condaPath += "3";
@@ -32,11 +32,11 @@ export function minicondaPath(options: types.IDynamicOptions): string {
  * Provide cross platform location of conda/mamba executable
  */
 export function condaExecutable(options: types.IDynamicOptions): string {
-  const dir: string = minicondaPath(options);
+  const dir: string = condaBasePath(options);
   let condaExe: string;
   let commandName: string;
   commandName = options.useMamba ? "mamba" : "conda";
-  commandName = IS_WINDOWS ? commandName + ".bat" : commandName;
+  commandName = constants.IS_WINDOWS ? commandName + ".bat" : commandName;
   condaExe = path.join(dir, "condabin", commandName);
   return condaExe;
 }
@@ -49,7 +49,17 @@ export async function condaCommand(
   options: types.IDynamicOptions
 ): Promise<void> {
   const command = [condaExecutable(options), ...cmd];
-  return await execute(command);
+  return await utils.execute(command);
+}
+
+/**
+ * Create a baseline .condarc
+ */
+export async function bootstrapConfig(): Promise<void> {
+  await fs.promises.writeFile(
+    constants.CONDARC_PATH,
+    constants.BOOTSTRAP_CONDARC
+  );
 }
 
 /**
@@ -112,18 +122,18 @@ export async function condaInit(
 
   // Fix ownership of folders
   if (options.useBundled) {
-    if (IS_MAC) {
+    if (constants.IS_MAC) {
       core.startGroup("Fixing conda folders ownership");
       const userName: string = process.env.USER as string;
-      await execute([
+      await utils.execute([
         "sudo",
         "chown",
         "-R",
         `${userName}:staff`,
-        minicondaPath(options),
+        condaBasePath(options),
       ]);
       core.endGroup();
-    } else if (IS_WINDOWS) {
+    } else if (constants.IS_WINDOWS) {
       for (let folder of [
         "condabin/",
         "Scripts/",
@@ -131,10 +141,10 @@ export async function condaInit(
         "etc/profile.d/",
         "/Lib/site-packages/xonsh/",
       ]) {
-        ownPath = path.join(minicondaPath(options), folder);
+        ownPath = path.join(condaBasePath(options), folder);
         if (fs.existsSync(ownPath)) {
           core.startGroup(`Fixing ${folder} ownership`);
-          await execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
+          await utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
           core.endGroup();
         }
       }
@@ -170,7 +180,7 @@ export async function condaInit(
   // Run conda init
   for (let cmd of ["--all"]) {
     // TODO: determine when it's safe to use mamba
-    await execute([
+    await utils.execute([
       condaExecutable({ ...options, useMamba: false }),
       "init",
       cmd,
@@ -178,12 +188,12 @@ export async function condaInit(
   }
 
   // Rename files
-  if (IS_LINUX) {
+  if (constants.IS_LINUX) {
     let source: string = "~/.bashrc".replace("~", os.homedir());
     let dest: string = "~/.profile".replace("~", os.homedir());
     core.info(`Renaming "${source}" to "${dest}"\n`);
     await io.mv(source, dest);
-  } else if (IS_MAC) {
+  } else if (constants.IS_MAC) {
     let source: string = "~/.bash_profile".replace("~", os.homedir());
     let dest: string = "~/.profile".replace("~", os.homedir());
     core.info(`Renaming "${source}" to "${dest}"\n`);

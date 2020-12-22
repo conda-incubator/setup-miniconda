@@ -5,15 +5,10 @@ import * as tc from "@actions/tool-cache";
 
 import getHrefs from "get-hrefs";
 
-import { ensureLocalInstaller } from "./base";
-import {
-  ARCHITECTURES,
-  IS_UNIX,
-  MINICONDA_BASE_URL,
-  OS_NAMES,
-} from "../constants";
-
 import * as types from "../types";
+import * as constants from "../constants";
+
+import * as base from "./base";
 
 /**
  * List available Miniconda versions
@@ -22,8 +17,10 @@ import * as types from "../types";
  */
 async function minicondaVersions(arch: string): Promise<string[]> {
   try {
-    let extension: string = IS_UNIX ? "sh" : "exe";
-    const downloadPath: string = await tc.downloadTool(MINICONDA_BASE_URL);
+    let extension: string = constants.IS_UNIX ? "sh" : "exe";
+    const downloadPath: string = await tc.downloadTool(
+      constants.MINICONDA_BASE_URL
+    );
     const content: string = fs.readFileSync(downloadPath, "utf8");
     let hrefs: string[] = getHrefs(content);
     hrefs = hrefs.filter((item: string) => item.startsWith("/Miniconda3"));
@@ -50,13 +47,13 @@ export async function downloadMiniconda(
   inputs: types.IActionInputs
 ): Promise<string> {
   // Check valid arch
-  const arch: string = ARCHITECTURES[inputs.architecture];
+  const arch: string = constants.ARCHITECTURES[inputs.architecture];
   if (!arch) {
     throw new Error(`Invalid arch "${inputs.architecture}"!`);
   }
 
-  let extension: string = IS_UNIX ? "sh" : "exe";
-  let osName: string = OS_NAMES[process.platform];
+  let extension: string = constants.IS_UNIX ? "sh" : "exe";
+  let osName: string = constants.OS_NAMES[process.platform];
   const minicondaInstallerName: string = `Miniconda${pythonMajorVersion}-${inputs.minicondaVersion}-${osName}-${arch}.${extension}`;
   core.info(minicondaInstallerName);
 
@@ -70,10 +67,33 @@ export async function downloadMiniconda(
     }
   }
 
-  return await ensureLocalInstaller({
-    url: MINICONDA_BASE_URL + minicondaInstallerName,
+  return await base.ensureLocalInstaller({
+    url: constants.MINICONDA_BASE_URL + minicondaInstallerName,
     tool: `Miniconda${pythonMajorVersion}`,
     version: inputs.minicondaVersion,
     arch: arch,
   });
 }
+
+/**
+ * Provide a path to a Miniconda downloaded from repo.anaconda.com.
+ *
+ * ### Note
+ * Uses the well-known structure of the repo.anaconda.com to resolve and download
+ * a particular Miniconda installer.
+ */
+export const minicondaDownloader: types.IInstallerProvider = {
+  label: "download Miniconda",
+  provides: async (inputs, options) => {
+    return inputs.minicondaVersion !== "" && inputs.installerUrl === "";
+  },
+  installerPath: async (inputs, options) => {
+    return {
+      localInstallerPath: await downloadMiniconda(3, inputs),
+      options: {
+        ...options,
+        useBundled: false,
+      },
+    };
+  },
+};
