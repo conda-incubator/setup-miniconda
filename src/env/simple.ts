@@ -12,7 +12,7 @@ import * as utils from "../utils";
  * In the future, this may need its own providers of environment patches.
  */
 export const ensureSimple: types.IEnvProvider = {
-  label: "create (simple)",
+  label: "conda create (simple)",
   provides: async (inputs, options) => {
     return !(
       options.envSpec?.explicit?.length ||

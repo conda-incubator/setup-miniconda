@@ -39,8 +39,9 @@ export async function installBaseTools(
   let postInstallOptions = { ...options };
   let postInstallActions = [];
   for (const provider of TOOL_PROVIDERS) {
+    core.info(`Do we need to ${provider.label}?`);
     if (await provider.provides(inputs, options)) {
-      core.info(provider.label);
+      core.info(`... will ${provider.label}.`);
       const toolUpdates = await provider.toolPackages(inputs, options);
       tools.push(...toolUpdates.tools);
       postInstallOptions = { ...postInstallOptions, ...toolUpdates.options };

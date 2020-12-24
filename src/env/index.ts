@@ -36,12 +36,13 @@ export async function ensureEnvironment(
   options: types.IDynamicOptions
 ): Promise<void> {
   for (const provider of ENV_PROVIDERS) {
-    core.info(`Can we use ${provider.label}...`);
+    core.info(`Can we use ${provider.label}?`);
     if (await provider.provides(inputs, options)) {
-      core.info(`... will ${provider.label}`);
+      core.info(`... will use ${provider.label}.`);
       const args = await provider.condaArgs(inputs, options);
-      return await core.group(`Updating env from ${provider.label}...`, () =>
-        conda.condaCommand(args, options)
+      return await core.group(
+        `Updating '${inputs.activateEnvironment}' env from ${provider.label}...`,
+        () => conda.condaCommand(args, options)
       );
     }
   }

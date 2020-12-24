@@ -7,7 +7,7 @@ import * as utils from "../utils";
  * The env providers have separate mechanisms for updating conda.
  */
 export const updatePython: types.IToolProvider = {
-  label: "Update python",
+  label: "update python",
   provides: async (inputs, options) =>
     !!(inputs.pythonVersion && utils.isBaseEnv(inputs.activateEnvironment)),
   toolPackages: async (inputs, options) => {

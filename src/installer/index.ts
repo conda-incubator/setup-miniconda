@@ -32,9 +32,9 @@ export async function getLocalInstallerPath(
   options: types.IDynamicOptions
 ) {
   for (const provider of INSTALLER_PROVIDERS) {
-    core.info(`Can we ${provider.label}?`);
+    core.info(`Can we use ${provider.label}?`);
     if (await provider.provides(inputs, options)) {
-      core.info(`... will ${provider.label}`);
+      core.info(`... will use ${provider.label}.`);
       return provider.installerPath(inputs, options);
     }
   }

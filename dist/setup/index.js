@@ -1160,7 +1160,7 @@ const utils = __importStar(__webpack_require__(163));
  * In the future, this may need its own providers of environment patches.
  */
 exports.ensureSimple = {
-    label: "create (simple)",
+    label: "conda create (simple)",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         var _a, _b, _c;
         return !(((_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.explicit) === null || _b === void 0 ? void 0 : _b.length) ||
@@ -2119,8 +2119,9 @@ function installBaseTools(inputs, options) {
         let postInstallOptions = Object.assign({}, options);
         let postInstallActions = [];
         for (const provider of TOOL_PROVIDERS) {
+            core.info(`Do we need to ${provider.label}?`);
             if (yield provider.provides(inputs, options)) {
-                core.info(provider.label);
+                core.info(`... will ${provider.label}.`);
                 const toolUpdates = yield provider.toolPackages(inputs, options);
                 tools.push(...toolUpdates.tools);
                 postInstallOptions = Object.assign(Object.assign({}, postInstallOptions), toolUpdates.options);
@@ -6463,7 +6464,7 @@ const utils = __importStar(__webpack_require__(163));
  * The env providers have separate mechanisms for updating conda.
  */
 exports.updatePython = {
-    label: "Update python",
+    label: "update python",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return !!(inputs.pythonVersion && utils.isBaseEnv(inputs.activateEnvironment)); }),
     toolPackages: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         let updates = {
@@ -11307,7 +11308,7 @@ exports.updateCondaBuild = void 0;
 const utils = __importStar(__webpack_require__(163));
 /** Install `conda-build` in the `base` env at a specified version */
 exports.updateCondaBuild = {
-    label: "Update conda-build",
+    label: "update conda-build",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return inputs.condaBuildVersion !== ""; }),
     toolPackages: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         return {
@@ -13710,23 +13711,25 @@ const utils = __importStar(__webpack_require__(163));
 const conda = __importStar(__webpack_require__(259));
 /** Install `mamba` in the `base` env at a specified version */
 exports.updateMamba = {
-    label: "Update mamba",
+    label: "update mamba",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return inputs.mambaVersion !== ""; }),
     toolPackages: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
         return {
             tools: [utils.makeSpec("mamba", inputs.mambaVersion)],
-            options,
+            options: Object.assign(Object.assign({}, options), { useMamba: true }),
         };
     }),
     postInstall: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
-        if (constants.IS_WINDOWS) {
-            core.info("Creating bash wrapper for `mamba`");
-            // Add bat-less forwarder for bash users on Windows
-            const mambaBat = conda.condaExecutable(options).replace("\\", "/");
-            const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
-            fs.writeFileSync(mambaBat.slice(0, -4), contents);
+        if (!constants.IS_WINDOWS) {
+            return;
         }
+        core.info("Creating bash wrapper for `mamba`...");
+        // Add bat-less forwarder for bash users on Windows
+        const mambaBat = conda.condaExecutable(options).replace("\\", "/");
+        const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
+        fs.writeFileSync(mambaBat.slice(0, -4), contents);
+        core.info(`... wrote ${mambaBat}:\n${contents}`);
     }),
 };
 
@@ -15833,7 +15836,7 @@ exports.ensureExplicit = void 0;
  * or `conda-lock`
  */
 exports.ensureExplicit = {
-    label: "create (explicit)",
+    label: "conda create (from explicit)",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { var _a, _b; return !!((_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.explicit) === null || _b === void 0 ? void 0 : _b.length); }),
     condaArgs: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         if (inputs.pythonVersion) {
@@ -20604,7 +20607,7 @@ const PATCH_PROVIDERS = [
  * If patched, a temporary file will be created with the patches
  */
 exports.ensureYaml = {
-    label: "env update",
+    label: "conda env update",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { var _a; return !!Object.keys(((_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) || {}).length; }),
     condaArgs: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         var _b;
@@ -22102,9 +22105,9 @@ const INSTALLER_PROVIDERS = [
 function getLocalInstallerPath(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         for (const provider of INSTALLER_PROVIDERS) {
-            core.info(`Can we ${provider.label}?`);
+            core.info(`Can we use ${provider.label}?`);
             if (yield provider.provides(inputs, options)) {
-                core.info(`... will ${provider.label}`);
+                core.info(`... will use ${provider.label}.`);
                 return provider.installerPath(inputs, options);
             }
         }
@@ -26457,7 +26460,7 @@ exports.updateConda = void 0;
 const utils = __importStar(__webpack_require__(163));
 /** Install `conda` in the `base` env at a specified version */
 exports.updateConda = {
-    label: "Update conda",
+    label: "update conda",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         return inputs.condaVersion !== "" ||
             inputs.condaConfig.auto_update_conda === "yes";
@@ -35273,11 +35276,11 @@ const ENV_PROVIDERS = [
 function ensureEnvironment(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         for (const provider of ENV_PROVIDERS) {
-            core.info(`Can we use ${provider.label}...`);
+            core.info(`Can we use ${provider.label}?`);
             if (yield provider.provides(inputs, options)) {
-                core.info(`... will ${provider.label}`);
+                core.info(`... will use ${provider.label}.`);
                 const args = yield provider.condaArgs(inputs, options);
-                return yield core.group(`Updating env from ${provider.label}...`, () => conda.condaCommand(args, options));
+                return yield core.group(`Updating '${inputs.activateEnvironment}' env from ${provider.label}...`, () => conda.condaCommand(args, options));
             }
         }
         throw Error(`'activate-environment: ${inputs.activateEnvironment}' could not be created`);

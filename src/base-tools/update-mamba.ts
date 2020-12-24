@@ -10,7 +10,7 @@ import * as conda from "../conda";
 
 /** Install `mamba` in the `base` env at a specified version */
 export const updateMamba: types.IToolProvider = {
-  label: "Update mamba",
+  label: "update mamba",
   provides: async (inputs, options) => inputs.mambaVersion !== "",
   toolPackages: async (inputs, options) => {
     core.warning(
@@ -18,16 +18,19 @@ export const updateMamba: types.IToolProvider = {
     );
     return {
       tools: [utils.makeSpec("mamba", inputs.mambaVersion)],
-      options,
+      options: { ...options, useMamba: true },
     };
   },
   postInstall: async (inputs, options) => {
-    if (constants.IS_WINDOWS) {
-      core.info("Creating bash wrapper for `mamba`");
-      // Add bat-less forwarder for bash users on Windows
-      const mambaBat = conda.condaExecutable(options).replace("\\", "/");
-      const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
-      fs.writeFileSync(mambaBat.slice(0, -4), contents);
+    if (!constants.IS_WINDOWS) {
+      return;
     }
+    core.info("Creating bash wrapper for `mamba`...");
+    // Add bat-less forwarder for bash users on Windows
+    const mambaBat = conda.condaExecutable(options).replace("\\", "/");
+
+    const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
+    fs.writeFileSync(mambaBat.slice(0, -4), contents);
+    core.info(`... wrote ${mambaBat}:\n${contents}`);
   },
 };

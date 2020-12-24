@@ -59,7 +59,7 @@ const PATCH_PROVIDERS: IYAMLEnvPatchProvider[] = [
  * If patched, a temporary file will be created with the patches
  */
 export const ensureYaml: types.IEnvProvider = {
-  label: "env update",
+  label: "conda env update",
   provides: async (inputs, options) =>
     !!Object.keys(options.envSpec?.yaml || {}).length,
   condaArgs: async (inputs, options) => {
