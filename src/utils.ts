@@ -6,15 +6,9 @@ import * as exec from "@actions/exec";
 import * as core from "@actions/core";
 import * as constants from "./constants";
 
-import {
-  CONDA_CACHE_FOLDER,
-  FORCED_ERRORS,
-  IGNORED_WARNINGS,
-} from "./constants";
-
 /** The folder to use as the conda package cache */
 export function cacheFolder() {
-  return path.join(os.homedir(), CONDA_CACHE_FOLDER);
+  return path.join(os.homedir(), constants.CONDA_CACHE_FOLDER);
 }
 
 /**
@@ -33,7 +27,7 @@ export async function execute(command: string[]): Promise<void> {
     listeners: {
       stdout: (data: Buffer) => {
         const stringData = data.toString();
-        for (const forced_error of FORCED_ERRORS) {
+        for (const forced_error of constants.FORCED_ERRORS) {
           if (stringData.includes(forced_error)) {
             throw new Error(`"${command}" failed with "${forced_error}"`);
           }
@@ -42,7 +36,7 @@ export async function execute(command: string[]): Promise<void> {
       },
       stderr: (data: Buffer) => {
         const stringData = data.toString();
-        for (const ignore of IGNORED_WARNINGS) {
+        for (const ignore of constants.IGNORED_WARNINGS) {
           if (stringData.includes(ignore)) {
             return;
           }

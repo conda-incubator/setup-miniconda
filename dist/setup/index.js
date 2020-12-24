@@ -2099,7 +2099,7 @@ const update_conda_build_1 = __webpack_require__(234);
  * To add a new tool provider,
  * - implement IToolProvider and add it here
  * - probably add inputs to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add any new RULEs in ../input.ts, for example if certain inputs make no sense
  * - add a test!
  */
 const TOOL_PROVIDERS = [
@@ -8195,10 +8195,9 @@ const stream = __importStar(__webpack_require__(413));
 const exec = __importStar(__webpack_require__(986));
 const core = __importStar(__webpack_require__(470));
 const constants = __importStar(__webpack_require__(211));
-const constants_1 = __webpack_require__(211);
 /** The folder to use as the conda package cache */
 function cacheFolder() {
-    return path.join(os.homedir(), constants_1.CONDA_CACHE_FOLDER);
+    return path.join(os.homedir(), constants.CONDA_CACHE_FOLDER);
 }
 exports.cacheFolder = cacheFolder;
 /**
@@ -8218,7 +8217,7 @@ function execute(command) {
             listeners: {
                 stdout: (data) => {
                     const stringData = data.toString();
-                    for (const forced_error of constants_1.FORCED_ERRORS) {
+                    for (const forced_error of constants.FORCED_ERRORS) {
                         if (stringData.includes(forced_error)) {
                             throw new Error(`"${command}" failed with "${forced_error}"`);
                         }
@@ -8227,7 +8226,7 @@ function execute(command) {
                 },
                 stderr: (data) => {
                     const stringData = data.toString();
-                    for (const ignore of constants_1.IGNORED_WARNINGS) {
+                    for (const ignore of constants.IGNORED_WARNINGS) {
                         if (stringData.includes(ignore)) {
                             return;
                         }
@@ -20587,7 +20586,7 @@ const utils = __importStar(__webpack_require__(163));
  * To add a new patch
  * - implement IEnvPatchProvider and add it here
  * - probably add inputs to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add any new RULEs in ../input.ts, for example if certain inputs make no sense
  * - add a test!
  */
 const PATCH_PROVIDERS = [
@@ -22092,7 +22091,7 @@ const bundled_miniconda_1 = __webpack_require__(468);
  * To add a new installer,
  * - implement IInstallerProvider and add it here
  * - add to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if the installer is not
+ * - add any new RULEs in ../input.ts, for example if the installer is not
  *   compatible with some architectures
  * - add a test!
  */
@@ -35262,7 +35261,7 @@ const simple_1 = __webpack_require__(21);
  * To add a new env creation mechanism,
  * - implement IEnvProvider and add it here
  * - probably add inputs to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add any new RULEs in ../input.ts, for example if certain inputs make no sense
  * - add a test!
  */
 const ENV_PROVIDERS = [

@@ -19,7 +19,7 @@ import { ensureSimple } from "./simple";
  * To add a new env creation mechanism,
  * - implement IEnvProvider and add it here
  * - probably add inputs to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add any new RULEs in ../input.ts, for example if certain inputs make no sense
  * - add a test!
  */
 const ENV_PROVIDERS: types.IEnvProvider[] = [

@@ -1070,10 +1070,9 @@ const stream = __importStar(__webpack_require__(413));
 const exec = __importStar(__webpack_require__(986));
 const core = __importStar(__webpack_require__(470));
 const constants = __importStar(__webpack_require__(211));
-const constants_1 = __webpack_require__(211);
 /** The folder to use as the conda package cache */
 function cacheFolder() {
-    return path.join(os.homedir(), constants_1.CONDA_CACHE_FOLDER);
+    return path.join(os.homedir(), constants.CONDA_CACHE_FOLDER);
 }
 exports.cacheFolder = cacheFolder;
 /**
@@ -1093,7 +1092,7 @@ function execute(command) {
             listeners: {
                 stdout: (data) => {
                     const stringData = data.toString();
-                    for (const forced_error of constants_1.FORCED_ERRORS) {
+                    for (const forced_error of constants.FORCED_ERRORS) {
                         if (stringData.includes(forced_error)) {
                             throw new Error(`"${command}" failed with "${forced_error}"`);
                         }
@@ -1102,7 +1101,7 @@ function execute(command) {
                 },
                 stderr: (data) => {
                     const stringData = data.toString();
-                    for (const ignore of constants_1.IGNORED_WARNINGS) {
+                    for (const ignore of constants.IGNORED_WARNINGS) {
                         if (stringData.includes(ignore)) {
                             return;
                         }

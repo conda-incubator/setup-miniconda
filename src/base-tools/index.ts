@@ -16,7 +16,7 @@ import { updateCondaBuild } from "./update-conda-build";
  * To add a new tool provider,
  * - implement IToolProvider and add it here
  * - probably add inputs to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add any new RULEs in ../input.ts, for example if certain inputs make no sense
  * - add a test!
  */
 const TOOL_PROVIDERS: types.IToolProvider[] = [

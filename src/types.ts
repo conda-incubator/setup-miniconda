@@ -173,14 +173,14 @@ export interface IToolProvider {
     options: IDynamicOptions
   ) => Promise<boolean>;
   /**
-   * Conda package specs and option yupdates for tools to install after updating
+   * Conda package specs and option updates for tools to install after updating
    */
   toolPackages: (
     inputs: IActionInputs,
     options: IDynamicOptions
   ) => Promise<IToolUpdates>;
   /**
-   * Steps to peform after the env is updated, and potentially reconfigured
+   * Steps to perform after the env is updated, and potentially reconfigured
    */
   postInstall?: (
     inputs: IActionInputs,

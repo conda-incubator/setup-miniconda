@@ -16,7 +16,7 @@ import { bundledMinicondaUser } from "./bundled-miniconda";
  * To add a new installer,
  * - implement IInstallerProvider and add it here
  * - add to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if the installer is not
+ * - add any new RULEs in ../input.ts, for example if the installer is not
  *   compatible with some architectures
  * - add a test!
  */
