@@ -3,6 +3,16 @@ import * as core from "@actions/core";
 import * as constants from "./constants";
 import * as types from "./types";
 
+/**
+ * A validator for action inputs: any findings will stop the action.
+ *
+ * ### Note
+ * Should return `false` if there are no findings,
+ * or a string providing an as-informative-as-possible message.
+ *
+ * All messages should be provided, so no errors should be thrown (e.g. from
+ * network calls or subprocesses).
+ */
 interface IRule {
   (inputs: types.IActionInputs, condaConfig: types.ICondaConfig):
     | string
@@ -12,7 +22,17 @@ interface IRule {
 const urlExt = (url: string) => path.posix.extname(new URL(url).pathname);
 
 /**
+ * The currrent known set of input validation rules.
  *
+ * ### Note
+ * Adding a new validation rule:
+ * - implement IRule
+ * - add it here
+ * - add a test!
+ *
+ * When the #107 changes have been completed, some of these rules can be moved to
+ * specific providers, but still checked up-front, with the name and type of provider
+ * for additional context.
  */
 const RULES: IRule[] = [
   (i, c) =>
@@ -44,7 +64,7 @@ const RULES: IRule[] = [
 ];
 
 /*
- * Parse, validate, and normalize string-ish inputs from `with`
+ * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
  */
 export async function parseInputs(): Promise<types.IActionInputs> {
   const inputs = Object.freeze({
@@ -72,7 +92,7 @@ export async function parseInputs(): Promise<types.IActionInputs> {
       channels: core.getInput("channels"),
       show_channel_urls: core.getInput("show-channel-urls"),
       use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
-      // these are always set to avoid terminal issues
+      // These are always set to avoid terminal issues
       always_yes: "true",
       changeps1: "false",
     }),

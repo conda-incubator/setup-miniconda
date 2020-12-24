@@ -11,31 +11,37 @@ import * as constants from "../constants";
 import * as utils from "../utils";
 
 /**
- * Envs specified in YAML can be patched according to some specific rules.
+ * Describes whether and how a YAML env should be patched to add a specific package
  *
  * ## Notes
  * This is only applied for `python` at this point, but could in turn be made
- * configurable for other complex options, e.g. gpu, etc.
+ * configurable for other complex options, e.g. GPU, etc.
  */
-interface IEnvPatchProvider {
+interface IYAMLEnvPatchProvider {
+  /** The human-readable name shown in logs */
   label: string;
+  /** Whether this patch should be applied for the given `inputs` and `options` */
   provides: (
     inputs: types.IActionInputs,
     options: types.IDynamicOptions
   ) => boolean;
+  /** A regular expression for detecting whether a spec will need to be replaced */
   specMatch: RegExp;
+  /** The new conda version spec that should be added/patched into the environment */
   spec: (inputs: types.IActionInputs, options: types.IDynamicOptions) => string;
 }
 
 /**
- * Install an environment from an `env` file as accepted by `conda env update`.
+ * The current known providers of patches to `environment.yml`
  *
- * ### Notes
- * May apply patches to ensure consistency with `inputs`
- *
- * If patched, a temporary file will be created with the patches
+ * ### Note
+ * To add a new patch
+ * - implement IEnvPatchProvider and add it here
+ * - probably add inputs to `../../action.yaml`
+ * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add a test!
  */
-const providers: IEnvPatchProvider[] = [
+const PATCH_PROVIDERS: IYAMLEnvPatchProvider[] = [
   {
     label: "python",
     provides: (inputs) => !!inputs.pythonVersion,
@@ -43,6 +49,15 @@ const providers: IEnvPatchProvider[] = [
     spec: ({ pythonVersion }) => utils.makeSpec("python", pythonVersion),
   },
 ];
+
+/**
+ * Install an environment from an `env` file as accepted by `conda env update`.
+ *
+ * ### Note
+ * May apply patches to ensure consistency with `inputs`
+ *
+ * If patched, a temporary file will be created with the patches
+ */
 export const ensureYaml: types.IEnvProvider = {
   label: "env update",
   provides: async (inputs, options) =>
@@ -58,12 +73,12 @@ export const ensureYaml: types.IEnvProvider = {
     let envFile = inputs.environmentFile;
     let patchesApplied: string[] = [];
 
-    // make a copy, update with each patch
+    // Make a copy, update with each patch
     let dependencies: types.TYamlDependencies = [
       ...(yamlData.dependencies || []),
     ];
 
-    for (const provider of providers) {
+    for (const provider of PATCH_PROVIDERS) {
       if (!provider.provides(inputs, options)) {
         continue;
       }
@@ -73,7 +88,7 @@ export const ensureYaml: types.IEnvProvider = {
       let patchedDeps = [];
 
       for (const spec of dependencies || []) {
-        // ignore pip
+        // Ignore pip deps
         if (!(spec instanceof String) || !spec.match(constants.PYTHON_SPEC)) {
           patchedDeps.push(spec);
           continue;
@@ -82,7 +97,7 @@ export const ensureYaml: types.IEnvProvider = {
         didPatch = true;
       }
 
-      // if there was nothing to patch, just append
+      // If there was nothing to patch, just append
       if (!didPatch) {
         patchedDeps.push(newSpec);
       }
@@ -95,7 +110,8 @@ export const ensureYaml: types.IEnvProvider = {
       const patchedYaml = yaml.safeDump({ ...yamlData, dependencies });
       envFile = path.join(os.tmpdir(), "environment-patched.yml");
       core.info(
-        `Making copy of 'environment-file: ${inputs.environmentFile}'\n${patchedYaml}`
+        `Making patched copy of 'environment-file: ${inputs.environmentFile}'
+        ${patchedYaml}`
       );
       fs.writeFileSync(envFile, patchedYaml, "utf8");
     }

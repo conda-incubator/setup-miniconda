@@ -6488,7 +6488,7 @@ const conda = __importStar(__webpack_require__(259));
  *
  * @returns the local path to the installer (with the correct extension)
  *
- * ### Notes
+ * ### Note
  * Assume `url` at least ends with the correct executable extension
  * for this platform, but don't make any other assumptions about `url`'s format:
  * - might include GET params (?&) and hashes (#),
@@ -6500,10 +6500,10 @@ function ensureLocalInstaller(options) {
         core.startGroup("Ensuring Installer...");
         const url = new url_1.URL(options.url);
         const installerName = path.basename(url.pathname);
-        // as a URL, we assume posix paths
+        // As a URL, we assume posix paths
         const installerExtension = path.posix.extname(installerName);
         const tool = options.tool != null ? options.tool : installerName;
-        // create a fake version if neccessary
+        // Create a fake version if neccessary
         const version = options.version != null
             ? options.version
             : "0.0.0-" +
@@ -6524,7 +6524,7 @@ function ensureLocalInstaller(options) {
             core.info(`Did not find ${installerName} in cache, downloading...`);
             const rawDownloadPath = yield tc.downloadTool(options.url);
             core.info(`Downloaded ${installerName}, appending ${installerExtension}`);
-            // always ensure the installer ends with a known path
+            // Always ensure the installer ends with a known path
             executablePath = rawDownloadPath + installerExtension;
             yield io.mv(rawDownloadPath, executablePath);
             core.info(`Caching ${tool}@${version}...`);
@@ -6540,7 +6540,7 @@ function ensureLocalInstaller(options) {
 }
 exports.ensureLocalInstaller = ensureLocalInstaller;
 /**
- * Install Miniconda
+ * Create a conda base (ne root) env from a `constructor`-compatible CLI executable
  *
  * @param installerPath must have an appropriate extension for this platform
  */
@@ -8083,7 +8083,7 @@ function execute(command) {
 }
 exports.execute = execute;
 /**
- * create a conda veersion spec string.
+ * Create a conda version spec string.
  *
  * ### Note
  * Generally favors '=' unless specified more tightly.
@@ -9250,9 +9250,12 @@ exports.OS_NAMES = {
     darwin: "MacOSX",
     linux: "Linux",
 };
+/**
+ * Known extensions for `constructor`-generated installers supported
+ */
 exports.KNOWN_EXTENSIONS = [".exe", ".sh"];
 /**
- * errors that are always probably spurious
+ * Errors that are always probably spurious
  */
 exports.IGNORED_WARNINGS = [
     // appear on win install, we can swallow them
@@ -9265,23 +9268,23 @@ exports.IGNORED_WARNINGS = [
     `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
 ];
 /**
- * warnings that should be errors
+ * Warnings that should be errors
  */
 exports.FORCED_ERRORS = [
     // conda env create will ignore invalid sections and move on
     `EnvironmentSectionNotValid`,
 ];
 /**
- * avoid spurious conda warnings before we have a chance to update them
+ * Avoid spurious conda warnings before we have a chance to update them
  */
 exports.BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
 /**
- * the conda config file
+ * The conda config file
  */
 exports.CONDARC_PATH = path.join(os.homedir(), ".condarc");
 /** Where to put files. Should eventually be configurable */
 exports.CONDA_CACHE_FOLDER = "conda_pkgs_dir";
-/** the environment variable exported */
+/** The environment variable exported */
 exports.ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
 /**
  * A regular expression for detecting whether a spec is the python package, not
@@ -12866,10 +12869,11 @@ function applyCondaConfiguration(inputs, options) {
     var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
         const configEntries = Object.entries(inputs.condaConfig);
-        // channels are special: if specified as an action input, these take priority
+        // Channels are special: if specified as an action input, these take priority
+        // over what is found in (at present) a YAML-based environment
         let channels = inputs.condaConfig.channels
             .trim()
-            .split(/[,\n]/)
+            .split(/,/)
             .map((c) => c.trim())
             .filter((c) => c.length);
         if (!channels.length && ((_c = (_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) === null || _b === void 0 ? void 0 : _b.channels) === null || _c === void 0 ? void 0 : _c.length)) {
@@ -12880,7 +12884,7 @@ function applyCondaConfiguration(inputs, options) {
             core.info(`Adding channel '${channel}'`);
             yield condaCommand(["config", "--add", "channels", channel], options);
         }
-        // all other options
+        // All other options are just passed as their string representations
         for (const [key, value] of configEntries) {
             if (value.trim().length === 0 || key === "channels") {
                 continue;
@@ -12893,7 +12897,7 @@ function applyCondaConfiguration(inputs, options) {
                 core.warning(err);
             }
         }
-        // log all config
+        // Log all configuration information
         yield condaCommand(["config", "--show-sources"], options);
         yield condaCommand(["config", "--show"], options);
     });
@@ -13337,7 +13341,17 @@ const core = __importStar(__webpack_require__(470));
 const constants = __importStar(__webpack_require__(211));
 const urlExt = (url) => path.posix.extname(new URL(url).pathname);
 /**
+ * The currrent known set of input validation rules.
  *
+ * ### Note
+ * Adding a new validation rule:
+ * - implement IRule
+ * - add it here
+ * - add a test!
+ *
+ * When the #107 changes have been completed, some of these rules can be moved to
+ * specific providers, but still checked up-front, with the name and type of provider
+ * for additional context.
  */
 const RULES = [
     (i, c) => !!(i.condaVersion && c.auto_update_conda === "true") &&
@@ -13357,7 +13371,7 @@ const RULES = [
         `'architecture: ${i.architecture}' is not supported by recent versions of Miniconda`,
 ];
 /*
- * Parse, validate, and normalize string-ish inputs from `with`
+ * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
  */
 function parseInputs() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -13384,7 +13398,7 @@ function parseInputs() {
                 channels: core.getInput("channels"),
                 show_channel_urls: core.getInput("show-channel-urls"),
                 use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
-                // these are always set to avoid terminal issues
+                // These are always set to avoid terminal issues
                 always_yes: "true",
                 changeps1: "false",
             }),
@@ -17693,7 +17707,7 @@ const constants = __importStar(__webpack_require__(211));
 const conda = __importStar(__webpack_require__(259));
 const utils = __importStar(__webpack_require__(163));
 /**
- * Add Conda executable to PATH
+ * Add Conda executable to PATH environment variable
  */
 function setPathVariables(options) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -17709,7 +17723,7 @@ function setPathVariables(options) {
 }
 exports.setPathVariables = setPathVariables;
 /**
- * Ensure the conda cache path is available as a variable
+ * Ensure the conda cache path is available as an environment variable
  */
 function setCacheVariable(options) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -18856,7 +18870,7 @@ exports.bundledMinicondaUser = {
             inputs.installerUrl === "");
     }),
     installerPath: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
-        // no-op
+        // No actions are performed. This is the only place `useBundled` will ever be true.
         return {
             localInstallerPath: "",
             options: Object.assign(Object.assign({}, options), { useBundled: true }),
@@ -20211,7 +20225,7 @@ function setupMiniconda(inputs) {
         if (inputs.condaConfigFile) {
             yield core.group("Copying condarc file...", () => conda.copyConfig(inputs));
         }
-        // for potential 'channels'
+        // For potential 'channels' that may alter configuration
         options.envSpec = yield core.group("Parsing environment...", () => env.getEnvSpec(inputs));
         yield core.group("Configuring conda package cache...", () => outputs.setCacheVariable(options));
         yield core.group("Applying initial configuration...", () => conda.applyCondaConfiguration(inputs, options));
@@ -20262,7 +20276,7 @@ function setupMiniconda(inputs) {
     });
 }
 /**
- * Run
+ * Main `setup-miniconda` entry point
  */
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -20324,14 +20338,16 @@ const core = __importStar(__webpack_require__(470));
 const constants = __importStar(__webpack_require__(211));
 const utils = __importStar(__webpack_require__(163));
 /**
- * Install an environment from an `env` file as accepted by `conda env update`.
+ * The current known providers of patches to `environment.yml`
  *
- * ### Notes
- * May apply patches to ensure consistency with `inputs`
- *
- * If patched, a temporary file will be created with the patches
+ * ### Note
+ * To add a new patch
+ * - implement IEnvPatchProvider and add it here
+ * - probably add inputs to `../../action.yaml`
+ * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add a test!
  */
-const providers = [
+const PATCH_PROVIDERS = [
     {
         label: "python",
         provides: (inputs) => !!inputs.pythonVersion,
@@ -20339,6 +20355,14 @@ const providers = [
         spec: ({ pythonVersion }) => utils.makeSpec("python", pythonVersion),
     },
 ];
+/**
+ * Install an environment from an `env` file as accepted by `conda env update`.
+ *
+ * ### Note
+ * May apply patches to ensure consistency with `inputs`
+ *
+ * If patched, a temporary file will be created with the patches
+ */
 exports.ensureYaml = {
     label: "env update",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { var _a; return !!Object.keys(((_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) || {}).length; }),
@@ -20350,11 +20374,11 @@ exports.ensureYaml = {
         }
         let envFile = inputs.environmentFile;
         let patchesApplied = [];
-        // make a copy, update with each patch
+        // Make a copy, update with each patch
         let dependencies = [
             ...(yamlData.dependencies || []),
         ];
-        for (const provider of providers) {
+        for (const provider of PATCH_PROVIDERS) {
             if (!provider.provides(inputs, options)) {
                 continue;
             }
@@ -20362,7 +20386,7 @@ exports.ensureYaml = {
             let didPatch = false;
             let patchedDeps = [];
             for (const spec of dependencies || []) {
-                // ignore pip
+                // Ignore pip deps
                 if (!(spec instanceof String) || !spec.match(constants.PYTHON_SPEC)) {
                     patchedDeps.push(spec);
                     continue;
@@ -20370,7 +20394,7 @@ exports.ensureYaml = {
                 patchedDeps.push(newSpec);
                 didPatch = true;
             }
-            // if there was nothing to patch, just append
+            // If there was nothing to patch, just append
             if (!didPatch) {
                 patchedDeps.push(newSpec);
             }
@@ -20380,7 +20404,8 @@ exports.ensureYaml = {
         if (patchesApplied.length) {
             const patchedYaml = yaml.safeDump(Object.assign(Object.assign({}, yamlData), { dependencies }));
             envFile = path.join(os.tmpdir(), "environment-patched.yml");
-            core.info(`Making copy of 'environment-file: ${inputs.environmentFile}'\n${patchedYaml}`);
+            core.info(`Making patched copy of 'environment-file: ${inputs.environmentFile}'
+        ${patchedYaml}`);
             fs.writeFileSync(envFile, patchedYaml, "utf8");
         }
         return [
@@ -21826,8 +21851,9 @@ const bundled_miniconda_1 = __webpack_require__(468);
  * - add to `../../action.yaml`
  * - any any new RULEs in ../input.ts, for example if the installer is not
  *   compatible with some architectures
+ * - add a test!
  */
-const providers = [
+const INSTALLER_PROVIDERS = [
     bundled_miniconda_1.bundledMinicondaUser,
     download_url_1.urlDownloader,
     download_miniconda_1.minicondaDownloader,
@@ -21835,7 +21861,7 @@ const providers = [
 /** See if any provider works with the given inputs and options */
 function getLocalInstallerPath(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        for (const provider of providers) {
+        for (const provider of INSTALLER_PROVIDERS) {
             core.info(`Can we ${provider.label}?`);
             if (yield provider.provides(inputs, options)) {
                 core.info(`... will ${provider.label}`);
@@ -34929,7 +34955,17 @@ const conda = __importStar(__webpack_require__(259));
 const explicit_1 = __webpack_require__(285);
 const yaml_1 = __webpack_require__(528);
 const simple_1 = __webpack_require__(21);
-const providers = [
+/**
+ * The current known providers of envs
+ *
+ * ### Note
+ * To add a new env creation mechanism,
+ * - implement IEnvProvider and add it here
+ * - probably add inputs to `../../action.yaml`
+ * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add a test!
+ */
+const ENV_PROVIDERS = [
     explicit_1.ensureExplicit,
     simple_1.ensureSimple,
     yaml_1.ensureYaml,
@@ -34939,7 +34975,7 @@ const providers = [
  */
 function ensureEnvironment(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        for (const provider of providers) {
+        for (const provider of ENV_PROVIDERS) {
             core.info(`Can we use ${provider.label}...`);
             if (yield provider.provides(inputs, options)) {
                 core.info(`... will ${provider.label}`);

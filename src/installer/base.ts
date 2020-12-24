@@ -14,7 +14,7 @@ import * as conda from "../conda";
  *
  * @returns the local path to the installer (with the correct extension)
  *
- * ### Notes
+ * ### Note
  * Assume `url` at least ends with the correct executable extension
  * for this platform, but don't make any other assumptions about `url`'s format:
  * - might include GET params (?&) and hashes (#),
@@ -29,10 +29,10 @@ export async function ensureLocalInstaller(
   const url = new URL(options.url);
 
   const installerName = path.basename(url.pathname);
-  // as a URL, we assume posix paths
+  // As a URL, we assume posix paths
   const installerExtension = path.posix.extname(installerName);
   const tool = options.tool != null ? options.tool : installerName;
-  // create a fake version if neccessary
+  // Create a fake version if neccessary
   const version =
     options.version != null
       ? options.version
@@ -58,7 +58,7 @@ export async function ensureLocalInstaller(
     core.info(`Did not find ${installerName} in cache, downloading...`);
     const rawDownloadPath = await tc.downloadTool(options.url);
     core.info(`Downloaded ${installerName}, appending ${installerExtension}`);
-    // always ensure the installer ends with a known path
+    // Always ensure the installer ends with a known path
     executablePath = rawDownloadPath + installerExtension;
     await io.mv(rawDownloadPath, executablePath);
     core.info(`Caching ${tool}@${version}...`);
@@ -82,7 +82,7 @@ export async function ensureLocalInstaller(
 }
 
 /**
- * Install Miniconda
+ * Create a conda base (ne root) env from a `constructor`-compatible CLI executable
  *
  * @param installerPath must have an appropriate extension for this platform
  */

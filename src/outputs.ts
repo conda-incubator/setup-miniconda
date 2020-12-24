@@ -11,7 +11,7 @@ import * as conda from "./conda";
 import * as utils from "./utils";
 
 /**
- * Add Conda executable to PATH
+ * Add Conda executable to PATH environment variable
  */
 export async function setPathVariables(
   options: types.IDynamicOptions
@@ -27,7 +27,7 @@ export async function setPathVariables(
 }
 
 /**
- * Ensure the conda cache path is available as a variable
+ * Ensure the conda cache path is available as an environment variable
  */
 export async function setCacheVariable(options: types.IDynamicOptions) {
   const folder = utils.cacheFolder();

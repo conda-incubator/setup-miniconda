@@ -7,6 +7,9 @@ import * as io from "@actions/io";
 
 import * as utils from "./utils";
 
+/**
+ * Clean up the conda cache directory
+ */
 async function run(): Promise<void> {
   try {
     const cacheFolder = utils.cacheFolder();

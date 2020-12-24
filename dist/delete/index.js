@@ -1110,7 +1110,7 @@ function execute(command) {
 }
 exports.execute = execute;
 /**
- * create a conda veersion spec string.
+ * Create a conda version spec string.
  *
  * ### Note
  * Generally favors '=' unless specified more tightly.
@@ -1176,9 +1176,12 @@ exports.OS_NAMES = {
     darwin: "MacOSX",
     linux: "Linux",
 };
+/**
+ * Known extensions for `constructor`-generated installers supported
+ */
 exports.KNOWN_EXTENSIONS = [".exe", ".sh"];
 /**
- * errors that are always probably spurious
+ * Errors that are always probably spurious
  */
 exports.IGNORED_WARNINGS = [
     // appear on win install, we can swallow them
@@ -1191,23 +1194,23 @@ exports.IGNORED_WARNINGS = [
     `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
 ];
 /**
- * warnings that should be errors
+ * Warnings that should be errors
  */
 exports.FORCED_ERRORS = [
     // conda env create will ignore invalid sections and move on
     `EnvironmentSectionNotValid`,
 ];
 /**
- * avoid spurious conda warnings before we have a chance to update them
+ * Avoid spurious conda warnings before we have a chance to update them
  */
 exports.BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
 /**
- * the conda config file
+ * The conda config file
  */
 exports.CONDARC_PATH = path.join(os.homedir(), ".condarc");
 /** Where to put files. Should eventually be configurable */
 exports.CONDA_CACHE_FOLDER = "conda_pkgs_dir";
-/** the environment variable exported */
+/** The environment variable exported */
 exports.ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
 /**
  * A regular expression for detecting whether a spec is the python package, not
@@ -1270,6 +1273,9 @@ const path = __importStar(__webpack_require__(622));
 const core = __importStar(__webpack_require__(470));
 const io = __importStar(__webpack_require__(1));
 const utils = __importStar(__webpack_require__(163));
+/**
+ * Clean up the conda cache directory
+ */
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {

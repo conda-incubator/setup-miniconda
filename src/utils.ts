@@ -50,7 +50,7 @@ export async function execute(command: string[]): Promise<void> {
 }
 
 /**
- * create a conda veersion spec string.
+ * Create a conda version spec string.
  *
  * ### Note
  * Generally favors '=' unless specified more tightly.

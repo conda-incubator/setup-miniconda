@@ -18,8 +18,9 @@ import { bundledMinicondaUser } from "./bundled-miniconda";
  * - add to `../../action.yaml`
  * - any any new RULEs in ../input.ts, for example if the installer is not
  *   compatible with some architectures
+ * - add a test!
  */
-const providers: types.IInstallerProvider[] = [
+const INSTALLER_PROVIDERS: types.IInstallerProvider[] = [
   bundledMinicondaUser,
   urlDownloader,
   minicondaDownloader,
@@ -30,7 +31,7 @@ export async function getLocalInstallerPath(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions
 ) {
-  for (const provider of providers) {
+  for (const provider of INSTALLER_PROVIDERS) {
     core.info(`Can we ${provider.label}?`);
     if (await provider.provides(inputs, options)) {
       core.info(`... will ${provider.label}`);

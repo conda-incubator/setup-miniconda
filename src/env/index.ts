@@ -12,7 +12,17 @@ import { ensureExplicit } from "./explicit";
 import { ensureYaml } from "./yaml";
 import { ensureSimple } from "./simple";
 
-const providers: types.IEnvProvider[] = [
+/**
+ * The current known providers of envs
+ *
+ * ### Note
+ * To add a new env creation mechanism,
+ * - implement IEnvProvider and add it here
+ * - probably add inputs to `../../action.yaml`
+ * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add a test!
+ */
+const ENV_PROVIDERS: types.IEnvProvider[] = [
   ensureExplicit,
   ensureSimple,
   ensureYaml,
@@ -25,7 +35,7 @@ export async function ensureEnvironment(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions
 ): Promise<void> {
-  for (const provider of providers) {
+  for (const provider of ENV_PROVIDERS) {
     core.info(`Can we use ${provider.label}...`);
     if (await provider.provides(inputs, options)) {
       core.info(`... will ${provider.label}`);

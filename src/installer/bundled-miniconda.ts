@@ -17,7 +17,7 @@ export const bundledMinicondaUser: types.IInstallerProvider = {
     );
   },
   installerPath: async (inputs, options) => {
-    // no-op
+    // No actions are performed. This is the only place `useBundled` will ever be true.
     return {
       localInstallerPath: "",
       options: {

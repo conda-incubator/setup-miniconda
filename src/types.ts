@@ -99,7 +99,9 @@ export interface IDynamicOptions {
  * File contents describing an environment
  */
 export interface IEnvSpec {
+  /** A `conda env`-compatible YAML env description */
   yaml?: IEnvironment;
+  /** A `conda list --explicit`-compatible text env description */
   explicit?: string;
 }
 
@@ -107,7 +109,9 @@ export interface IEnvSpec {
  * The output of an installer: may update the dynamic options
  */
 export interface IInstallerResult {
+  /** Options that may change as a result of selecting the installer */
   options: IDynamicOptions;
+  /** The local path to the installer. May be empty if the bundled installer is used */
   localInstallerPath: string;
 }
 
@@ -115,11 +119,14 @@ export interface IInstallerResult {
  * A strategy for ensuring a locally-runnable provider (or no-op, if bundled)
  */
 export interface IInstallerProvider {
+  /** A human-readable name shown in logs */
   label: string;
+  /** Whether this set of actions and inputs entails using this provider */
   provides: (
     inputs: IActionInputs,
     options: IDynamicOptions
   ) => Promise<boolean>;
+  /** Provide the local file path (and any updated options) for the installer */
   installerPath: (
     inputs: IActionInputs,
     options: IDynamicOptions
@@ -127,7 +134,7 @@ export interface IInstallerProvider {
 }
 
 /**
- * A strategy for ensure an environment is up-to-date vs the action inputs
+ * A strategy for ensuring a test environment that matches the action inputs
  */
 export interface IEnvProvider {
   label: string;

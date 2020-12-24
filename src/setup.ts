@@ -51,7 +51,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     await core.group("Copying condarc file...", () => conda.copyConfig(inputs));
   }
 
-  // for potential 'channels'
+  // For potential 'channels' that may alter configuration
   options.envSpec = await core.group("Parsing environment...", () =>
     env.getEnvSpec(inputs)
   );
@@ -137,7 +137,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
 }
 
 /**
- * Run
+ * Main `setup-miniconda` entry point
  */
 async function run(): Promise<void> {
   try {

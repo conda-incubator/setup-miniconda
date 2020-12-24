@@ -86,10 +86,11 @@ export async function applyCondaConfiguration(
     string
   ][];
 
-  // channels are special: if specified as an action input, these take priority
+  // Channels are special: if specified as an action input, these take priority
+  // over what is found in (at present) a YAML-based environment
   let channels = inputs.condaConfig.channels
     .trim()
-    .split(/[,\n]/)
+    .split(/,/)
     .map((c) => c.trim())
     .filter((c) => c.length);
 
@@ -103,7 +104,7 @@ export async function applyCondaConfiguration(
     await condaCommand(["config", "--add", "channels", channel], options);
   }
 
-  // all other options
+  // All other options are just passed as their string representations
   for (const [key, value] of configEntries) {
     if (value.trim().length === 0 || key === "channels") {
       continue;
@@ -116,7 +117,7 @@ export async function applyCondaConfiguration(
     }
   }
 
-  // log all config
+  // Log all configuration information
   await condaCommand(["config", "--show-sources"], options);
   await condaCommand(["config", "--show"], options);
 }
