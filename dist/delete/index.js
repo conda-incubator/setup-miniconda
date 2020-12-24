@@ -1063,17 +1063,26 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeSpec = exports.execute = exports.cacheFolder = void 0;
+exports.makeSpec = exports.execute = exports.isBaseEnv = exports.cacheFolder = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 const stream = __importStar(__webpack_require__(413));
 const exec = __importStar(__webpack_require__(986));
 const core = __importStar(__webpack_require__(470));
+const constants = __importStar(__webpack_require__(211));
 const constants_1 = __webpack_require__(211);
+/** The folder to use as the conda package cache */
 function cacheFolder() {
     return path.join(os.homedir(), constants_1.CONDA_CACHE_FOLDER);
 }
 exports.cacheFolder = cacheFolder;
+/**
+ * Whether the given env is a conda `base` env
+ */
+function isBaseEnv(envName) {
+    return constants.BASE_ENV_NAMES.includes(envName);
+}
+exports.isBaseEnv = isBaseEnv;
 /**
  * Run exec.exec with error handling
  */
@@ -1153,7 +1162,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PYTHON_SPEC = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.KNOWN_EXTENSIONS = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 //-----------------------------------------------------------------------
@@ -1176,6 +1185,8 @@ exports.OS_NAMES = {
     darwin: "MacOSX",
     linux: "Linux",
 };
+/** Names for a conda `base` env */
+exports.BASE_ENV_NAMES = ["root", "base", ""];
 /**
  * Known extensions for `constructor`-generated installers supported
  */
@@ -1212,6 +1223,27 @@ exports.CONDARC_PATH = path.join(os.homedir(), ".condarc");
 exports.CONDA_CACHE_FOLDER = "conda_pkgs_dir";
 /** The environment variable exported */
 exports.ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+/** Shell profiles names to update so `conda` works for *login shells* */
+exports.PROFILES = [
+    ".bashrc",
+    ".bash_profile",
+    ".config/fish/config.fish",
+    ".profile",
+    ".tcshrc",
+    ".xonshrc",
+    ".zshrc",
+    ".config/powershell/profile.ps1",
+    "Documents/PowerShell/profile.ps1",
+    "Documents/WindowsPowerShell/profile.ps1",
+];
+/** Folders that need user ownership on windows */
+exports.WIN_PERMS_FOLDERS = [
+    "condabin/",
+    "Scripts/",
+    "shell/",
+    "etc/profile.d/",
+    "/Lib/site-packages/xonsh/",
+];
 /**
  * A regular expression for detecting whether a spec is the python package, not
  * all of which are valid in all settings.

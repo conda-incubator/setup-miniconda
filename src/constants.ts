@@ -27,6 +27,9 @@ export const OS_NAMES: types.IOperatingSystems = {
   linux: "Linux",
 };
 
+/** Names for a conda `base` env */
+export const BASE_ENV_NAMES = ["root", "base", ""];
+
 /**
  * Known extensions for `constructor`-generated installers supported
  */
@@ -69,6 +72,29 @@ export const CONDA_CACHE_FOLDER = "conda_pkgs_dir";
 
 /** The environment variable exported */
 export const ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+
+/** Shell profiles names to update so `conda` works for *login shells* */
+export const PROFILES = [
+  ".bashrc",
+  ".bash_profile",
+  ".config/fish/config.fish",
+  ".profile",
+  ".tcshrc",
+  ".xonshrc",
+  ".zshrc",
+  ".config/powershell/profile.ps1",
+  "Documents/PowerShell/profile.ps1",
+  "Documents/WindowsPowerShell/profile.ps1",
+];
+
+/** Folders that need user ownership on windows */
+export const WIN_PERMS_FOLDERS = [
+  "condabin/",
+  "Scripts/",
+  "shell/",
+  "etc/profile.d/",
+  "/Lib/site-packages/xonsh/",
+];
 
 /**
  * A regular expression for detecting whether a spec is the python package, not

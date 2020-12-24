@@ -4,6 +4,7 @@ import * as stream from "stream";
 
 import * as exec from "@actions/exec";
 import * as core from "@actions/core";
+import * as constants from "./constants";
 
 import {
   CONDA_CACHE_FOLDER,
@@ -11,8 +12,16 @@ import {
   IGNORED_WARNINGS,
 } from "./constants";
 
+/** The folder to use as the conda package cache */
 export function cacheFolder() {
   return path.join(os.homedir(), CONDA_CACHE_FOLDER);
+}
+
+/**
+ * Whether the given env is a conda `base` env
+ */
+export function isBaseEnv(envName: string) {
+  return constants.BASE_ENV_NAMES.includes(envName);
 }
 
 /**

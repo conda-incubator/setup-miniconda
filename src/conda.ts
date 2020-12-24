@@ -151,13 +151,7 @@ export async function condaInit(
       ]);
       core.endGroup();
     } else if (constants.IS_WINDOWS) {
-      for (let folder of [
-        "condabin/",
-        "Scripts/",
-        "shell/",
-        "etc/profile.d/",
-        "/Lib/site-packages/xonsh/",
-      ]) {
+      for (let folder of constants.WIN_PERMS_FOLDERS) {
         ownPath = path.join(condaBasePath(options), folder);
         if (fs.existsSync(ownPath)) {
           core.startGroup(`Fixing ${folder} ownership`);
@@ -170,18 +164,7 @@ export async function condaInit(
 
   // Remove profile files
   if (inputs.removeProfiles == "true") {
-    for (let rc of [
-      ".bashrc",
-      ".bash_profile",
-      ".config/fish/config.fish",
-      ".profile",
-      ".tcshrc",
-      ".xonshrc",
-      ".zshrc",
-      ".config/powershell/profile.ps1",
-      "Documents/PowerShell/profile.ps1",
-      "Documents/WindowsPowerShell/profile.ps1",
-    ]) {
+    for (let rc of constants.PROFILES) {
       try {
         let file: string = path.join(os.homedir(), rc);
         if (fs.existsSync(file)) {
