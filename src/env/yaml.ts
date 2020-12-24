@@ -38,7 +38,7 @@ interface IYAMLEnvPatchProvider {
  * To add a new patch
  * - implement IEnvPatchProvider and add it here
  * - probably add inputs to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add any new RULEs in ../input.ts, for example if certain inputs make no sense
  * - add a test!
  */
 const PATCH_PROVIDERS: IYAMLEnvPatchProvider[] = [
@@ -59,7 +59,7 @@ const PATCH_PROVIDERS: IYAMLEnvPatchProvider[] = [
  * If patched, a temporary file will be created with the patches
  */
 export const ensureYaml: types.IEnvProvider = {
-  label: "env update",
+  label: "conda env update",
   provides: async (inputs, options) =>
     !!Object.keys(options.envSpec?.yaml || {}).length,
   condaArgs: async (inputs, options) => {

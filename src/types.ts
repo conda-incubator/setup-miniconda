@@ -153,3 +153,37 @@ export interface IEnvProvider {
     options: IDynamicOptions
   ) => Promise<string[]>;
 }
+
+/** The options and package specs to add to the base environment */
+export interface IToolUpdates {
+  options: IDynamicOptions;
+  tools: string[];
+}
+
+/**
+ * A strategy for ensuring a tool is available in the conda 'base'
+ */
+export interface IToolProvider {
+  label: string;
+  /**
+   * Whether this provider is requested by action inputs
+   */
+  provides: (
+    inputs: IActionInputs,
+    options: IDynamicOptions
+  ) => Promise<boolean>;
+  /**
+   * Conda package specs and option updates for tools to install after updating
+   */
+  toolPackages: (
+    inputs: IActionInputs,
+    options: IDynamicOptions
+  ) => Promise<IToolUpdates>;
+  /**
+   * Steps to perform after the env is updated, and potentially reconfigured
+   */
+  postInstall?: (
+    inputs: IActionInputs,
+    options: IDynamicOptions
+  ) => Promise<void>;
+}

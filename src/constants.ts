@@ -27,6 +27,9 @@ export const OS_NAMES: types.IOperatingSystems = {
   linux: "Linux",
 };
 
+/** Names for a conda `base` env */
+export const BASE_ENV_NAMES = ["root", "base", ""];
+
 /**
  * Known extensions for `constructor`-generated installers supported
  */
@@ -36,21 +39,23 @@ export const KNOWN_EXTENSIONS = [".exe", ".sh"];
  * Errors that are always probably spurious
  */
 export const IGNORED_WARNINGS = [
-  // appear on win install, we can swallow them
+  // Appear on win install, we can swallow them
   `menuinst_win32`,
   `Unable to register environment`,
   `0%|`,
-  // appear on certain Linux/OSX installers
+  // Appear on certain Linux/OSX installers
   `Please run using "bash"`,
-  // old condas don't know what to do with these
+  // Old condas don't know what to do with these
   `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
+  // Channel warnings are very boring and noisy
+  `moving to the top`,
 ];
 
 /**
  * Warnings that should be errors
  */
 export const FORCED_ERRORS = [
-  // conda env create will ignore invalid sections and move on
+  // `conda env create` will ignore invalid sections and move on
   `EnvironmentSectionNotValid`,
 ];
 
@@ -69,6 +74,29 @@ export const CONDA_CACHE_FOLDER = "conda_pkgs_dir";
 
 /** The environment variable exported */
 export const ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+
+/** Shell profiles names to update so `conda` works for *login shells* */
+export const PROFILES = [
+  ".bashrc",
+  ".bash_profile",
+  ".config/fish/config.fish",
+  ".profile",
+  ".tcshrc",
+  ".xonshrc",
+  ".zshrc",
+  ".config/powershell/profile.ps1",
+  "Documents/PowerShell/profile.ps1",
+  "Documents/WindowsPowerShell/profile.ps1",
+];
+
+/** Folders that need user ownership on windows */
+export const WIN_PERMS_FOLDERS = [
+  "condabin/",
+  "Scripts/",
+  "shell/",
+  "etc/profile.d/",
+  "/Lib/site-packages/xonsh/",
+];
 
 /**
  * A regular expression for detecting whether a spec is the python package, not

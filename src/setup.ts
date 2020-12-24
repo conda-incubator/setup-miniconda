@@ -9,6 +9,7 @@ import * as outputs from "./outputs";
 import * as installer from "./installer";
 import * as conda from "./conda";
 import * as env from "./env";
+import * as baseTools from "./base-tools";
 
 /**
  * Main conda setup method to handle all configuration options
@@ -64,76 +65,24 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     conda.applyCondaConfiguration(inputs, options)
   );
 
-  core.startGroup("Setup Conda basic configuration...");
-  await conda.condaCommand(
-    ["config", "--set", "always_yes", "yes", "--set", "changeps1", "no"],
-    options
+  await core.group("Initializing conda shell integration...", () =>
+    conda.condaInit(inputs, options)
   );
-  core.endGroup();
 
-  core.startGroup("Initialize Conda and fix ownership...");
-  await conda.condaInit(inputs, options);
-  core.endGroup();
+  const toolOptions = await core.group("Adding tools to 'base' env", () =>
+    baseTools.installBaseTools(inputs, options)
+  );
 
-  if (inputs.condaVersion) {
-    core.startGroup("Installing Conda...");
-    await conda.condaCommand(
-      ["install", "--name", "base", `conda=${inputs.condaVersion}`],
-      options
-    );
-    core.endGroup();
-  }
-
-  if (options.condaConfig["auto_update_conda"] == "true") {
-    core.startGroup("Updating conda...");
-    await conda.condaCommand(["update", "conda"], options);
-    core.endGroup();
-
-    if (options.condaConfig) {
-      core.startGroup("Applying conda configuration after update...");
-      await conda.applyCondaConfiguration(inputs, options);
-      core.endGroup();
-    }
-  }
-
-  // Any conda commands run here after init and setup
-  if (inputs.mambaVersion) {
-    core.startGroup("Installing Mamba...");
-    core.warning(
-      `Mamba support is still experimental and can result in differently solved environments!`
-    );
-
-    await conda.condaCommand(
-      ["install", "--name", "base", `mamba=${inputs.mambaVersion}`],
-      options
-    );
-
-    if (constants.IS_WINDOWS) {
-      // add bat-less forwarder for bash users on Windows
-      const mambaBat = conda
-        .condaExecutable({ ...options, useMamba: true })
-        .replace("\\", "/");
-      const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
-      fs.writeFileSync(mambaBat.slice(0, -4), contents);
-    }
-
-    options.useMamba = true;
-  }
-
-  if (inputs.condaBuildVersion) {
-    core.startGroup("Installing Conda Build...");
-    await conda.condaCommand(
-      ["install", "--name", "base", `conda-build=${inputs.condaBuildVersion}`],
-      options
-    );
-    core.endGroup();
-  }
+  // `useMamba` may have changed
+  options = { ...options, ...toolOptions };
 
   if (inputs.activateEnvironment) {
     await core.group("Ensuring environment...", () =>
       env.ensureEnvironment(inputs, options)
     );
   }
+
+  core.info("setup-miniconda ran successfully");
 }
 
 /**

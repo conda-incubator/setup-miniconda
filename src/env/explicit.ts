@@ -5,7 +5,7 @@ import * as types from "../types";
  * or `conda-lock`
  */
 export const ensureExplicit: types.IEnvProvider = {
-  label: "create (explicit)",
+  label: "conda create (from explicit)",
   provides: async (inputs, options) => !!options.envSpec?.explicit?.length,
   condaArgs: async (inputs, options) => {
     if (inputs.pythonVersion) {

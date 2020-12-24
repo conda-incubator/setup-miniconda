@@ -1160,7 +1160,7 @@ const utils = __importStar(__webpack_require__(163));
  * In the future, this may need its own providers of environment patches.
  */
 exports.ensureSimple = {
-    label: "create (simple)",
+    label: "conda create (simple)",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         var _a, _b, _c;
         return !(((_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.explicit) === null || _b === void 0 ? void 0 : _b.length) ||
@@ -2051,7 +2051,106 @@ module.exports = createReadableStreamAsyncIterator;
 /***/ }),
 /* 47 */,
 /* 48 */,
-/* 49 */,
+/* 49 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.installBaseTools = void 0;
+const core = __importStar(__webpack_require__(470));
+const conda = __importStar(__webpack_require__(259));
+const update_conda_1 = __webpack_require__(715);
+const update_mamba_1 = __webpack_require__(269);
+const update_python_1 = __webpack_require__(113);
+const update_conda_build_1 = __webpack_require__(234);
+/**
+ * The providers of tool updates: order isn't _really_ important
+ *
+ * ### Note
+ * To add a new tool provider,
+ * - implement IToolProvider and add it here
+ * - probably add inputs to `../../action.yaml`
+ * - add any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add a test!
+ */
+const TOOL_PROVIDERS = [
+    update_conda_1.updateConda,
+    update_mamba_1.updateMamba,
+    update_python_1.updatePython,
+    update_conda_build_1.updateCondaBuild,
+];
+/**
+ * Update the 'base' env with relevant tools
+ *
+ * Do this in one step to avoid multiple solves
+ */
+function installBaseTools(inputs, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let tools = [];
+        let postInstallOptions = Object.assign({}, options);
+        let postInstallActions = [];
+        for (const provider of TOOL_PROVIDERS) {
+            core.info(`Do we need to ${provider.label}?`);
+            if (yield provider.provides(inputs, options)) {
+                core.info(`... will ${provider.label}.`);
+                const toolUpdates = yield provider.toolPackages(inputs, options);
+                tools.push(...toolUpdates.tools);
+                postInstallOptions = Object.assign(Object.assign({}, postInstallOptions), toolUpdates.options);
+                if (provider.postInstall) {
+                    postInstallActions.push(provider.postInstall);
+                }
+            }
+        }
+        if (tools.length) {
+            yield conda.condaCommand(["install", "--name", "base", ...tools], 
+            // Use the original `options`, as we can't guarantee `mamba` is available
+            // TODO: allow declaring that the installer already has `mamba`
+            options);
+            // *Now* use the new options, as we may have a new conda/mamba with more supported
+            // options that previously failed
+            yield conda.applyCondaConfiguration(inputs, postInstallOptions);
+            if (postInstallActions.length) {
+                for (const action of postInstallActions) {
+                    yield action(inputs, postInstallOptions);
+                }
+            }
+        }
+        return postInstallOptions;
+    });
+}
+exports.installBaseTools = installBaseTools;
+
+
+/***/ }),
 /* 50 */,
 /* 51 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
@@ -6323,7 +6422,61 @@ module.exports = assignMergeValue;
 /***/ }),
 /* 111 */,
 /* 112 */,
-/* 113 */,
+/* 113 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.updatePython = void 0;
+const utils = __importStar(__webpack_require__(163));
+/** Install `python` in the `base` env at a specified version
+ *
+ * ### Note
+ * The env providers have separate mechanisms for updating conda.
+ */
+exports.updatePython = {
+    label: "update python",
+    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return !!(inputs.pythonVersion && utils.isBaseEnv(inputs.activateEnvironment)); }),
+    toolPackages: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        let updates = {
+            tools: [utils.makeSpec("python", inputs.pythonVersion)],
+            options,
+        };
+        return updates;
+    }),
+};
+
+
+/***/ }),
 /* 114 */,
 /* 115 */,
 /* 116 */,
@@ -6497,7 +6650,7 @@ const conda = __importStar(__webpack_require__(259));
  */
 function ensureLocalInstaller(options) {
     return __awaiter(this, void 0, void 0, function* () {
-        core.startGroup("Ensuring Installer...");
+        core.info("Ensuring Installer...");
         const url = new url_1.URL(options.url);
         const installerName = path.basename(url.pathname);
         // As a URL, we assume posix paths
@@ -6531,7 +6684,6 @@ function ensureLocalInstaller(options) {
             const cacheResult = yield tc.cacheFile(executablePath, installerName, tool, version, ...(options.arch ? [options.arch] : []));
             core.info(`Cached ${tool}@${version}: ${cacheResult}!`);
         }
-        core.endGroup();
         if (executablePath === "") {
             throw Error("Could not determine an executable path from installer-url");
         }
@@ -8036,17 +8188,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeSpec = exports.execute = exports.cacheFolder = void 0;
+exports.makeSpec = exports.execute = exports.isBaseEnv = exports.cacheFolder = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 const stream = __importStar(__webpack_require__(413));
 const exec = __importStar(__webpack_require__(986));
 const core = __importStar(__webpack_require__(470));
-const constants_1 = __webpack_require__(211);
+const constants = __importStar(__webpack_require__(211));
+/** The folder to use as the conda package cache */
 function cacheFolder() {
-    return path.join(os.homedir(), constants_1.CONDA_CACHE_FOLDER);
+    return path.join(os.homedir(), constants.CONDA_CACHE_FOLDER);
 }
 exports.cacheFolder = cacheFolder;
+/**
+ * Whether the given env is a conda `base` env
+ */
+function isBaseEnv(envName) {
+    return constants.BASE_ENV_NAMES.includes(envName);
+}
+exports.isBaseEnv = isBaseEnv;
 /**
  * Run exec.exec with error handling
  */
@@ -8057,7 +8217,7 @@ function execute(command) {
             listeners: {
                 stdout: (data) => {
                     const stringData = data.toString();
-                    for (const forced_error of constants_1.FORCED_ERRORS) {
+                    for (const forced_error of constants.FORCED_ERRORS) {
                         if (stringData.includes(forced_error)) {
                             throw new Error(`"${command}" failed with "${forced_error}"`);
                         }
@@ -8066,7 +8226,7 @@ function execute(command) {
                 },
                 stderr: (data) => {
                     const stringData = data.toString();
-                    for (const ignore of constants_1.IGNORED_WARNINGS) {
+                    for (const ignore of constants.IGNORED_WARNINGS) {
                         if (stringData.includes(ignore)) {
                             return;
                         }
@@ -9227,7 +9387,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PYTHON_SPEC = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.KNOWN_EXTENSIONS = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 //-----------------------------------------------------------------------
@@ -9250,6 +9410,8 @@ exports.OS_NAMES = {
     darwin: "MacOSX",
     linux: "Linux",
 };
+/** Names for a conda `base` env */
+exports.BASE_ENV_NAMES = ["root", "base", ""];
 /**
  * Known extensions for `constructor`-generated installers supported
  */
@@ -9258,20 +9420,22 @@ exports.KNOWN_EXTENSIONS = [".exe", ".sh"];
  * Errors that are always probably spurious
  */
 exports.IGNORED_WARNINGS = [
-    // appear on win install, we can swallow them
+    // Appear on win install, we can swallow them
     `menuinst_win32`,
     `Unable to register environment`,
     `0%|`,
-    // appear on certain Linux/OSX installers
+    // Appear on certain Linux/OSX installers
     `Please run using "bash"`,
-    // old condas don't know what to do with these
+    // Old condas don't know what to do with these
     `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
+    // Channel warnings are very boring and noisy
+    `moving to the top`,
 ];
 /**
  * Warnings that should be errors
  */
 exports.FORCED_ERRORS = [
-    // conda env create will ignore invalid sections and move on
+    // `conda env create` will ignore invalid sections and move on
     `EnvironmentSectionNotValid`,
 ];
 /**
@@ -9286,6 +9450,27 @@ exports.CONDARC_PATH = path.join(os.homedir(), ".condarc");
 exports.CONDA_CACHE_FOLDER = "conda_pkgs_dir";
 /** The environment variable exported */
 exports.ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+/** Shell profiles names to update so `conda` works for *login shells* */
+exports.PROFILES = [
+    ".bashrc",
+    ".bash_profile",
+    ".config/fish/config.fish",
+    ".profile",
+    ".tcshrc",
+    ".xonshrc",
+    ".zshrc",
+    ".config/powershell/profile.ps1",
+    "Documents/PowerShell/profile.ps1",
+    "Documents/WindowsPowerShell/profile.ps1",
+];
+/** Folders that need user ownership on windows */
+exports.WIN_PERMS_FOLDERS = [
+    "condabin/",
+    "Scripts/",
+    "shell/",
+    "etc/profile.d/",
+    "/Lib/site-packages/xonsh/",
+];
 /**
  * A regular expression for detecting whether a spec is the python package, not
  * all of which are valid in all settings.
@@ -11086,7 +11271,56 @@ module.exports = {
 
 /***/ }),
 /* 233 */,
-/* 234 */,
+/* 234 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.updateCondaBuild = void 0;
+const utils = __importStar(__webpack_require__(163));
+/** Install `conda-build` in the `base` env at a specified version */
+exports.updateCondaBuild = {
+    label: "update conda-build",
+    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return inputs.condaBuildVersion !== ""; }),
+    toolPackages: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        return {
+            tools: [utils.makeSpec("conda-build", inputs.condaBuildVersion)],
+            options,
+        };
+    }),
+};
+
+
+/***/ }),
 /* 235 */,
 /* 236 */,
 /* 237 */,
@@ -12916,7 +13150,7 @@ function condaInit(inputs, options) {
         // Fix ownership of folders
         if (options.useBundled) {
             if (constants.IS_MAC) {
-                core.startGroup("Fixing conda folders ownership");
+                core.info("Fixing conda folders ownership");
                 const userName = process.env.USER;
                 yield utils.execute([
                     "sudo",
@@ -12925,39 +13159,20 @@ function condaInit(inputs, options) {
                     `${userName}:staff`,
                     condaBasePath(options),
                 ]);
-                core.endGroup();
             }
             else if (constants.IS_WINDOWS) {
-                for (let folder of [
-                    "condabin/",
-                    "Scripts/",
-                    "shell/",
-                    "etc/profile.d/",
-                    "/Lib/site-packages/xonsh/",
-                ]) {
+                for (let folder of constants.WIN_PERMS_FOLDERS) {
                     ownPath = path.join(condaBasePath(options), folder);
                     if (fs.existsSync(ownPath)) {
-                        core.startGroup(`Fixing ${folder} ownership`);
+                        core.info(`Fixing ${folder} ownership`);
                         yield utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
-                        core.endGroup();
                     }
                 }
             }
         }
         // Remove profile files
         if (inputs.removeProfiles == "true") {
-            for (let rc of [
-                ".bashrc",
-                ".bash_profile",
-                ".config/fish/config.fish",
-                ".profile",
-                ".tcshrc",
-                ".xonshrc",
-                ".zshrc",
-                ".config/powershell/profile.ps1",
-                "Documents/PowerShell/profile.ps1",
-                "Documents/WindowsPowerShell/profile.ps1",
-            ]) {
+            for (let rc of constants.PROFILES) {
                 try {
                     let file = path.join(os.homedir(), rc);
                     if (fs.existsSync(file)) {
@@ -13455,7 +13670,72 @@ module.exports = listCacheSet;
 
 
 /***/ }),
-/* 269 */,
+/* 269 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.updateMamba = void 0;
+const fs = __importStar(__webpack_require__(747));
+const core = __importStar(__webpack_require__(470));
+const constants = __importStar(__webpack_require__(211));
+const utils = __importStar(__webpack_require__(163));
+const conda = __importStar(__webpack_require__(259));
+/** Install `mamba` in the `base` env at a specified version */
+exports.updateMamba = {
+    label: "update mamba",
+    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return inputs.mambaVersion !== ""; }),
+    toolPackages: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
+        return {
+            tools: [utils.makeSpec("mamba", inputs.mambaVersion)],
+            options: Object.assign(Object.assign({}, options), { useMamba: true }),
+        };
+    }),
+    postInstall: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        if (!constants.IS_WINDOWS) {
+            return;
+        }
+        core.info("Creating bash wrapper for `mamba`...");
+        // Add bat-less forwarder for bash users on Windows
+        const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
+        const contents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
+        fs.writeFileSync(mambaBat.slice(0, -4), contents);
+        core.info(`... wrote ${mambaBat}:\n${contents}`);
+    }),
+};
+
+
+/***/ }),
 /* 270 */,
 /* 271 */,
 /* 272 */
@@ -15557,7 +15837,7 @@ exports.ensureExplicit = void 0;
  * or `conda-lock`
  */
 exports.ensureExplicit = {
-    label: "create (explicit)",
+    label: "conda create (from explicit)",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { var _a, _b; return !!((_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.explicit) === null || _b === void 0 ? void 0 : _b.length); }),
     condaArgs: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         if (inputs.pythonVersion) {
@@ -20201,6 +20481,7 @@ const outputs = __importStar(__webpack_require__(405));
 const installer = __importStar(__webpack_require__(555));
 const conda = __importStar(__webpack_require__(259));
 const env = __importStar(__webpack_require__(956));
+const baseTools = __importStar(__webpack_require__(49));
 /**
  * Main conda setup method to handle all configuration options
  */
@@ -20229,50 +20510,14 @@ function setupMiniconda(inputs) {
         options.envSpec = yield core.group("Parsing environment...", () => env.getEnvSpec(inputs));
         yield core.group("Configuring conda package cache...", () => outputs.setCacheVariable(options));
         yield core.group("Applying initial configuration...", () => conda.applyCondaConfiguration(inputs, options));
-        core.startGroup("Setup Conda basic configuration...");
-        yield conda.condaCommand(["config", "--set", "always_yes", "yes", "--set", "changeps1", "no"], options);
-        core.endGroup();
-        core.startGroup("Initialize Conda and fix ownership...");
-        yield conda.condaInit(inputs, options);
-        core.endGroup();
-        if (inputs.condaVersion) {
-            core.startGroup("Installing Conda...");
-            yield conda.condaCommand(["install", "--name", "base", `conda=${inputs.condaVersion}`], options);
-            core.endGroup();
-        }
-        if (options.condaConfig["auto_update_conda"] == "true") {
-            core.startGroup("Updating conda...");
-            yield conda.condaCommand(["update", "conda"], options);
-            core.endGroup();
-            if (options.condaConfig) {
-                core.startGroup("Applying conda configuration after update...");
-                yield conda.applyCondaConfiguration(inputs, options);
-                core.endGroup();
-            }
-        }
-        // Any conda commands run here after init and setup
-        if (inputs.mambaVersion) {
-            core.startGroup("Installing Mamba...");
-            core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
-            yield conda.condaCommand(["install", "--name", "base", `mamba=${inputs.mambaVersion}`], options);
-            if (constants.IS_WINDOWS) {
-                // add bat-less forwarder for bash users on Windows
-                const mambaBat = conda
-                    .condaExecutable(Object.assign(Object.assign({}, options), { useMamba: true }))
-                    .replace("\\", "/");
-                const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
-                fs.writeFileSync(mambaBat.slice(0, -4), contents);
-            }
-            options.useMamba = true;
-        }
-        if (inputs.condaBuildVersion) {
-            core.startGroup("Installing Conda Build...");
-            yield conda.condaCommand(["install", "--name", "base", `conda-build=${inputs.condaBuildVersion}`], options);
-            core.endGroup();
-        }
+        yield core.group("Initializing conda shell integration...", () => conda.condaInit(inputs, options));
+        const toolOptions = yield core.group("Adding tools to 'base' env", () => baseTools.installBaseTools(inputs, options));
+        // `useMamba` may have changed
+        options = Object.assign(Object.assign({}, options), toolOptions);
         if (inputs.activateEnvironment) {
             yield core.group("Ensuring environment...", () => env.ensureEnvironment(inputs, options));
         }
+        core.info("setup-miniconda ran successfully");
     });
 }
 /**
@@ -20344,7 +20589,7 @@ const utils = __importStar(__webpack_require__(163));
  * To add a new patch
  * - implement IEnvPatchProvider and add it here
  * - probably add inputs to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add any new RULEs in ../input.ts, for example if certain inputs make no sense
  * - add a test!
  */
 const PATCH_PROVIDERS = [
@@ -20364,7 +20609,7 @@ const PATCH_PROVIDERS = [
  * If patched, a temporary file will be created with the patches
  */
 exports.ensureYaml = {
-    label: "env update",
+    label: "conda env update",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { var _a; return !!Object.keys(((_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) || {}).length; }),
     condaArgs: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         var _b;
@@ -21849,7 +22094,7 @@ const bundled_miniconda_1 = __webpack_require__(468);
  * To add a new installer,
  * - implement IInstallerProvider and add it here
  * - add to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if the installer is not
+ * - add any new RULEs in ../input.ts, for example if the installer is not
  *   compatible with some architectures
  * - add a test!
  */
@@ -21862,9 +22107,9 @@ const INSTALLER_PROVIDERS = [
 function getLocalInstallerPath(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         for (const provider of INSTALLER_PROVIDERS) {
-            core.info(`Can we ${provider.label}?`);
+            core.info(`Can we use ${provider.label}?`);
             if (yield provider.provides(inputs, options)) {
-                core.info(`... will ${provider.label}`);
+                core.info(`... will use ${provider.label}.`);
                 return provider.installerPath(inputs, options);
             }
         }
@@ -26179,7 +26424,64 @@ module.exports = hashClear;
 /* 712 */,
 /* 713 */,
 /* 714 */,
-/* 715 */,
+/* 715 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.updateConda = void 0;
+const utils = __importStar(__webpack_require__(163));
+/** Install `conda` in the `base` env at a specified version */
+exports.updateConda = {
+    label: "update conda",
+    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        return inputs.condaVersion !== "" ||
+            inputs.condaConfig.auto_update_conda === "yes";
+    }),
+    toolPackages: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        let updates = {
+            tools: [
+                inputs.condaVersion !== ""
+                    ? utils.makeSpec("conda", inputs.condaVersion)
+                    : "conda",
+            ],
+            options,
+        };
+        return updates;
+    }),
+};
+
+
+/***/ }),
 /* 716 */,
 /* 717 */,
 /* 718 */,
@@ -34962,7 +35264,7 @@ const simple_1 = __webpack_require__(21);
  * To add a new env creation mechanism,
  * - implement IEnvProvider and add it here
  * - probably add inputs to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if certain inputs make no sense
+ * - add any new RULEs in ../input.ts, for example if certain inputs make no sense
  * - add a test!
  */
 const ENV_PROVIDERS = [
@@ -34976,11 +35278,11 @@ const ENV_PROVIDERS = [
 function ensureEnvironment(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         for (const provider of ENV_PROVIDERS) {
-            core.info(`Can we use ${provider.label}...`);
+            core.info(`Can we use ${provider.label}?`);
             if (yield provider.provides(inputs, options)) {
-                core.info(`... will ${provider.label}`);
+                core.info(`... will use ${provider.label}.`);
                 const args = yield provider.condaArgs(inputs, options);
-                return yield core.group(`Updating env from ${provider.label}...`, () => conda.condaCommand(args, options));
+                return yield core.group(`Updating '${inputs.activateEnvironment}' env from ${provider.label}...`, () => conda.condaCommand(args, options));
             }
         }
         throw Error(`'activate-environment: ${inputs.activateEnvironment}' could not be created`);

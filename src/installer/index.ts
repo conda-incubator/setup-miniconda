@@ -16,7 +16,7 @@ import { bundledMinicondaUser } from "./bundled-miniconda";
  * To add a new installer,
  * - implement IInstallerProvider and add it here
  * - add to `../../action.yaml`
- * - any any new RULEs in ../input.ts, for example if the installer is not
+ * - add any new RULEs in ../input.ts, for example if the installer is not
  *   compatible with some architectures
  * - add a test!
  */
@@ -32,9 +32,9 @@ export async function getLocalInstallerPath(
   options: types.IDynamicOptions
 ) {
   for (const provider of INSTALLER_PROVIDERS) {
-    core.info(`Can we ${provider.label}?`);
+    core.info(`Can we use ${provider.label}?`);
     if (await provider.provides(inputs, options)) {
-      core.info(`... will ${provider.label}`);
+      core.info(`... will use ${provider.label}.`);
       return provider.installerPath(inputs, options);
     }
   }

@@ -1063,17 +1063,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeSpec = exports.execute = exports.cacheFolder = void 0;
+exports.makeSpec = exports.execute = exports.isBaseEnv = exports.cacheFolder = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 const stream = __importStar(__webpack_require__(413));
 const exec = __importStar(__webpack_require__(986));
 const core = __importStar(__webpack_require__(470));
-const constants_1 = __webpack_require__(211);
+const constants = __importStar(__webpack_require__(211));
+/** The folder to use as the conda package cache */
 function cacheFolder() {
-    return path.join(os.homedir(), constants_1.CONDA_CACHE_FOLDER);
+    return path.join(os.homedir(), constants.CONDA_CACHE_FOLDER);
 }
 exports.cacheFolder = cacheFolder;
+/**
+ * Whether the given env is a conda `base` env
+ */
+function isBaseEnv(envName) {
+    return constants.BASE_ENV_NAMES.includes(envName);
+}
+exports.isBaseEnv = isBaseEnv;
 /**
  * Run exec.exec with error handling
  */
@@ -1084,7 +1092,7 @@ function execute(command) {
             listeners: {
                 stdout: (data) => {
                     const stringData = data.toString();
-                    for (const forced_error of constants_1.FORCED_ERRORS) {
+                    for (const forced_error of constants.FORCED_ERRORS) {
                         if (stringData.includes(forced_error)) {
                             throw new Error(`"${command}" failed with "${forced_error}"`);
                         }
@@ -1093,7 +1101,7 @@ function execute(command) {
                 },
                 stderr: (data) => {
                     const stringData = data.toString();
-                    for (const ignore of constants_1.IGNORED_WARNINGS) {
+                    for (const ignore of constants.IGNORED_WARNINGS) {
                         if (stringData.includes(ignore)) {
                             return;
                         }
@@ -1153,7 +1161,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PYTHON_SPEC = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.KNOWN_EXTENSIONS = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 //-----------------------------------------------------------------------
@@ -1176,6 +1184,8 @@ exports.OS_NAMES = {
     darwin: "MacOSX",
     linux: "Linux",
 };
+/** Names for a conda `base` env */
+exports.BASE_ENV_NAMES = ["root", "base", ""];
 /**
  * Known extensions for `constructor`-generated installers supported
  */
@@ -1184,20 +1194,22 @@ exports.KNOWN_EXTENSIONS = [".exe", ".sh"];
  * Errors that are always probably spurious
  */
 exports.IGNORED_WARNINGS = [
-    // appear on win install, we can swallow them
+    // Appear on win install, we can swallow them
     `menuinst_win32`,
     `Unable to register environment`,
     `0%|`,
-    // appear on certain Linux/OSX installers
+    // Appear on certain Linux/OSX installers
     `Please run using "bash"`,
-    // old condas don't know what to do with these
+    // Old condas don't know what to do with these
     `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
+    // Channel warnings are very boring and noisy
+    `moving to the top`,
 ];
 /**
  * Warnings that should be errors
  */
 exports.FORCED_ERRORS = [
-    // conda env create will ignore invalid sections and move on
+    // `conda env create` will ignore invalid sections and move on
     `EnvironmentSectionNotValid`,
 ];
 /**
@@ -1212,6 +1224,27 @@ exports.CONDARC_PATH = path.join(os.homedir(), ".condarc");
 exports.CONDA_CACHE_FOLDER = "conda_pkgs_dir";
 /** The environment variable exported */
 exports.ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+/** Shell profiles names to update so `conda` works for *login shells* */
+exports.PROFILES = [
+    ".bashrc",
+    ".bash_profile",
+    ".config/fish/config.fish",
+    ".profile",
+    ".tcshrc",
+    ".xonshrc",
+    ".zshrc",
+    ".config/powershell/profile.ps1",
+    "Documents/PowerShell/profile.ps1",
+    "Documents/WindowsPowerShell/profile.ps1",
+];
+/** Folders that need user ownership on windows */
+exports.WIN_PERMS_FOLDERS = [
+    "condabin/",
+    "Scripts/",
+    "shell/",
+    "etc/profile.d/",
+    "/Lib/site-packages/xonsh/",
+];
 /**
  * A regular expression for detecting whether a spec is the python package, not
  * all of which are valid in all settings.
