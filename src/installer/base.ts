@@ -24,7 +24,7 @@ import * as conda from "../conda";
 export async function ensureLocalInstaller(
   options: types.ILocalInstallerOpts
 ): Promise<string> {
-  core.startGroup("Ensuring Installer...");
+  core.info("Ensuring Installer...");
 
   const url = new URL(options.url);
 
@@ -71,8 +71,6 @@ export async function ensureLocalInstaller(
     );
     core.info(`Cached ${tool}@${version}: ${cacheResult}!`);
   }
-
-  core.endGroup();
 
   if (executablePath === "") {
     throw Error("Could not determine an executable path from installer-url");

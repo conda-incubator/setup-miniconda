@@ -140,7 +140,7 @@ export async function condaInit(
   // Fix ownership of folders
   if (options.useBundled) {
     if (constants.IS_MAC) {
-      core.startGroup("Fixing conda folders ownership");
+      core.info("Fixing conda folders ownership");
       const userName: string = process.env.USER as string;
       await utils.execute([
         "sudo",
@@ -149,14 +149,12 @@ export async function condaInit(
         `${userName}:staff`,
         condaBasePath(options),
       ]);
-      core.endGroup();
     } else if (constants.IS_WINDOWS) {
       for (let folder of constants.WIN_PERMS_FOLDERS) {
         ownPath = path.join(condaBasePath(options), folder);
         if (fs.existsSync(ownPath)) {
-          core.startGroup(`Fixing ${folder} ownership`);
+          core.info(`Fixing ${folder} ownership`);
           await utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
-          core.endGroup();
         }
       }
     }

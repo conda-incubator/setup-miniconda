@@ -6649,7 +6649,7 @@ const conda = __importStar(__webpack_require__(259));
  */
 function ensureLocalInstaller(options) {
     return __awaiter(this, void 0, void 0, function* () {
-        core.startGroup("Ensuring Installer...");
+        core.info("Ensuring Installer...");
         const url = new url_1.URL(options.url);
         const installerName = path.basename(url.pathname);
         // As a URL, we assume posix paths
@@ -6683,7 +6683,6 @@ function ensureLocalInstaller(options) {
             const cacheResult = yield tc.cacheFile(executablePath, installerName, tool, version, ...(options.arch ? [options.arch] : []));
             core.info(`Cached ${tool}@${version}: ${cacheResult}!`);
         }
-        core.endGroup();
         if (executablePath === "") {
             throw Error("Could not determine an executable path from installer-url");
         }
@@ -13149,7 +13148,7 @@ function condaInit(inputs, options) {
         // Fix ownership of folders
         if (options.useBundled) {
             if (constants.IS_MAC) {
-                core.startGroup("Fixing conda folders ownership");
+                core.info("Fixing conda folders ownership");
                 const userName = process.env.USER;
                 yield utils.execute([
                     "sudo",
@@ -13158,15 +13157,13 @@ function condaInit(inputs, options) {
                     `${userName}:staff`,
                     condaBasePath(options),
                 ]);
-                core.endGroup();
             }
             else if (constants.IS_WINDOWS) {
                 for (let folder of constants.WIN_PERMS_FOLDERS) {
                     ownPath = path.join(condaBasePath(options), folder);
                     if (fs.existsSync(ownPath)) {
-                        core.startGroup(`Fixing ${folder} ownership`);
+                        core.info(`Fixing ${folder} ownership`);
                         yield utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
-                        core.endGroup();
                     }
                 }
             }
@@ -13724,6 +13721,7 @@ exports.updateMamba = {
     }),
     postInstall: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         if (constants.IS_WINDOWS) {
+            core.info("Creating bash wrapper for `mamba`");
             // Add bat-less forwarder for bash users on Windows
             const mambaBat = conda.condaExecutable(options).replace("\\", "/");
             const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
