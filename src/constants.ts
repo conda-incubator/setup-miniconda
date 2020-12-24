@@ -27,10 +27,13 @@ export const OS_NAMES: types.IOperatingSystems = {
   linux: "Linux",
 };
 
+/**
+ * Known extensions for `constructor`-generated installers supported
+ */
 export const KNOWN_EXTENSIONS = [".exe", ".sh"];
 
 /**
- * errors that are always probably spurious
+ * Errors that are always probably spurious
  */
 export const IGNORED_WARNINGS = [
   // appear on win install, we can swallow them
@@ -44,7 +47,7 @@ export const IGNORED_WARNINGS = [
 ];
 
 /**
- * warnings that should be errors
+ * Warnings that should be errors
  */
 export const FORCED_ERRORS = [
   // conda env create will ignore invalid sections and move on
@@ -52,17 +55,35 @@ export const FORCED_ERRORS = [
 ];
 
 /**
- * avoid spurious conda warnings before we have a chance to update them
+ * Avoid spurious conda warnings before we have a chance to update them
  */
 export const BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
 
 /**
- * the conda config file
+ * The conda config file
  */
 export const CONDARC_PATH = path.join(os.homedir(), ".condarc");
 
 /** Where to put files. Should eventually be configurable */
 export const CONDA_CACHE_FOLDER = "conda_pkgs_dir";
 
-/** the environment variable exported */
+/** The environment variable exported */
 export const ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+
+/**
+ * A regular expression for detecting whether a spec is the python package, not
+ * all of which are valid in all settings.
+ *
+ * ### Note
+ * Some examples:
+ * - python
+ * - python 3
+ * - python>3
+ * - python!=2
+ * - conda-forge::python
+ *
+ * TODO: this should be generalized, and, along with roundtrip parsing/generating
+ *       probably be a sub-package in its own right.
+ * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
+ */
+export const PYTHON_SPEC = /^(.*::)?python($|\s\=\<\>\!\|)/i;
