@@ -27,9 +27,9 @@ export const updateMamba: types.IToolProvider = {
     }
     core.info("Creating bash wrapper for `mamba`...");
     // Add bat-less forwarder for bash users on Windows
-    const mambaBat = conda.condaExecutable(options).replace("\\", "/");
+    const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
 
-    const contents = `bash.exe -c "exec '${mambaBat}' $*"`;
+    const contents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
     fs.writeFileSync(mambaBat.slice(0, -4), contents);
     core.info(`... wrote ${mambaBat}:\n${contents}`);
   },
