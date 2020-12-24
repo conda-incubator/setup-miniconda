@@ -39,21 +39,23 @@ export const KNOWN_EXTENSIONS = [".exe", ".sh"];
  * Errors that are always probably spurious
  */
 export const IGNORED_WARNINGS = [
-  // appear on win install, we can swallow them
+  // Appear on win install, we can swallow them
   `menuinst_win32`,
   `Unable to register environment`,
   `0%|`,
-  // appear on certain Linux/OSX installers
+  // Appear on certain Linux/OSX installers
   `Please run using "bash"`,
-  // old condas don't know what to do with these
+  // Old condas don't know what to do with these
   `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
+  // Channel warnings are very boring and noisy
+  `moving to the top`,
 ];
 
 /**
  * Warnings that should be errors
  */
 export const FORCED_ERRORS = [
-  // conda env create will ignore invalid sections and move on
+  // `conda env create` will ignore invalid sections and move on
   `EnvironmentSectionNotValid`,
 ];
 

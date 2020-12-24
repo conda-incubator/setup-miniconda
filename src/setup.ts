@@ -81,6 +81,8 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
       env.ensureEnvironment(inputs, options)
     );
   }
+
+  core.info("setup-miniconda ran successfully");
 }
 
 /**
