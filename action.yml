@@ -11,9 +11,29 @@ inputs:
     default: ""
   miniconda-version:
     description:
-      "If provided, this version of miniconda will be downloaded and installed.
+      "If provided, this version of Miniconda3 will be downloaded and installed.
       Visit https://repo.continuum.io/miniconda/ for more information on
       available versions."
+    required: false
+    default: ""
+  miniforge-variant:
+    description:
+      "If provided, this variant of Miniforge will be downloaded and installed.
+      Currently-known values:
+      - Miniforge3
+      - Miniforge-pypy3
+      - Mambaforge
+      - Mambaforge-pypy3
+      Visit https://github.com/conda-forge/miniforge/releases/ for more information
+      on available variants"
+    required: false
+    default: ""
+  miniforge-version:
+    description:
+      "If provided, this version of the given Miniforge variant will be downloaded
+      and installed instead of the latest.
+      Visit https://github.com/conda-forge/miniforge/releases/ for more information
+      on available versions"
     required: false
     default: ""
   conda-version:
@@ -180,11 +200,24 @@ inputs:
       removed from the runner. Default is "true".'
     required: false
     default: "true"
+  mamba-in-installer:
+    description:
+      'Experimental. If `true`, assume `mamba` is already available after running
+      the installer. Always `true` for `miniforge-variant: Mambaforge` or
+      `miniforge-variant: Mambaforge-pypy3`'
+    required: false
+    default: ""
   mamba-version:
     description:
       'Experimental. Use mamba (https://github.com/QuantStack/mamba) as a faster
       drop-in replacement for conda installs. Disabled by default. To enable,
       use "*" or a "x.y" version string.'
+    required: false
+    default: ""
+  use-mamba:
+    description:
+      'Experimental. Use mamba as soon as available (either as provided by
+      `mamba-in-installer` or installation by `mamba-version`)'
     required: false
     default: ""
   architecture:

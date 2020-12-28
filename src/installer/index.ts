@@ -5,6 +5,7 @@ import * as core from "@actions/core";
 import * as types from "../types";
 import * as utils from "../utils";
 
+import { miniforgeDownloader } from "./download-miniforge";
 import { minicondaDownloader } from "./download-miniconda";
 import { urlDownloader } from "./download-url";
 import { bundledMinicondaUser } from "./bundled-miniconda";
@@ -24,6 +25,7 @@ const INSTALLER_PROVIDERS: types.IInstallerProvider[] = [
   bundledMinicondaUser,
   urlDownloader,
   minicondaDownloader,
+  miniforgeDownloader,
 ];
 
 /** See if any provider works with the given inputs and options */
@@ -32,9 +34,9 @@ export async function getLocalInstallerPath(
   options: types.IDynamicOptions
 ) {
   for (const provider of INSTALLER_PROVIDERS) {
-    core.info(`Can we use ${provider.label}?`);
+    core.info(`Can we ${provider.label}?`);
     if (await provider.provides(inputs, options)) {
-      core.info(`... will use ${provider.label}.`);
+      core.info(`... will ${provider.label}.`);
       return provider.installerPath(inputs, options);
     }
   }

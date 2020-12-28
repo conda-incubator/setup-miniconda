@@ -6628,15 +6628,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runInstaller = exports.ensureLocalInstaller = void 0;
+exports.ensureLocalInstaller = void 0;
 const crypto = __importStar(__webpack_require__(417));
 const path = __importStar(__webpack_require__(622));
 const url_1 = __webpack_require__(835);
 const core = __importStar(__webpack_require__(470));
 const io = __importStar(__webpack_require__(1));
 const tc = __importStar(__webpack_require__(533));
-const utils = __importStar(__webpack_require__(163));
-const conda = __importStar(__webpack_require__(259));
 /** Get the path for a locally-executable installer from cache, or as downloaded
  *
  * @returns the local path to the installer (with the correct extension)
@@ -6691,40 +6689,6 @@ function ensureLocalInstaller(options) {
     });
 }
 exports.ensureLocalInstaller = ensureLocalInstaller;
-/**
- * Create a conda base (ne root) env from a `constructor`-compatible CLI executable
- *
- * @param installerPath must have an appropriate extension for this platform
- */
-function runInstaller(installerPath, options) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const outputPath = conda.condaBasePath(options);
-        const installerExtension = path.extname(installerPath);
-        let command;
-        switch (installerExtension) {
-            case ".exe":
-                /* From https://docs.anaconda.com/anaconda/install/silent-mode/
-                    /D=<installation path> - Destination installation path.
-                                            - Must be the last argument.
-                                            - Do not wrap in quotation marks.
-                                            - Required if you use /S.
-                    For the above reasons, this is treated a monolithic arg
-                  */
-                command = [
-                    `"${installerPath}" /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`,
-                ];
-                break;
-            case ".sh":
-                command = ["bash", installerPath, "-f", "-b", "-p", outputPath];
-                break;
-            default:
-                throw new Error(`Unknown installer extension: ${installerExtension}`);
-        }
-        core.info(`Install Command:\n\t${command}`);
-        return yield utils.execute(command);
-    });
-}
-exports.runInstaller = runInstaller;
 
 
 /***/ }),
@@ -9387,7 +9351,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_URL_PREFIX = exports.MINIFORGE_INDEX_URL = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 //-----------------------------------------------------------------------
@@ -9410,12 +9374,27 @@ exports.OS_NAMES = {
     darwin: "MacOSX",
     linux: "Linux",
 };
+/** API endpoint for Miniforge releases */
+exports.MINIFORGE_INDEX_URL = `https://api.github.com/repos/conda-forge/miniforge/releases`;
+/** Common download prefix */
+exports.MINIFORGE_URL_PREFIX = "https://github.com/conda-forge/miniforge/releases/download";
 /** Names for a conda `base` env */
 exports.BASE_ENV_NAMES = ["root", "base", ""];
 /**
  * Known extensions for `constructor`-generated installers supported
  */
 exports.KNOWN_EXTENSIONS = [".exe", ".sh"];
+/** As of mamba 0.7.6, only these top-level commands are supported */
+exports.MAMBA_SUBCOMMANDS = [
+    "clean",
+    "create",
+    "env",
+    "info",
+    "install",
+    "list",
+    "run",
+    "search",
+];
 /**
  * Errors that are always probably spurious
  */
@@ -13056,11 +13035,14 @@ exports.condaBasePath = condaBasePath;
 /**
  * Provide cross platform location of conda/mamba executable
  */
-function condaExecutable(options) {
+function condaExecutable(options, subcommand) {
     const dir = condaBasePath(options);
     let condaExe;
-    let commandName;
-    commandName = options.useMamba ? "mamba" : "conda";
+    let commandName = "conda";
+    if (options.useMamba &&
+        (subcommand == null || constants.MAMBA_SUBCOMMANDS.includes(subcommand))) {
+        commandName = "mamba";
+    }
     commandName = constants.IS_WINDOWS ? commandName + ".bat" : commandName;
     condaExe = path.join(dir, "condabin", commandName);
     return condaExe;
@@ -13071,7 +13053,7 @@ exports.condaExecutable = condaExecutable;
  */
 function condaCommand(cmd, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        const command = [condaExecutable(options), ...cmd];
+        const command = [condaExecutable(options, cmd[0]), ...cmd];
         return yield utils.execute(command);
     });
 }
@@ -13187,12 +13169,7 @@ function condaInit(inputs, options) {
         }
         // Run conda init
         for (let cmd of ["--all"]) {
-            // TODO: determine when it's safe to use mamba
-            yield utils.execute([
-                condaExecutable(Object.assign(Object.assign({}, options), { useMamba: false })),
-                "init",
-                cmd,
-            ]);
+            yield condaCommand(["init", cmd], options);
         }
         // Rename files
         if (constants.IS_LINUX) {
@@ -13573,10 +13550,12 @@ const RULES = [
         `only one of 'conda-version: ${i.condaVersion}' or 'auto-update-conda: true' may be provided`,
     (i) => !!(i.pythonVersion && !i.activateEnvironment) &&
         `'python-version: ${i.pythonVersion}' requires 'activate-environment: true'`,
-    (i, c) => !!(i.mambaVersion && !c.channels.includes("conda-forge")) &&
-        `'mamba-version: ${i.mambaVersion}' requires 'conda-forge' to be included in 'channels'`,
+    (i) => !!(i.minicondaVersion && i.miniforgeVariant) &&
+        `only one of 'miniconda-version: ${i.minicondaVersion}' or 'miniforge-variant: ${i.miniforgeVariant}' may be provided`,
     (i) => !!(i.installerUrl && i.minicondaVersion) &&
-        `only one of 'installer-url' and 'miniconda-version' may be provided`,
+        `only one of 'installer-url: ${i.installerUrl}' or 'miniconda-version: ${i.minicondaVersion}' may be provided`,
+    (i) => !!(i.installerUrl && i.miniforgeVariant) &&
+        `only one of 'installer-url: ${i.installerUrl}' or 'miniforge-variant: ${i.miniforgeVariant}' may be provided`,
     (i) => !!(i.installerUrl &&
         !constants.KNOWN_EXTENSIONS.includes(urlExt(i.installerUrl))) &&
         `'installer-url' extension '${urlExt(i.installerUrl)}' must be one of: ${constants.KNOWN_EXTENSIONS}`,
@@ -13598,8 +13577,12 @@ function parseInputs() {
             condaVersion: core.getInput("conda-version"),
             environmentFile: core.getInput("environment-file"),
             installerUrl: core.getInput("installer-url"),
+            mambaInInstaller: core.getInput("mamba-in-installer"),
             mambaVersion: core.getInput("mamba-version"),
+            useMamba: core.getInput("use-mamba"),
             minicondaVersion: core.getInput("miniconda-version"),
+            miniforgeVariant: core.getInput("miniforge-variant"),
+            miniforgeVersion: core.getInput("miniforge-version"),
             pythonVersion: core.getInput("python-version"),
             removeProfiles: core.getInput("remove-profiles"),
             condaConfig: Object.freeze({
@@ -19146,6 +19129,7 @@ exports.bundledMinicondaUser = {
     label: "use bundled Miniconda",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         return (inputs.minicondaVersion === "" &&
+            inputs.miniforgeVariant === "" &&
             inputs.architecture === "x64" &&
             inputs.installerUrl === "");
     }),
@@ -20490,15 +20474,19 @@ function setupMiniconda(inputs) {
         let options = {
             useBundled: true,
             useMamba: false,
+            mambaInInstaller: inputs.mambaInInstaller === "true",
             condaConfig: Object.assign({}, inputs.condaConfig),
         };
         yield core.group(`Creating bootstrap condarc file in ${constants.CONDARC_PATH}...`, conda.bootstrapConfig);
         const installerInfo = yield core.group("Ensuring installer...", () => installer.getLocalInstallerPath(inputs, options));
+        // The installer may change the options
         options = Object.assign(Object.assign({}, options), installerInfo.options);
         const basePath = conda.condaBasePath(options);
         if (installerInfo.localInstallerPath && !options.useBundled) {
             yield core.group("Running installer...", () => installer.runInstaller(installerInfo.localInstallerPath, basePath));
         }
+        // The installer may have provisioned mamba: use if requested
+        options.useMamba = options.mambaInInstaller && inputs.useMamba === "true";
         if (!fs.existsSync(basePath)) {
             throw Error(`No installed conda 'base' enviroment found at ${basePath}`);
         }
@@ -20511,7 +20499,7 @@ function setupMiniconda(inputs) {
         yield core.group("Configuring conda package cache...", () => outputs.setCacheVariable(options));
         yield core.group("Applying initial configuration...", () => conda.applyCondaConfiguration(inputs, options));
         yield core.group("Initializing conda shell integration...", () => conda.condaInit(inputs, options));
-        const toolOptions = yield core.group("Adding tools to 'base' env", () => baseTools.installBaseTools(inputs, options));
+        const toolOptions = yield core.group("Adding tools to 'base' env...", () => baseTools.installBaseTools(inputs, options));
         // `useMamba` may have changed
         options = Object.assign(Object.assign({}, options), toolOptions);
         if (inputs.activateEnvironment) {
@@ -22084,6 +22072,7 @@ exports.runInstaller = exports.getLocalInstallerPath = void 0;
 const path = __importStar(__webpack_require__(622));
 const core = __importStar(__webpack_require__(470));
 const utils = __importStar(__webpack_require__(163));
+const download_miniforge_1 = __webpack_require__(897);
 const download_miniconda_1 = __webpack_require__(768);
 const download_url_1 = __webpack_require__(339);
 const bundled_miniconda_1 = __webpack_require__(468);
@@ -22102,14 +22091,15 @@ const INSTALLER_PROVIDERS = [
     bundled_miniconda_1.bundledMinicondaUser,
     download_url_1.urlDownloader,
     download_miniconda_1.minicondaDownloader,
+    download_miniforge_1.miniforgeDownloader,
 ];
 /** See if any provider works with the given inputs and options */
 function getLocalInstallerPath(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         for (const provider of INSTALLER_PROVIDERS) {
-            core.info(`Can we use ${provider.label}?`);
+            core.info(`Can we ${provider.label}?`);
             if (yield provider.provides(inputs, options)) {
-                core.info(`... will use ${provider.label}.`);
+                core.info(`... will ${provider.label}.`);
                 return provider.installerPath(inputs, options);
             }
         }
@@ -29902,7 +29892,7 @@ module.exports.safeLoad    = safeLoad;
 /* 771 */
 /***/ (function(module) {
 
-module.exports = {"_args":[["cheerio@1.0.0-rc.3","/Users/goanpeca/Dropbox (Personal)/develop/conda-incubator/setup-miniconda"]],"_from":"cheerio@1.0.0-rc.3","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"cheerio@1.0.0-rc.3","name":"cheerio","escapedName":"cheerio","rawSpec":"1.0.0-rc.3","saveSpec":null,"fetchSpec":"1.0.0-rc.3"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_spec":"1.0.0-rc.3","_where":"/Users/goanpeca/Dropbox (Personal)/develop/conda-incubator/setup-miniconda","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
+module.exports = {"_args":[["cheerio@1.0.0-rc.3","/home/weg/projects/actions/setup-miniconda"]],"_from":"cheerio@1.0.0-rc.3","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"cheerio@1.0.0-rc.3","name":"cheerio","escapedName":"cheerio","rawSpec":"1.0.0-rc.3","saveSpec":null,"fetchSpec":"1.0.0-rc.3"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_spec":"1.0.0-rc.3","_where":"/home/weg/projects/actions/setup-miniconda","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
 
 /***/ }),
 /* 772 */
@@ -34081,7 +34071,127 @@ function () {
 }();
 
 /***/ }),
-/* 897 */,
+/* 897 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.miniforgeDownloader = exports.downloadMiniforge = void 0;
+const fs = __importStar(__webpack_require__(747));
+const core = __importStar(__webpack_require__(470));
+const tc = __importStar(__webpack_require__(533));
+const constants = __importStar(__webpack_require__(211));
+const base = __importStar(__webpack_require__(122));
+/**
+ * List available Miniforge versions
+ *
+ * @param arch
+ */
+function miniforgeVersions(variant, osName, arch) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const assets = [];
+        let extension = constants.IS_UNIX ? "sh" : "exe";
+        const suffix = `${osName}-${arch}.${extension}`;
+        core.info(`Downloading ${constants.MINIFORGE_INDEX_URL}`);
+        const downloadPath = yield tc.downloadTool(constants.MINIFORGE_INDEX_URL);
+        const data = JSON.parse(fs.readFileSync(downloadPath, "utf8"));
+        for (const release of data) {
+            if (release.prerelease || release.draft) {
+                continue;
+            }
+            for (const asset of release.assets) {
+                if (asset.name.match(`${variant}-\\d`) && asset.name.endsWith(suffix)) {
+                    assets.push(Object.assign(Object.assign({}, asset), { tag_name: release.tag_name }));
+                }
+            }
+        }
+        return assets;
+    });
+}
+/**
+ * Download specific Miniforge defined by variant, version and architecture
+ */
+function downloadMiniforge(inputs, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let tool = inputs.miniforgeVariant.trim();
+        let version = inputs.miniforgeVersion.trim();
+        const arch = constants.ARCHITECTURES[inputs.architecture];
+        // Check valid arch
+        if (!arch) {
+            throw new Error(`Invalid 'architecture: ${inputs.architecture}'`);
+        }
+        let url;
+        const extension = constants.IS_UNIX ? "sh" : "exe";
+        const osName = constants.OS_NAMES[process.platform];
+        if (version) {
+            const fileName = [tool, version, osName, `${arch}.${extension}`].join("-");
+            url = [constants.MINIFORGE_URL_PREFIX, version, fileName].join("/");
+        }
+        else {
+            const assets = yield miniforgeVersions(inputs.miniforgeVariant, osName, arch);
+            if (!assets.length) {
+                throw new Error(`Couldn't fetch Miniforge versions and 'miniforge-version' not provided`);
+            }
+            version = assets[0].tag_name;
+            url = assets[0].browser_download_url;
+        }
+        return yield base.ensureLocalInstaller({ url, tool, version, arch });
+    });
+}
+exports.downloadMiniforge = downloadMiniforge;
+/**
+ * Provide a path to a Miniforge downloaded from github.com.
+ *
+ * ### Note
+ * Uses the well-known structure of GitHub releases to resolve and download
+ * a particular Miniforge installer.
+ */
+exports.miniforgeDownloader = {
+    label: "download Minforge",
+    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        return inputs.miniforgeVariant !== "" && inputs.installerUrl === "";
+    }),
+    installerPath: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        return {
+            localInstallerPath: yield downloadMiniforge(inputs, options),
+            options: Object.assign(Object.assign({}, options), { useBundled: false, mambaInInstaller: inputs.miniforgeVariant
+                    .toLowerCase()
+                    .includes("mamba") }),
+        };
+    }),
+};
+
+
+/***/ }),
 /* 898 */,
 /* 899 */,
 /* 900 */,
@@ -35278,9 +35388,9 @@ const ENV_PROVIDERS = [
 function ensureEnvironment(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         for (const provider of ENV_PROVIDERS) {
-            core.info(`Can we use ${provider.label}?`);
+            core.info(`Can we ${provider.label}?`);
             if (yield provider.provides(inputs, options)) {
-                core.info(`... will use ${provider.label}.`);
+                core.info(`... will ${provider.label}.`);
                 const args = yield provider.condaArgs(inputs, options);
                 return yield core.group(`Updating '${inputs.activateEnvironment}' env from ${provider.label}...`, () => conda.condaCommand(args, options));
             }

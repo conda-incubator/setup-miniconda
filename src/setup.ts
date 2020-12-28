@@ -18,6 +18,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
   let options: types.IDynamicOptions = {
     useBundled: true,
     useMamba: false,
+    mambaInInstaller: inputs.mambaInInstaller === "true",
     condaConfig: { ...inputs.condaConfig },
   };
 
@@ -30,6 +31,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     installer.getLocalInstallerPath(inputs, options)
   );
 
+  // The installer may change the options
   options = { ...options, ...installerInfo.options };
 
   const basePath = conda.condaBasePath(options);
@@ -39,6 +41,9 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
       installer.runInstaller(installerInfo.localInstallerPath, basePath)
     );
   }
+
+  // The installer may have provisioned mamba: use if requested
+  options.useMamba = options.mambaInInstaller && inputs.useMamba === "true";
 
   if (!fs.existsSync(basePath)) {
     throw Error(`No installed conda 'base' enviroment found at ${basePath}`);
@@ -69,7 +74,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     conda.condaInit(inputs, options)
   );
 
-  const toolOptions = await core.group("Adding tools to 'base' env", () =>
+  const toolOptions = await core.group("Adding tools to 'base' env...", () =>
     baseTools.installBaseTools(inputs, options)
   );
 

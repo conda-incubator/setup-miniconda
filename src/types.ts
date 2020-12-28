@@ -79,10 +79,14 @@ export interface IActionInputs {
   readonly condaVersion: string;
   readonly environmentFile: string;
   readonly installerUrl: string;
+  readonly mambaInInstaller: string;
   readonly mambaVersion: string;
   readonly minicondaVersion: string;
+  readonly miniforgeVariant: string;
+  readonly miniforgeVersion: string;
   readonly pythonVersion: string;
   readonly removeProfiles: string;
+  readonly useMamba: string;
 }
 
 /**
@@ -91,6 +95,7 @@ export interface IActionInputs {
 export interface IDynamicOptions {
   useBundled: boolean;
   useMamba: boolean;
+  mambaInInstaller: boolean;
   envSpec?: IEnvSpec;
   condaConfig: TCondaConfig;
 }
@@ -186,4 +191,24 @@ export interface IToolProvider {
     inputs: IActionInputs,
     options: IDynamicOptions
   ) => Promise<void>;
+}
+
+/** A release asset from the GitHub API */
+export interface IGithubAsset {
+  browser_download_url: string;
+  created_at: string;
+  name: string;
+}
+
+/** An asset with some extra metadata from the release */
+export interface IGithubAssetWithRelease extends IGithubAsset {
+  tag_name: string;
+}
+
+/** The body of the API request */
+export interface IGithubRelease {
+  assets: IGithubAsset[];
+  tag_name: string;
+  prerelease: boolean;
+  draft: boolean;
 }

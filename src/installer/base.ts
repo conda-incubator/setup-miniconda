@@ -7,8 +7,6 @@ import * as io from "@actions/io";
 import * as tc from "@actions/tool-cache";
 
 import * as types from "../types";
-import * as utils from "../utils";
-import * as conda from "../conda";
 
 /** Get the path for a locally-executable installer from cache, or as downloaded
  *
@@ -77,42 +75,4 @@ export async function ensureLocalInstaller(
   }
 
   return executablePath;
-}
-
-/**
- * Create a conda base (ne root) env from a `constructor`-compatible CLI executable
- *
- * @param installerPath must have an appropriate extension for this platform
- */
-export async function runInstaller(
-  installerPath: string,
-  options: types.IDynamicOptions
-): Promise<void> {
-  const outputPath: string = conda.condaBasePath(options);
-  const installerExtension = path.extname(installerPath);
-  let command: string[];
-
-  switch (installerExtension) {
-    case ".exe":
-      /* From https://docs.anaconda.com/anaconda/install/silent-mode/
-          /D=<installation path> - Destination installation path.
-                                  - Must be the last argument.
-                                  - Do not wrap in quotation marks.
-                                  - Required if you use /S.
-          For the above reasons, this is treated a monolithic arg
-        */
-      command = [
-        `"${installerPath}" /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`,
-      ];
-      break;
-    case ".sh":
-      command = ["bash", installerPath, "-f", "-b", "-p", outputPath];
-      break;
-    default:
-      throw new Error(`Unknown installer extension: ${installerExtension}`);
-  }
-
-  core.info(`Install Command:\n\t${command}`);
-
-  return await utils.execute(command);
 }

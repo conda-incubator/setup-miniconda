@@ -31,11 +31,19 @@ export function condaBasePath(options: types.IDynamicOptions): string {
 /**
  * Provide cross platform location of conda/mamba executable
  */
-export function condaExecutable(options: types.IDynamicOptions): string {
+export function condaExecutable(
+  options: types.IDynamicOptions,
+  subcommand?: string
+): string {
   const dir: string = condaBasePath(options);
   let condaExe: string;
-  let commandName: string;
-  commandName = options.useMamba ? "mamba" : "conda";
+  let commandName = "conda";
+  if (
+    options.useMamba &&
+    (subcommand == null || constants.MAMBA_SUBCOMMANDS.includes(subcommand))
+  ) {
+    commandName = "mamba";
+  }
   commandName = constants.IS_WINDOWS ? commandName + ".bat" : commandName;
   condaExe = path.join(dir, "condabin", commandName);
   return condaExe;
@@ -48,7 +56,7 @@ export async function condaCommand(
   cmd: string[],
   options: types.IDynamicOptions
 ): Promise<void> {
-  const command = [condaExecutable(options), ...cmd];
+  const command = [condaExecutable(options, cmd[0]), ...cmd];
   return await utils.execute(command);
 }
 
@@ -177,12 +185,7 @@ export async function condaInit(
 
   // Run conda init
   for (let cmd of ["--all"]) {
-    // TODO: determine when it's safe to use mamba
-    await utils.execute([
-      condaExecutable({ ...options, useMamba: false }),
-      "init",
-      cmd,
-    ]);
+    await condaCommand(["init", cmd], options);
   }
 
   // Rename files
