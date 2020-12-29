@@ -73,6 +73,7 @@ jobs:
           environment-file: ${{ matrix.environment-file }}
           miniforge-variant: ${{ matrix.miniforge-variant }}
           miniforge-version: ${{ matrix.miniforge-version }}
+          mamba-version: ${{ matrix.mamba-version }}
           use-mamba: true
       - run: |
           mamba info
