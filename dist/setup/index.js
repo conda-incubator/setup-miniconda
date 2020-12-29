@@ -2132,7 +2132,7 @@ function installBaseTools(inputs, options) {
             }
         }
         if (tools.length) {
-            yield conda.condaCommand(["install", "--name", "base", ...tools], 
+            yield conda.condaCommand(["install", "--name", "base", ...tools],
             // Use the original `options`, as we can't guarantee `mamba` is available
             // TODO: allow declaring that the installer already has `mamba`
             options);
@@ -7086,7 +7086,7 @@ var attributeRules = {
 		if(len === 0){
 			return falseFunc;
 		}
-		
+
 		if(data.ignoreCase){
 			value = value.toLowerCase();
 
@@ -7254,7 +7254,7 @@ exports.prepend = function(elem, prev){
 	if(elem.prev){
 		elem.prev.next = prev;
 	}
-	
+
 	prev.parent = parent;
 	prev.prev = elem.prev;
 	prev.next = elem;
@@ -8525,7 +8525,7 @@ Parser.prototype.onclosetag = function(name) {
     if (this._lowerCaseTagNames) {
         name = name.toLowerCase();
     }
-    
+
     if (name in foreignContextElements || name in htmlIntegrationElements) {
         this._foreignContext.pop();
     }
@@ -8574,7 +8574,7 @@ Parser.prototype._closeCurrentTag = function() {
             this._cbs.onclosetag(name);
         }
         this._stack.pop();
-        
+
     }
 };
 
@@ -15654,7 +15654,7 @@ DomHandler.prototype.onerror = function(error){
 
 DomHandler.prototype.onclosetag = function(){
 	//if(this._tagStack.pop().name !== name) this._handleCallback(Error("Tagname didn't match!"));
-	
+
 	var elem = this._tagStack.pop();
 
 	if(this._options.withEndIndices && elem){
@@ -20653,9 +20653,12 @@ exports.ensureYaml = {
         if (patchesApplied.length) {
             const patchedYaml = yaml.safeDump(Object.assign(Object.assign({}, yamlData), { dependencies }));
             envFile = path.join(os.tmpdir(), "environment-patched.yml");
-            core.info(`Making patched copy of 'environment-file: ${inputs.environmentFile}'
-        ${patchedYaml}`);
+            core.info(`Making patched copy of 'environment-file: ${inputs.environmentFile}'`);
+            core.info(patchedYaml);
             fs.writeFileSync(envFile, patchedYaml, "utf8");
+        }
+        else {
+            core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
         }
         return [
             "env",
@@ -38318,7 +38321,7 @@ LocationInfoTokenizerMixin.prototype._getOverriddenMethods = function (mxn, orig
 /******/ ],
 /******/ function(__webpack_require__) { // webpackRuntimeModules
 /******/ 	"use strict";
-/******/ 
+/******/
 /******/ 	/* webpack/runtime/node module decorator */
 /******/ 	!function() {
 /******/ 		__webpack_require__.nmd = function(module) {
@@ -38335,6 +38338,6 @@ LocationInfoTokenizerMixin.prototype._getOverriddenMethods = function (mxn, orig
 /******/ 			return module;
 /******/ 		};
 /******/ 	}();
-/******/ 	
+/******/
 /******/ }
 );

@@ -110,10 +110,12 @@ export const ensureYaml: types.IEnvProvider = {
       const patchedYaml = yaml.safeDump({ ...yamlData, dependencies });
       envFile = path.join(os.tmpdir(), "environment-patched.yml");
       core.info(
-        `Making patched copy of 'environment-file: ${inputs.environmentFile}'
-        ${patchedYaml}`
+        `Making patched copy of 'environment-file: ${inputs.environmentFile}'`
       );
+      core.info(patchedYaml);
       fs.writeFileSync(envFile, patchedYaml, "utf8");
+    } else {
+      core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
     }
 
     return [
