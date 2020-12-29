@@ -2121,11 +2121,12 @@ function installBaseTools(inputs, options) {
         for (const provider of TOOL_PROVIDERS) {
             core.info(`Do we need to ${provider.label}?`);
             if (yield provider.provides(inputs, options)) {
-                core.info(`... will ${provider.label}.`);
+                core.info(`... we will ${provider.label}.`);
                 const toolUpdates = yield provider.toolPackages(inputs, options);
                 tools.push(...toolUpdates.tools);
                 postInstallOptions = Object.assign(Object.assign({}, postInstallOptions), toolUpdates.options);
                 if (provider.postInstall) {
+                    core.info(`... we will perform post-intall steps after we ${provider.label}.`);
                     postInstallActions.push(provider.postInstall);
                 }
             }
@@ -2138,11 +2139,17 @@ function installBaseTools(inputs, options) {
             // *Now* use the new options, as we may have a new conda/mamba with more supported
             // options that previously failed
             yield conda.applyCondaConfiguration(inputs, postInstallOptions);
-            if (postInstallActions.length) {
-                for (const action of postInstallActions) {
-                    yield action(inputs, postInstallOptions);
-                }
+        }
+        else {
+            core.info("No tools were installed in 'base' env.");
+        }
+        if (postInstallActions.length) {
+            for (const action of postInstallActions) {
+                yield action(inputs, postInstallOptions);
             }
+        }
+        else {
+            core.info("No post-install actions were taken on 'base' env.");
         }
         return postInstallOptions;
     });
@@ -13717,6 +13724,7 @@ exports.updateMamba = {
     }),
     postInstall: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         if (!constants.IS_WINDOWS) {
+            core.info("`mamba` is already executable");
             return;
         }
         core.info("Creating bash wrapper for `mamba`...");

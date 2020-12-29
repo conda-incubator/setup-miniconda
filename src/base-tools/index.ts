@@ -41,11 +41,14 @@ export async function installBaseTools(
   for (const provider of TOOL_PROVIDERS) {
     core.info(`Do we need to ${provider.label}?`);
     if (await provider.provides(inputs, options)) {
-      core.info(`... will ${provider.label}.`);
+      core.info(`... we will ${provider.label}.`);
       const toolUpdates = await provider.toolPackages(inputs, options);
       tools.push(...toolUpdates.tools);
       postInstallOptions = { ...postInstallOptions, ...toolUpdates.options };
       if (provider.postInstall) {
+        core.info(
+          `... we will perform post-intall steps after we ${provider.label}.`
+        );
         postInstallActions.push(provider.postInstall);
       }
     }
@@ -62,12 +65,16 @@ export async function installBaseTools(
     // *Now* use the new options, as we may have a new conda/mamba with more supported
     // options that previously failed
     await conda.applyCondaConfiguration(inputs, postInstallOptions);
+  } else {
+    core.info("No tools were installed in 'base' env.");
+  }
 
-    if (postInstallActions.length) {
-      for (const action of postInstallActions) {
-        await action(inputs, postInstallOptions);
-      }
+  if (postInstallActions.length) {
+    for (const action of postInstallActions) {
+      await action(inputs, postInstallOptions);
     }
+  } else {
+    core.info("No post-install actions were taken on 'base' env.");
   }
 
   return postInstallOptions;

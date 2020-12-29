@@ -27,6 +27,7 @@ export const updateMamba: types.IToolProvider = {
   },
   postInstall: async (inputs, options) => {
     if (!constants.IS_WINDOWS) {
+      core.info("`mamba` is already executable");
       return;
     }
     core.info("Creating bash wrapper for `mamba`...");
