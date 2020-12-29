@@ -22,10 +22,27 @@ async function miniforgeVersions(
   let extension: string = constants.IS_UNIX ? "sh" : "exe";
   const suffix = `${osName}-${arch}.${extension}`;
 
-  core.info(`Downloading ${constants.MINIFORGE_INDEX_URL}`);
-  const downloadPath: string = await tc.downloadTool(
-    constants.MINIFORGE_INDEX_URL
-  );
+  core.info(`Checking for cached Miniforge releases...`);
+
+  // Try to pull cached releases with an hour epoch: YYYY-MM-DDTHH
+  const cacheEpoch = new Date().toISOString().split(":")[0];
+  let downloadPath = tc.find(constants.MINIFORGE_RELEASE_JSON, cacheEpoch);
+
+  if (downloadPath !== "") {
+    core.info(`Found Miniforge releases in cache`);
+  } else {
+    core.info(
+      `Downloading Miniforge releases from ${constants.MINIFORGE_INDEX_URL}`
+    );
+    downloadPath = await tc.downloadTool(constants.MINIFORGE_INDEX_URL);
+    const cacheResult = await tc.cacheFile(
+      downloadPath,
+      constants.MINIFORGE_RELEASE_JSON,
+      constants.MINIFORGE_RELEASE_JSON,
+      cacheEpoch
+    );
+    core.info(`Cached Miniforge releases: ${cacheResult}!`);
+  }
 
   const data: types.IGithubRelease[] = JSON.parse(
     fs.readFileSync(downloadPath, "utf8")
@@ -83,6 +100,8 @@ export async function downloadMiniforge(
     version = assets[0].tag_name;
     url = assets[0].browser_download_url;
   }
+
+  core.info(`Will fetch ${tool} ${version} from ${url}`);
 
   return await base.ensureLocalInstaller({ url, tool, version, arch });
 }

@@ -55,7 +55,7 @@ jobs:
           - os: ubuntu
             environment-file: etc/example-environment-no-name.yml
             miniforge-variant: Mambaforge
-            miniforge-version: 4.9.2-1
+            miniforge-version: 4.9.2-2
             mamba-version: "*"
           - os: macos
             environment-file: etc/example-empty-channels-environment.yml
