@@ -66,7 +66,6 @@ jobs:
             environment-file: etc/example-explicit.Windows.conda.lock
             condarc-file: etc/example-condarc.yml
             miniforge-variant: Mambaforge
-            python-version: 3.7
     steps:
       - uses: actions/checkout@v2
       - uses: ./
