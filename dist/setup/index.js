@@ -13705,11 +13705,13 @@ const conda = __importStar(__webpack_require__(259));
 /** Install `mamba` in the `base` env at a specified version */
 exports.updateMamba = {
     label: "update mamba",
-    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return inputs.mambaVersion !== ""; }),
+    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return inputs.mambaVersion !== "" || options.mambaInInstaller; }),
     toolPackages: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
         return {
-            tools: [utils.makeSpec("mamba", inputs.mambaVersion)],
+            tools: inputs.mambaVersion !== ""
+                ? [utils.makeSpec("mamba", inputs.mambaVersion)]
+                : [],
             options: Object.assign(Object.assign({}, options), { useMamba: true }),
         };
     }),
