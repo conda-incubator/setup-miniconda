@@ -38,8 +38,8 @@ You can change the default `test` environment to have a different name bu settin
 
 ```yaml
  - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: whatever
+   with:
+     activate-environment: whatever
 ```
 
 ### Activate `base` environment
@@ -50,9 +50,9 @@ key to `true`.
 
 ```yaml
  - uses: conda-incubator/setup-miniconda@v2
-        with:
-          auto-activate-base: true
-          activate-environment: ""
+   with:
+     auto-activate-base: true
+     activate-environment: ""
 ```
 
 ## Usage examples
@@ -376,7 +376,7 @@ jobs:
           miniforge-version: 4.9.2-4
     steps:
       - uses: actions/checkout@v2
-      - uses: ./
+      - uses: conda-incubator/setup-miniconda@v2
         id: setup-miniconda
         with:
           environment-file: etc/example-environment.yml
@@ -413,7 +413,7 @@ jobs:
             miniforge-variant: Mambaforge
     steps:
       - uses: actions/checkout@v2
-      - uses: ./
+      - uses: conda-incubator/setup-miniconda@v2
         id: setup-miniconda
         with:
           condarc-file: ${{ matrix.condarc-file }}
