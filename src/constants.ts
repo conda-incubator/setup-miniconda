@@ -11,6 +11,7 @@ export const IS_WINDOWS: boolean = process.platform === "win32";
 export const IS_MAC: boolean = process.platform === "darwin";
 export const IS_LINUX: boolean = process.platform === "linux";
 export const IS_UNIX: boolean = IS_MAC || IS_LINUX;
+
 export const MINICONDA_BASE_URL: string =
   "https://repo.anaconda.com/miniconda/";
 
@@ -27,6 +28,16 @@ export const OS_NAMES: types.IOperatingSystems = {
   linux: "Linux",
 };
 
+/** API endpoint for Miniforge releases */
+export const MINIFORGE_INDEX_URL = `https://api.github.com/repos/conda-forge/miniforge/releases?per_page=100`;
+
+/**  */
+export const MINIFORGE_RELEASE_JSON = "miniforge-releases.json";
+
+/** Common download prefix */
+export const MINIFORGE_URL_PREFIX =
+  "https://github.com/conda-forge/miniforge/releases/download";
+
 /** Names for a conda `base` env */
 export const BASE_ENV_NAMES = ["root", "base", ""];
 
@@ -34,6 +45,18 @@ export const BASE_ENV_NAMES = ["root", "base", ""];
  * Known extensions for `constructor`-generated installers supported
  */
 export const KNOWN_EXTENSIONS = [".exe", ".sh"];
+
+/** As of mamba 0.7.6, only these top-level commands are supported */
+export const MAMBA_SUBCOMMANDS = [
+  "clean",
+  "create",
+  "env",
+  "info",
+  "install",
+  "list",
+  "run",
+  "search",
+];
 
 /**
  * Errors that are always probably spurious

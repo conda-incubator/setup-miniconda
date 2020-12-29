@@ -1,0 +1,91 @@
+name: "Example 10: Miniforge, etc"
+
+on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - "master"
+  schedule:
+    # Note that cronjobs run on master/main by default
+    - cron: "0 0 * * *"
+
+jobs:
+  example-10-miniforge:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Ex10 (${{ matrix.os }}, Miniforge)
+    runs-on: ${{ matrix.os }}-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu", "macos", "windows"]
+        include:
+          - os: windows
+            miniforge-version: 4.9.2-4
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        id: setup-miniconda
+        with:
+          environment-file: etc/example-environment.yml
+          miniforge-variant: Miniforge3
+          miniforge-version: ${{ matrix.miniforge-version }}
+      - run: |
+          conda info
+          conda list
+          python -VV
+          printenv | sort
+
+  example-10-mambaforge:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Ex10 (${{ matrix.os }}, Mambaforge)
+    runs-on: ${{ matrix.os }}-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu", "macos", "windows"]
+        include:
+          # should use mamba 0.7.4 to upgrade to mamba 0.7.6
+          - os: ubuntu
+            environment-file: etc/example-environment-no-name.yml
+            miniforge-variant: Mambaforge
+            miniforge-version: 4.9.2-2
+            mamba-version: 0.7.6
+            python-version: 3.6
+          - os: macos
+            environment-file: etc/example-empty-channels-environment.yml
+            miniforge-variant: Mambaforge-pypy3
+          - os: windows
+            environment-file: etc/example-explicit.Windows.conda.lock
+            condarc-file: etc/example-condarc.yml
+            miniforge-variant: Mambaforge
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        id: setup-miniconda
+        with:
+          condarc-file: ${{ matrix.condarc-file }}
+          environment-file: ${{ matrix.environment-file }}
+          miniforge-variant: ${{ matrix.miniforge-variant }}
+          miniforge-version: ${{ matrix.miniforge-version }}
+          mamba-version: ${{ matrix.mamba-version }}
+          use-mamba: true
+          python-version: ${{ matrix.python-version }}
+      - run: |
+          mamba info
+          mamba list
+          python -VV
+          printenv | sort

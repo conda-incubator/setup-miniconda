@@ -18,6 +18,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
   let options: types.IDynamicOptions = {
     useBundled: true,
     useMamba: false,
+    mambaInInstaller: false,
     condaConfig: { ...inputs.condaConfig },
   };
 
@@ -30,13 +31,19 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     installer.getLocalInstallerPath(inputs, options)
   );
 
+  // The desired installer may change the options
   options = { ...options, ...installerInfo.options };
 
   const basePath = conda.condaBasePath(options);
 
   if (installerInfo.localInstallerPath && !options.useBundled) {
-    await core.group("Running installer...", () =>
-      installer.runInstaller(installerInfo.localInstallerPath, basePath)
+    options = await core.group("Running installer...", () =>
+      installer.runInstaller(
+        installerInfo.localInstallerPath,
+        basePath,
+        inputs,
+        options
+      )
     );
   }
 
@@ -69,12 +76,10 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     conda.condaInit(inputs, options)
   );
 
-  const toolOptions = await core.group("Adding tools to 'base' env", () =>
+  // New base tools may change options
+  options = await core.group("Adding tools to 'base' env...", () =>
     baseTools.installBaseTools(inputs, options)
   );
-
-  // `useMamba` may have changed
-  options = { ...options, ...toolOptions };
 
   if (inputs.activateEnvironment) {
     await core.group("Ensuring environment...", () =>

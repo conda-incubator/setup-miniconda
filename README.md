@@ -243,10 +243,12 @@ Any installer created with [constructor](https://github.com/conda/constructor)
 which includes `conda` can be used in place of Miniconda. For example,
 [conda-forge](https://conda-forge.org/) maintains additional builds of
 [miniforge](https://github.com/conda-forge/miniforge/releases) for platforms not
-yet supported by Miniconda.
+yet supported by Miniconda. For more, see [Example 10](#example-10-miniforge).
 
-> Note: Installer downloads are cached based on their full URL: adding some
-  non-functional salt to the URL will prevent this behavior, e.g. `#${{ github.run_number }}`
+> Notes:
+>  - Installer downloads are cached based on their full URL: adding some
+>    non-functional salt to the URL will prevent this behavior, e.g.
+>    `#${{ github.run_number }}`
 
 ```yaml
 jobs:
@@ -277,6 +279,11 @@ Experimental! Use `mamba` to handle conda installs in a faster way.
 `mamba-version` accepts a version string `x.y` (including `"*"`). It requires
 you specify `conda-forge` as part of the channels, ideally with the highest
 priority.
+
+> Notes:
+>  - If a [custom installer](#example-5-custom-installer) provides `mamba`, it
+>    can be prioritized wherever possible (including installing `mamba-version`)
+>    with `use-mamba: true`.
 
 ```yaml
 jobs:
@@ -348,6 +355,72 @@ jobs:
           conda config --show-sources
           conda config --show
           printenv | sort
+```
+
+### Example 10: Miniforge
+
+[Miniforge](https://github.com/conda-forge/miniforge) provides a number of
+alternatives to Miniconda, built from the ground up with `conda-forge` packages
+and with only `conda-forge` in its default channels.
+
+```yaml
+jobs:
+  example-10-miniforge:
+    name: Ex10 (${{ matrix.os }}, Miniforge)
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      matrix:
+        os: ["ubuntu", "macos", "windows"]
+        include:
+        - os: windows
+          miniforge-version: 4.9.2-4
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        id: setup-miniconda
+        with:
+          environment-file: etc/example-environment.yml
+          miniforge-variant: Miniforge3
+          miniforge-version: ${{ matrix.miniforge-version }}
+```
+
+In addition to `Miniforge3` with `conda` and `CPython` for each
+of its many supported platforms and architectures, additional variants including
+`Mambaforge` (which comes pre-installed `mamba` in addition to `conda` on all platforms)
+and `Miniforge-pypy3`/`Mamabaforge-pypy3` (which replace `CPython` with `pypy3`
+on Linux/MacOs) are available. The specific version can also be overridden.
+
+```yaml
+jobs:
+  example-10-mambaforge:
+    name: Ex10 (${{ matrix.os }}, Mambaforge)
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu", "macos", "windows"]
+        include:
+          - os: ubuntu
+            environment-file: etc/example-environment-no-name.yml
+            miniforge-variant: Mambaforge
+            miniforge-version: 4.9.2-4
+          - os: macos
+            environment-file: etc/example-empty-channels-environment.yml
+            miniforge-variant: Mambaforge-pypy3
+          - os: windows
+            environment-file: etc/example-explicit.Windows.conda.lock
+            condarc-file: etc/example-condarc.yml
+            miniforge-variant: Mambaforge
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        id: setup-miniconda
+        with:
+          condarc-file: ${{ matrix.condarc-file }}
+          environment-file: ${{ matrix.environment-file }}
+          miniforge-variant: ${{ matrix.miniforge-variant }}
+          miniforge-version: ${{ matrix.miniforge-version }}
+          use-mamba: true
 ```
 
 ## Caching

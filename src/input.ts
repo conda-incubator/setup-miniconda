@@ -41,12 +41,15 @@ const RULES: IRule[] = [
   (i) =>
     !!(i.pythonVersion && !i.activateEnvironment) &&
     `'python-version: ${i.pythonVersion}' requires 'activate-environment: true'`,
-  (i, c) =>
-    !!(i.mambaVersion && !c.channels.includes("conda-forge")) &&
-    `'mamba-version: ${i.mambaVersion}' requires 'conda-forge' to be included in 'channels'`,
+  (i) =>
+    !!(i.minicondaVersion && i.miniforgeVariant) &&
+    `only one of 'miniconda-version: ${i.minicondaVersion}' or 'miniforge-variant: ${i.miniforgeVariant}' may be provided`,
   (i) =>
     !!(i.installerUrl && i.minicondaVersion) &&
-    `only one of 'installer-url' and 'miniconda-version' may be provided`,
+    `only one of 'installer-url: ${i.installerUrl}' or 'miniconda-version: ${i.minicondaVersion}' may be provided`,
+  (i) =>
+    !!(i.installerUrl && i.miniforgeVariant) &&
+    `only one of 'installer-url: ${i.installerUrl}' or 'miniforge-variant: ${i.miniforgeVariant}' may be provided`,
   (i) =>
     !!(
       i.installerUrl &&
@@ -67,7 +70,7 @@ const RULES: IRule[] = [
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
  */
 export async function parseInputs(): Promise<types.IActionInputs> {
-  const inputs = Object.freeze({
+  const inputs: types.IActionInputs = Object.freeze({
     activateEnvironment: core.getInput("activate-environment"),
     architecture: core.getInput("architecture"),
     condaBuildVersion: core.getInput("conda-build-version"),
@@ -76,7 +79,10 @@ export async function parseInputs(): Promise<types.IActionInputs> {
     environmentFile: core.getInput("environment-file"),
     installerUrl: core.getInput("installer-url"),
     mambaVersion: core.getInput("mamba-version"),
+    useMamba: core.getInput("use-mamba"),
     minicondaVersion: core.getInput("miniconda-version"),
+    miniforgeVariant: core.getInput("miniforge-variant"),
+    miniforgeVersion: core.getInput("miniforge-version"),
     pythonVersion: core.getInput("python-version"),
     removeProfiles: core.getInput("remove-profiles"),
     condaConfig: Object.freeze({
@@ -111,5 +117,5 @@ export async function parseInputs(): Promise<types.IActionInputs> {
     throw Error(`${errors.length} errors found in action inputs`);
   }
 
-  return Object.freeze(inputs);
+  return inputs;
 }
