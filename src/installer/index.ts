@@ -5,6 +5,8 @@ import * as core from "@actions/core";
 import * as types from "../types";
 import * as utils from "../utils";
 
+import * as conda from "../conda";
+
 import { miniforgeDownloader } from "./download-miniforge";
 import { minicondaDownloader } from "./download-miniconda";
 import { urlDownloader } from "./download-url";
@@ -50,8 +52,10 @@ export async function getLocalInstallerPath(
  */
 export async function runInstaller(
   installerPath: string,
-  outputPath: string
-): Promise<void> {
+  outputPath: string,
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions
+): Promise<types.IDynamicOptions> {
   const installerExtension = path.extname(installerPath);
   let command: string[];
 
@@ -76,4 +80,17 @@ export async function runInstaller(
   }
 
   await utils.execute(command);
+
+  // The installer may have provisioned `mamba` in `base`: use now if requested
+  const mambaInInstaller = conda.isMambaInstalled(options);
+  if (mambaInInstaller) {
+    core.info("Mamba was found in the `base` env");
+    options = {
+      ...options,
+      mambaInInstaller,
+      useMamba: mambaInInstaller && inputs.useMamba === "true",
+    };
+  }
+
+  return options;
 }

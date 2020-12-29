@@ -20490,15 +20490,12 @@ function setupMiniconda(inputs) {
         };
         yield core.group(`Creating bootstrap condarc file in ${constants.CONDARC_PATH}...`, conda.bootstrapConfig);
         const installerInfo = yield core.group("Ensuring installer...", () => installer.getLocalInstallerPath(inputs, options));
-        // The installer may change the options
+        // The desired installer may change the options
         options = Object.assign(Object.assign({}, options), installerInfo.options);
         const basePath = conda.condaBasePath(options);
         if (installerInfo.localInstallerPath && !options.useBundled) {
-            yield core.group("Running installer...", () => installer.runInstaller(installerInfo.localInstallerPath, basePath));
+            options = yield core.group("Running installer...", () => installer.runInstaller(installerInfo.localInstallerPath, basePath, inputs, options));
         }
-        // The installer may have provisioned `mamba` in `base`: use if requested
-        options.useMamba =
-            conda.isMambaInstalled(options) && inputs.useMamba === "true";
         if (!fs.existsSync(basePath)) {
             throw Error(`No installed conda 'base' enviroment found at ${basePath}`);
         }
@@ -20511,9 +20508,8 @@ function setupMiniconda(inputs) {
         yield core.group("Configuring conda package cache...", () => outputs.setCacheVariable(options));
         yield core.group("Applying initial configuration...", () => conda.applyCondaConfiguration(inputs, options));
         yield core.group("Initializing conda shell integration...", () => conda.condaInit(inputs, options));
-        const toolOptions = yield core.group("Adding tools to 'base' env...", () => baseTools.installBaseTools(inputs, options));
-        // `useMamba` may have changed
-        options = Object.assign(Object.assign({}, options), toolOptions);
+        // New base tools may change options
+        options = yield core.group("Adding tools to 'base' env...", () => baseTools.installBaseTools(inputs, options));
         if (inputs.activateEnvironment) {
             yield core.group("Ensuring environment...", () => env.ensureEnvironment(inputs, options));
         }
@@ -22084,6 +22080,7 @@ exports.runInstaller = exports.getLocalInstallerPath = void 0;
 const path = __importStar(__webpack_require__(622));
 const core = __importStar(__webpack_require__(470));
 const utils = __importStar(__webpack_require__(163));
+const conda = __importStar(__webpack_require__(259));
 const download_miniforge_1 = __webpack_require__(897);
 const download_miniconda_1 = __webpack_require__(768);
 const download_url_1 = __webpack_require__(339);
@@ -22124,7 +22121,7 @@ exports.getLocalInstallerPath = getLocalInstallerPath;
  *
  * @param installerPath must have an appropriate extension for this platform
  */
-function runInstaller(installerPath, outputPath) {
+function runInstaller(installerPath, outputPath, inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const installerExtension = path.extname(installerPath);
         let command;
@@ -22148,6 +22145,13 @@ function runInstaller(installerPath, outputPath) {
                 throw Error(`Unknown installer extension: ${installerExtension}`);
         }
         yield utils.execute(command);
+        // The installer may have provisioned `mamba` in `base`: use now if requested
+        const mambaInInstaller = conda.isMambaInstalled(options);
+        if (mambaInInstaller) {
+            core.info("Mamba was found in the `base` env");
+            options = Object.assign(Object.assign({}, options), { mambaInInstaller, useMamba: mambaInInstaller && inputs.useMamba === "true" });
+        }
+        return options;
     });
 }
 exports.runInstaller = runInstaller;
