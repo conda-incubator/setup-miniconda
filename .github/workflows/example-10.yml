@@ -19,6 +19,9 @@ jobs:
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
     name: Ex10 (${{ matrix.os }}, Miniforge)
     runs-on: ${{ matrix.os }}-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
@@ -47,6 +50,9 @@ jobs:
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
     name: Ex10 (${{ matrix.os }}, Mambaforge)
     runs-on: ${{ matrix.os }}-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
