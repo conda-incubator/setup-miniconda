@@ -200,13 +200,6 @@ inputs:
       removed from the runner. Default is "true".'
     required: false
     default: "true"
-  mamba-in-installer:
-    description:
-      'Experimental. If `true`, assume `mamba` is already available after running
-      the installer. Always `true` for `miniforge-variant: Mambaforge` or
-      `miniforge-variant: Mambaforge-pypy3`'
-    required: false
-    default: ""
   mamba-version:
     description:
       'Experimental. Use mamba (https://github.com/QuantStack/mamba) as a faster

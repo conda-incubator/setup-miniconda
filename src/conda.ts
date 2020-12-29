@@ -49,6 +49,12 @@ export function condaExecutable(
   return condaExe;
 }
 
+/** Detect the presence of mamba */
+export function isMambaInstalled(options: types.IDynamicOptions) {
+  const mamba = condaExecutable({ ...options, useMamba: true });
+  return fs.existsSync(mamba);
+}
+
 /**
  * Run Conda command
  */

@@ -105,9 +105,6 @@ export const miniforgeDownloader: types.IInstallerProvider = {
       options: {
         ...options,
         useBundled: false,
-        mambaInInstaller: inputs.miniforgeVariant
-          .toLowerCase()
-          .includes("mamba"),
       },
     };
   },

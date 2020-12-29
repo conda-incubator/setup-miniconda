@@ -282,11 +282,8 @@ priority.
 
 > Notes:
 >  - If a [custom installer](#example-5-custom-installer) provides `mamba`, it
->    can prioritized wherever possible with the following settings.
->    - `mamba-in-installer: true`
->      - this is _always_ `true` for [Mambaforge](#example-10-miniforge)
->    - `use-mamba: true`
-
+>    can be prioritized wherever possible (including installing `mamba-version`)
+>    with `use-mamba: true`.
 
 ```yaml
 jobs:

@@ -51,10 +51,12 @@ jobs:
       matrix:
         os: ["ubuntu", "macos", "windows"]
         include:
+          # should use mamba to upgrade mamba
           - os: ubuntu
             environment-file: etc/example-environment-no-name.yml
             miniforge-variant: Mambaforge
-            miniforge-version: 4.9.2-4
+            miniforge-version: 4.9.2-1
+            mamba-version: "*"
           - os: macos
             environment-file: etc/example-empty-channels-environment.yml
             miniforge-variant: Mambaforge-pypy3

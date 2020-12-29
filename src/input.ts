@@ -70,7 +70,7 @@ const RULES: IRule[] = [
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
  */
 export async function parseInputs(): Promise<types.IActionInputs> {
-  const inputs = Object.freeze({
+  const inputs: types.IActionInputs = Object.freeze({
     activateEnvironment: core.getInput("activate-environment"),
     architecture: core.getInput("architecture"),
     condaBuildVersion: core.getInput("conda-build-version"),
@@ -78,7 +78,6 @@ export async function parseInputs(): Promise<types.IActionInputs> {
     condaVersion: core.getInput("conda-version"),
     environmentFile: core.getInput("environment-file"),
     installerUrl: core.getInput("installer-url"),
-    mambaInInstaller: core.getInput("mamba-in-installer"),
     mambaVersion: core.getInput("mamba-version"),
     useMamba: core.getInput("use-mamba"),
     minicondaVersion: core.getInput("miniconda-version"),
@@ -118,5 +117,5 @@ export async function parseInputs(): Promise<types.IActionInputs> {
     throw Error(`${errors.length} errors found in action inputs`);
   }
 
-  return Object.freeze(inputs);
+  return inputs;
 }

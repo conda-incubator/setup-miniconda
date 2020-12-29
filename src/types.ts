@@ -79,7 +79,6 @@ export interface IActionInputs {
   readonly condaVersion: string;
   readonly environmentFile: string;
   readonly installerUrl: string;
-  readonly mambaInInstaller: string;
   readonly mambaVersion: string;
   readonly minicondaVersion: string;
   readonly miniforgeVariant: string;

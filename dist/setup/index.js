@@ -13008,7 +13008,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.condaInit = exports.applyCondaConfiguration = exports.copyConfig = exports.bootstrapConfig = exports.condaCommand = exports.condaExecutable = exports.condaBasePath = void 0;
+exports.condaInit = exports.applyCondaConfiguration = exports.copyConfig = exports.bootstrapConfig = exports.condaCommand = exports.isMambaInstalled = exports.condaExecutable = exports.condaBasePath = void 0;
 const fs = __importStar(__webpack_require__(747));
 const path = __importStar(__webpack_require__(622));
 const os = __importStar(__webpack_require__(87));
@@ -13048,6 +13048,12 @@ function condaExecutable(options, subcommand) {
     return condaExe;
 }
 exports.condaExecutable = condaExecutable;
+/** Detect the presence of mamba */
+function isMambaInstalled(options) {
+    const mamba = condaExecutable(Object.assign(Object.assign({}, options), { useMamba: true }));
+    return fs.existsSync(mamba);
+}
+exports.isMambaInstalled = isMambaInstalled;
 /**
  * Run Conda command
  */
@@ -13577,7 +13583,6 @@ function parseInputs() {
             condaVersion: core.getInput("conda-version"),
             environmentFile: core.getInput("environment-file"),
             installerUrl: core.getInput("installer-url"),
-            mambaInInstaller: core.getInput("mamba-in-installer"),
             mambaVersion: core.getInput("mamba-version"),
             useMamba: core.getInput("use-mamba"),
             minicondaVersion: core.getInput("miniconda-version"),
@@ -13612,7 +13617,7 @@ function parseInputs() {
         if (errors.length) {
             throw Error(`${errors.length} errors found in action inputs`);
         }
-        return Object.freeze(inputs);
+        return inputs;
     });
 }
 exports.parseInputs = parseInputs;
@@ -20474,7 +20479,7 @@ function setupMiniconda(inputs) {
         let options = {
             useBundled: true,
             useMamba: false,
-            mambaInInstaller: inputs.mambaInInstaller === "true",
+            mambaInInstaller: false,
             condaConfig: Object.assign({}, inputs.condaConfig),
         };
         yield core.group(`Creating bootstrap condarc file in ${constants.CONDARC_PATH}...`, conda.bootstrapConfig);
@@ -20485,8 +20490,9 @@ function setupMiniconda(inputs) {
         if (installerInfo.localInstallerPath && !options.useBundled) {
             yield core.group("Running installer...", () => installer.runInstaller(installerInfo.localInstallerPath, basePath));
         }
-        // The installer may have provisioned mamba: use if requested
-        options.useMamba = options.mambaInInstaller && inputs.useMamba === "true";
+        // The installer may have provisioned `mamba` in `base`: use if requested
+        options.useMamba =
+            conda.isMambaInstalled(options) && inputs.useMamba === "true";
         if (!fs.existsSync(basePath)) {
             throw Error(`No installed conda 'base' enviroment found at ${basePath}`);
         }
@@ -34183,9 +34189,7 @@ exports.miniforgeDownloader = {
     installerPath: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         return {
             localInstallerPath: yield downloadMiniforge(inputs, options),
-            options: Object.assign(Object.assign({}, options), { useBundled: false, mambaInInstaller: inputs.miniforgeVariant
-                    .toLowerCase()
-                    .includes("mamba") }),
+            options: Object.assign(Object.assign({}, options), { useBundled: false }),
         };
     }),
 };
