@@ -29,6 +29,19 @@ export function condaBasePath(options: types.IDynamicOptions): string {
 }
 
 /**
+ * Provide conda CLI arguments for identifying an env by name or prefix/path
+ *
+ * ### Note
+ * Only really detects by presence of a path separator, as the path may not yet exist
+ */
+export function envCommandFlag(inputs: types.IActionInputs): string[] {
+  return [
+    inputs.activateEnvironment.match(/(\\|\/)/) ? "--prefix" : "--name",
+    inputs.activateEnvironment,
+  ];
+}
+
+/**
  * Provide cross platform location of conda/mamba executable
  */
 export function condaExecutable(
@@ -144,10 +157,7 @@ export async function condaInit(
   options: types.IDynamicOptions
 ): Promise<void> {
   let ownPath: string;
-  const isValidActivate: boolean =
-    inputs.activateEnvironment !== "base" &&
-    inputs.activateEnvironment !== "root" &&
-    inputs.activateEnvironment !== "";
+  const isValidActivate = !utils.isBaseEnv(inputs.activateEnvironment);
   const autoActivateBase: boolean =
     options.condaConfig["auto_activate_base"] === "true";
 
@@ -213,7 +223,7 @@ export async function condaInit(
   if (isValidActivate) {
     powerExtraText += `
   # Conda Setup Action: Custom activation
-  conda activate ${inputs.activateEnvironment}`;
+  conda activate "${inputs.activateEnvironment}"`;
   }
   powerExtraText += `
   # ----------------------------------------------------------------------------`;
@@ -226,7 +236,7 @@ export async function condaInit(
   if (isValidActivate) {
     bashExtraText += `
   # Conda Setup Action: Custom activation
-  conda activate ${inputs.activateEnvironment}`;
+  conda activate "${inputs.activateEnvironment}"`;
     bashExtraText += `
   # ----------------------------------------------------------------------------`;
   }
@@ -242,7 +252,7 @@ export async function condaInit(
   if (isValidActivate) {
     batchExtraText += `
   :: Conda Setup Action: Custom activation
-  @CALL "%CONDA_BAT%" activate ${inputs.activateEnvironment}`;
+  @CALL "%CONDA_BAT%" activate "${inputs.activateEnvironment}"`;
   }
   batchExtraText += `
   :: Conda Setup Action: Basic configuration

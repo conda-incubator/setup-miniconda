@@ -47,7 +47,7 @@ export async function installBaseTools(
       postInstallOptions = { ...postInstallOptions, ...toolUpdates.options };
       if (provider.postInstall) {
         core.info(
-          `... we will perform post-intall steps after we ${provider.label}.`
+          `... we will perform post-install steps after we ${provider.label}.`
         );
         postInstallActions.push(provider.postInstall);
       }
@@ -55,12 +55,7 @@ export async function installBaseTools(
   }
 
   if (tools.length) {
-    await conda.condaCommand(
-      ["install", "--name", "base", ...tools],
-      // Use the original `options`, as we can't guarantee `mamba` is available
-      // TODO: allow declaring that the installer already has `mamba`
-      options
-    );
+    await conda.condaCommand(["install", "--name", "base", ...tools], options);
 
     // *Now* use the new options, as we may have a new conda/mamba with more supported
     // options that previously failed
