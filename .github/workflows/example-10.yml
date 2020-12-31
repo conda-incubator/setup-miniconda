@@ -35,7 +35,6 @@ jobs:
         id: setup-miniconda
         with:
           environment-file: etc/example-environment.yml
-          miniforge-variant: Miniforge3
           miniforge-version: ${{ matrix.miniforge-version }}
       - run: |
           conda info

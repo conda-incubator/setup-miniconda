@@ -28,11 +28,8 @@ export const OS_NAMES: types.IOperatingSystems = {
   linux: "Linux",
 };
 
-/** API endpoint for Miniforge releases */
-export const MINIFORGE_INDEX_URL = `https://api.github.com/repos/conda-forge/miniforge/releases?per_page=100`;
-
-/**  */
-export const MINIFORGE_RELEASE_JSON = "miniforge-releases.json";
+/** A default Miniforge variant to use if only `miniforgeVersion` is given */
+export const MINIFORGE_DEFAULT_VARIANT = "Miniforge3";
 
 /** Common download prefix */
 export const MINIFORGE_URL_PREFIX =
