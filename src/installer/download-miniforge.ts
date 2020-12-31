@@ -39,7 +39,7 @@ export async function downloadMiniforge(
  * a particular Miniforge installer.
  */
 export const miniforgeDownloader: types.IInstallerProvider = {
-  label: "download Minforge",
+  label: "download Miniforge",
   provides: async (inputs, options) => inputs.miniforgeVersion !== "",
   installerPath: async (inputs, options) => {
     return {

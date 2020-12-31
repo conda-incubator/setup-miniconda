@@ -19172,7 +19172,7 @@ exports.bundledMinicondaUser = {
     label: "use bundled Miniconda",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         return (inputs.minicondaVersion === "" &&
-            inputs.miniforgeVariant === "" &&
+            inputs.miniforgeVersion === "" &&
             inputs.architecture === "x64" &&
             inputs.installerUrl === "");
     }),
@@ -34189,7 +34189,7 @@ exports.downloadMiniforge = downloadMiniforge;
  * a particular Miniforge installer.
  */
 exports.miniforgeDownloader = {
-    label: "download Minforge",
+    label: "download Miniforge",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return inputs.miniforgeVersion !== ""; }),
     installerPath: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         return {

@@ -12,7 +12,7 @@ export const bundledMinicondaUser: types.IInstallerProvider = {
   provides: async (inputs, options) => {
     return (
       inputs.minicondaVersion === "" &&
-      inputs.miniforgeVariant === "" &&
+      inputs.miniforgeVersion === "" &&
       inputs.architecture === "x64" &&
       inputs.installerUrl === ""
     );
