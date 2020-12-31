@@ -2,6 +2,7 @@ import * as core from "@actions/core";
 
 import * as types from "../types";
 import * as utils from "../utils";
+import * as conda from "../conda";
 
 /**
  * Install an environment with `conda create` when no `envSpec` is detected
@@ -20,7 +21,7 @@ export const ensureSimple: types.IEnvProvider = {
     );
   },
   condaArgs: async (inputs, options) => {
-    const args = ["create", "--name", inputs.activateEnvironment];
+    const args = ["create", ...conda.envCommandFlag(inputs)];
 
     if (inputs.pythonVersion) {
       const spec = utils.makeSpec("python", inputs.pythonVersion);

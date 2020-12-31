@@ -31,16 +31,27 @@ This action will by default will not activate the `base`environment and activate
 This enforces the idea of not using the `base` environment to install packages used for the action and
 leave the `base` environment untouched, with only `conda` (or `mamba`) in it.
 
-### Use a different environment name
+### Use a different environment name or path
 
-You can change the default `test` environment to have a different name bu setting the
-`activate-environment` input option.
+You can change the default `test` environment to have a different name or path by
+setting the `activate-environment` input option.
 
 ```yaml
  - uses: conda-incubator/setup-miniconda@v2
    with:
      activate-environment: whatever
 ```
+
+This will be create a _named_ env in `$CONDA/envs/whatever`, where `$CONDA` is the
+path to the infrequently-updated, but **very fast** to start, "bundled" Miniconda
+installation.
+
+> - If `activate-environment` contains either POSIX or Windows slashes, it will be
+>   interpreted as a path, or "prefix" in `conda` terminology. Use this to avoid
+>   "path too long"-style errors, especially on windows.
+> - Self-hosted runners can emulate the "bundled" Miniconda approach by pre-installing
+>   _a_ Miniconda-like installer and ensuring `$CONDA` is set prior to starting
+>   `setup-miniconda`
 
 ### Activate `base` environment
 

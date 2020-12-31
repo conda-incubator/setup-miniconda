@@ -53,22 +53,6 @@ export async function ensureEnvironment(
 }
 
 /**
- * Check if a given conda environment exists
- */
-export function environmentExists(
-  inputs: types.IActionInputs,
-  options: types.IDynamicOptions
-): boolean {
-  const condaMetaPath = path.join(
-    conda.condaBasePath(options),
-    "envs",
-    inputs.activateEnvironment,
-    "conda-meta"
-  );
-  return fs.existsSync(condaMetaPath);
-}
-
-/**
  * Read and potentially parse the `environment-file`
  *
  * ### Notes

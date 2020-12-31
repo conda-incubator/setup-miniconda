@@ -59,12 +59,13 @@ inputs:
     default: ""
   activate-environment:
     description:
-      'Environment to activate by default on all shells. Default is "test". If
-      an empty string is used, no environment is activated by default (For
-      "base" activation see the "auto-activate-base" option). If the environment
-      does not exist, it will be created and activated. If "environment-file" is
+      'Environment name (or path) to activate on all shells. Default is
+      `test` which will be created in `$CONDA/envs/test`. If an empty string is used,
+      no environment is activated by default (For `base` activation see the
+      `auto-activate-base` option). If the environment
+      does not exist, it will be created and activated. If `environment-file` is
       used and you want that to be the environment used, you need to explicitely
-      provide the name of that environment on "activate-environment". If using
+      provide the name of that environment on `activate-environment`. If using
       sh/bash/cmd.exe shells please read the IMPORTANT! section on the
       README.md! to properly activate conda environments on these shells.'
     required: false

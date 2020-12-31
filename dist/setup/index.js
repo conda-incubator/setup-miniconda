@@ -1151,6 +1151,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensureSimple = void 0;
 const core = __importStar(__webpack_require__(470));
 const utils = __importStar(__webpack_require__(163));
+const conda = __importStar(__webpack_require__(259));
 /**
  * Install an environment with `conda create` when no `envSpec` is detected
  *
@@ -1167,7 +1168,7 @@ exports.ensureSimple = {
             Object.keys(((_c = options.envSpec) === null || _c === void 0 ? void 0 : _c.yaml) || {}).length);
     }),
     condaArgs: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
-        const args = ["create", "--name", inputs.activateEnvironment];
+        const args = ["create", ...conda.envCommandFlag(inputs)];
         if (inputs.pythonVersion) {
             const spec = utils.makeSpec("python", inputs.pythonVersion);
             core.info(`Adding spec: ${spec}`);
@@ -2126,16 +2127,13 @@ function installBaseTools(inputs, options) {
                 tools.push(...toolUpdates.tools);
                 postInstallOptions = Object.assign(Object.assign({}, postInstallOptions), toolUpdates.options);
                 if (provider.postInstall) {
-                    core.info(`... we will perform post-intall steps after we ${provider.label}.`);
+                    core.info(`... we will perform post-install steps after we ${provider.label}.`);
                     postInstallActions.push(provider.postInstall);
                 }
             }
         }
         if (tools.length) {
-            yield conda.condaCommand(["install", "--name", "base", ...tools], 
-            // Use the original `options`, as we can't guarantee `mamba` is available
-            // TODO: allow declaring that the installer already has `mamba`
-            options);
+            yield conda.condaCommand(["install", "--name", "base", ...tools], options);
             // *Now* use the new options, as we may have a new conda/mamba with more supported
             // options that previously failed
             yield conda.applyCondaConfiguration(inputs, postInstallOptions);
@@ -13017,7 +13015,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.condaInit = exports.applyCondaConfiguration = exports.copyConfig = exports.bootstrapConfig = exports.condaCommand = exports.isMambaInstalled = exports.condaExecutable = exports.condaBasePath = void 0;
+exports.condaInit = exports.applyCondaConfiguration = exports.copyConfig = exports.bootstrapConfig = exports.condaCommand = exports.isMambaInstalled = exports.condaExecutable = exports.envCommandFlag = exports.condaBasePath = void 0;
 const fs = __importStar(__webpack_require__(747));
 const path = __importStar(__webpack_require__(622));
 const os = __importStar(__webpack_require__(87));
@@ -13041,6 +13039,19 @@ function condaBasePath(options) {
     return condaPath;
 }
 exports.condaBasePath = condaBasePath;
+/**
+ * Provide conda CLI arguments for identifying an env by name or prefix/path
+ *
+ * ### Note
+ * Only really detects by presence of a path separator, as the path may not yet exist
+ */
+function envCommandFlag(inputs) {
+    return [
+        inputs.activateEnvironment.match(/(\\|\/)/) ? "--prefix" : "--name",
+        inputs.activateEnvironment,
+    ];
+}
+exports.envCommandFlag = envCommandFlag;
 /**
  * Provide cross platform location of conda/mamba executable
  */
@@ -13140,9 +13151,7 @@ exports.applyCondaConfiguration = applyCondaConfiguration;
 function condaInit(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         let ownPath;
-        const isValidActivate = inputs.activateEnvironment !== "base" &&
-            inputs.activateEnvironment !== "root" &&
-            inputs.activateEnvironment !== "";
+        const isValidActivate = !utils.isBaseEnv(inputs.activateEnvironment);
         const autoActivateBase = options.condaConfig["auto_activate_base"] === "true";
         // Fix ownership of folders
         if (options.useBundled) {
@@ -13205,7 +13214,7 @@ function condaInit(inputs, options) {
         if (isValidActivate) {
             powerExtraText += `
   # Conda Setup Action: Custom activation
-  conda activate ${inputs.activateEnvironment}`;
+  conda activate "${inputs.activateEnvironment}"`;
         }
         powerExtraText += `
   # ----------------------------------------------------------------------------`;
@@ -13217,7 +13226,7 @@ function condaInit(inputs, options) {
         if (isValidActivate) {
             bashExtraText += `
   # Conda Setup Action: Custom activation
-  conda activate ${inputs.activateEnvironment}`;
+  conda activate "${inputs.activateEnvironment}"`;
             bashExtraText += `
   # ----------------------------------------------------------------------------`;
         }
@@ -13232,7 +13241,7 @@ function condaInit(inputs, options) {
         if (isValidActivate) {
             batchExtraText += `
   :: Conda Setup Action: Custom activation
-  @CALL "%CONDA_BAT%" activate ${inputs.activateEnvironment}`;
+  @CALL "%CONDA_BAT%" activate "${inputs.activateEnvironment}"`;
         }
         batchExtraText += `
   :: Conda Setup Action: Basic configuration
@@ -15821,10 +15830,29 @@ module.exports = DomHandler;
 /* 283 */,
 /* 284 */,
 /* 285 */
-/***/ (function(__unusedmodule, exports) {
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -15836,6 +15864,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensureExplicit = void 0;
+const conda = __importStar(__webpack_require__(259));
 /**
  * Install an environment from an explicit file generated `conda list --explicit`
  * or `conda-lock`
@@ -15849,8 +15878,7 @@ exports.ensureExplicit = {
         }
         return [
             "create",
-            "--name",
-            inputs.activateEnvironment,
+            ...conda.envCommandFlag(inputs),
             "--file",
             inputs.environmentFile,
         ];
@@ -20587,6 +20615,7 @@ const path = __importStar(__webpack_require__(622));
 const yaml = __importStar(__webpack_require__(414));
 const core = __importStar(__webpack_require__(470));
 const constants = __importStar(__webpack_require__(211));
+const conda = __importStar(__webpack_require__(259));
 const utils = __importStar(__webpack_require__(163));
 /**
  * The current known providers of patches to `environment.yml`
@@ -20665,8 +20694,7 @@ exports.ensureYaml = {
         return [
             "env",
             "update",
-            "--name",
-            inputs.activateEnvironment,
+            ...conda.envCommandFlag(inputs),
             "--file",
             envFile,
         ];
@@ -35349,7 +35377,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getEnvSpec = exports.environmentExists = exports.ensureEnvironment = void 0;
+exports.getEnvSpec = exports.ensureEnvironment = void 0;
 const path = __importStar(__webpack_require__(622));
 const fs = __importStar(__webpack_require__(747));
 const yaml = __importStar(__webpack_require__(414));
@@ -35390,14 +35418,6 @@ function ensureEnvironment(inputs, options) {
     });
 }
 exports.ensureEnvironment = ensureEnvironment;
-/**
- * Check if a given conda environment exists
- */
-function environmentExists(inputs, options) {
-    const condaMetaPath = path.join(conda.condaBasePath(options), "envs", inputs.activateEnvironment, "conda-meta");
-    return fs.existsSync(condaMetaPath);
-}
-exports.environmentExists = environmentExists;
 /**
  * Read and potentially parse the `environment-file`
  *

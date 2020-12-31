@@ -23,6 +23,13 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        include:
+          - os: ubuntu-latest
+            activate-environment: anaconda-client-env
+          - os: macos-latest
+            activate-environment: /tmp/anaconda-client-env
+          - os: windows-latest
+            activate-environment: c:\ace
     defaults:
       run:
         shell: bash -l {0}
@@ -32,9 +39,9 @@ jobs:
         with:
           python-version: "3.7"
           mamba-version: "*"
-          channels: conda-forge,defaults
+          channels: conda-forge,nodefaults
           channel-priority: true
-          activate-environment: anaconda-client-env
+          activate-environment: ${{ matrix.activate-environment }}
           environment-file: etc/example-environment.yml
       - run: |
           conda info
