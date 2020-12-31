@@ -67,9 +67,11 @@ jobs:
           - os: macos
             environment-file: etc/example-empty-channels-environment.yml
             miniforge-variant: Mambaforge-pypy3
+            miniforge-version: 4.9.2-4
           - os: windows
             environment-file: etc/example-explicit.Windows.conda.lock
             condarc-file: etc/example-condarc.yml
+            miniforge-version: 4.9.2-4
             miniforge-variant: Mambaforge
     steps:
       - uses: actions/checkout@v2
