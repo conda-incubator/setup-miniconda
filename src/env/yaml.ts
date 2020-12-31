@@ -5,9 +5,9 @@ import * as path from "path";
 import * as yaml from "js-yaml";
 
 import * as core from "@actions/core";
-
 import * as types from "../types";
 import * as constants from "../constants";
+import * as conda from "../conda";
 import * as utils from "../utils";
 
 /**
@@ -121,8 +121,7 @@ export const ensureYaml: types.IEnvProvider = {
     return [
       "env",
       "update",
-      "--name",
-      inputs.activateEnvironment,
+      ...conda.envCommandFlag(inputs),
       "--file",
       envFile,
     ];

@@ -1,4 +1,5 @@
 import * as types from "../types";
+import * as conda from "../conda";
 
 /**
  * Install an environment from an explicit file generated `conda list --explicit`
@@ -16,8 +17,7 @@ export const ensureExplicit: types.IEnvProvider = {
 
     return [
       "create",
-      "--name",
-      inputs.activateEnvironment,
+      ...conda.envCommandFlag(inputs),
       "--file",
       inputs.environmentFile,
     ];
