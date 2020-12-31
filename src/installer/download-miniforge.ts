@@ -20,12 +20,7 @@ export async function downloadMiniforge(
     throw new Error(`Invalid 'architecture: ${inputs.architecture}'`);
   }
 
-  let tool = inputs.miniforgeVariant.trim();
-  if (!tool.length) {
-    tool = constants.MINIFORGE_DEFAULT_VARIANT;
-    core.info(`Using default 'miniforge-variant: ${tool}'`);
-  }
-
+  const tool = inputs.miniforgeVariant.trim();
   const extension = constants.IS_UNIX ? "sh" : "exe";
   const osName = constants.OS_NAMES[process.platform];
   const fileName = [tool, version, osName, `${arch}.${extension}`].join("-");

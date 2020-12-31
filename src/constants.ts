@@ -28,9 +28,6 @@ export const OS_NAMES: types.IOperatingSystems = {
   linux: "Linux",
 };
 
-/** A default Miniforge variant to use if only `miniforgeVersion` is given */
-export const MINIFORGE_DEFAULT_VARIANT = "Miniforge3";
-
 /** Common download prefix */
 export const MINIFORGE_URL_PREFIX =
   "https://github.com/conda-forge/miniforge/releases/download";

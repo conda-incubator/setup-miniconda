@@ -27,7 +27,7 @@ inputs:
       Visit https://github.com/conda-forge/miniforge/releases/ for more information
       on available variants"
     required: false
-    default: ""
+    default: "Miniforge3"
   miniforge-version:
     description:
       "If provided, this version of the given Miniforge variant will be downloaded
