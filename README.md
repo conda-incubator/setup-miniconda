@@ -391,11 +391,10 @@ jobs:
         id: setup-miniconda
         with:
           environment-file: etc/example-environment.yml
-          miniforge-variant: Miniforge3
           miniforge-version: ${{ matrix.miniforge-version }}
 ```
 
-In addition to `Miniforge3` with `conda` and `CPython` for each
+In addition to `Miniforge3`, with `conda` and `CPython`, for each
 of its many supported platforms and architectures, additional variants including
 `Mambaforge` (which comes pre-installed `mamba` in addition to `conda` on all platforms)
 and `Miniforge-pypy3`/`Mamabaforge-pypy3` (which replace `CPython` with `pypy3`

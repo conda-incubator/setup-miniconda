@@ -42,14 +42,14 @@ const RULES: IRule[] = [
     !!(i.pythonVersion && !i.activateEnvironment) &&
     `'python-version: ${i.pythonVersion}' requires 'activate-environment: true'`,
   (i) =>
-    !!(i.minicondaVersion && i.miniforgeVariant) &&
-    `only one of 'miniconda-version: ${i.minicondaVersion}' or 'miniforge-variant: ${i.miniforgeVariant}' may be provided`,
+    !!(i.minicondaVersion && i.miniforgeVersion) &&
+    `only one of 'miniconda-version: ${i.minicondaVersion}' or 'miniforge-version: ${i.miniforgeVersion}' may be provided`,
   (i) =>
     !!(i.installerUrl && i.minicondaVersion) &&
     `only one of 'installer-url: ${i.installerUrl}' or 'miniconda-version: ${i.minicondaVersion}' may be provided`,
   (i) =>
-    !!(i.installerUrl && i.miniforgeVariant) &&
-    `only one of 'installer-url: ${i.installerUrl}' or 'miniforge-variant: ${i.miniforgeVariant}' may be provided`,
+    !!(i.installerUrl && i.miniforgeVersion) &&
+    `only one of 'installer-url: ${i.installerUrl}' or 'miniforge-version: ${i.miniforgeVersion}' may be provided`,
   (i) =>
     !!(
       i.installerUrl &&
