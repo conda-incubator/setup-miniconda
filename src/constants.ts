@@ -15,11 +15,21 @@ export const IS_UNIX: boolean = IS_MAC || IS_LINUX;
 export const MINICONDA_BASE_URL: string =
   "https://repo.anaconda.com/miniconda/";
 
-export const ARCHITECTURES: types.IArchitectures = {
+/** Processor architectures supported by Miniconda */
+export const MINICONDA_ARCHITECTURES: types.IArchitectures = {
   x64: "x86_64",
   x86: "x86",
   ARM64: "aarch64", // To be supported by github runners
   ARM32: "armv7l", // To be supported by github runners
+};
+
+/** Processor architectures supported by Miniforge */
+export const MINIFORGE_ARCHITECTURES: types.IArchitectures = {
+  x64: "x86_64",
+  x86_64: "x86_64",
+  aarch64: "aarch64", // To be supported by github runners
+  ppc64le: "ppc64le", // To be supported by github runners
+  arm64: "arm64", // To be supported by github runners
 };
 
 export const OS_NAMES: types.IOperatingSystems = {
@@ -30,7 +40,7 @@ export const OS_NAMES: types.IOperatingSystems = {
 
 /** Common download prefix */
 export const MINIFORGE_URL_PREFIX =
-  "https://github.com/conda-forge/miniforge/releases/download";
+  "https://github.com/conda-forge/miniforge/releases";
 
 /** Names for a conda `base` env */
 export const BASE_ENV_NAMES = ["root", "base", ""];

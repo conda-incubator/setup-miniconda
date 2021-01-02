@@ -382,23 +382,19 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu", "macos", "windows"]
-        include:
-        - os: windows
-          miniforge-version: 4.9.2-4
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
-        id: setup-miniconda
         with:
           environment-file: etc/example-environment.yml
-          miniforge-version: ${{ matrix.miniforge-version }}
+          miniforge-version: latest
 ```
 
 In addition to `Miniforge3`, with `conda` and `CPython`, for each
 of its many supported platforms and architectures, additional variants including
 `Mambaforge` (which comes pre-installed `mamba` in addition to `conda` on all platforms)
 and `Miniforge-pypy3`/`Mamabaforge-pypy3` (which replace `CPython` with `pypy3`
-on Linux/MacOs) are available. The specific version can also be overridden.
+on Linux/MacOS) are available. A specific version can also be provided.
 
 ```yaml
 jobs:
@@ -424,7 +420,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
-        id: setup-miniconda
         with:
           condarc-file: ${{ matrix.condarc-file }}
           environment-file: ${{ matrix.environment-file }}

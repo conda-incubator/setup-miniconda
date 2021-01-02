@@ -13,7 +13,7 @@ export async function downloadMiniforge(
   options: types.IDynamicOptions
 ): Promise<string> {
   const version = inputs.miniforgeVersion.trim();
-  const arch = constants.ARCHITECTURES[inputs.architecture];
+  const arch = constants.MINIFORGE_ARCHITECTURES[inputs.architecture];
 
   // Check valid arch
   if (!arch) {
@@ -23,8 +23,22 @@ export async function downloadMiniforge(
   const tool = inputs.miniforgeVariant.trim();
   const extension = constants.IS_UNIX ? "sh" : "exe";
   const osName = constants.OS_NAMES[process.platform];
-  const fileName = [tool, version, osName, `${arch}.${extension}`].join("-");
-  const url = [constants.MINIFORGE_URL_PREFIX, version, fileName].join("/");
+
+  let fileName: string;
+  let url: string;
+  if (version === "latest") {
+    // e.g. https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+    fileName = [tool, osName, `${arch}.${extension}`].join("-");
+    url = [constants.MINIFORGE_URL_PREFIX, version, "download", fileName].join(
+      "/"
+    );
+  } else {
+    // e.g. https://github.com/conda-forge/miniforge/releases/download/4.9.2-5/Miniforge3-4.9.2-5-Linux-x86_64.sh
+    fileName = [tool, version, osName, `${arch}.${extension}`].join("-");
+    url = [constants.MINIFORGE_URL_PREFIX, "download", version, fileName].join(
+      "/"
+    );
+  }
 
   core.info(`Will fetch ${tool} ${version} from ${url}`);
 
