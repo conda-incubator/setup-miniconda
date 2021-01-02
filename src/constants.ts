@@ -25,6 +25,7 @@ export const MINICONDA_ARCHITECTURES: types.IArchitectures = {
 
 /** Processor architectures supported by Miniforge */
 export const MINIFORGE_ARCHITECTURES: types.IArchitectures = {
+  x64: "x86_64",
   x86_64: "x86_64",
   aarch64: "aarch64", // To be supported by github runners
   ppc64le: "ppc64le", // To be supported by github runners

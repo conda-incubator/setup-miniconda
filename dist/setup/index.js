@@ -9379,6 +9379,7 @@ exports.MINICONDA_ARCHITECTURES = {
 };
 /** Processor architectures supported by Miniforge */
 exports.MINIFORGE_ARCHITECTURES = {
+    x64: "x86_64",
     x86_64: "x86_64",
     aarch64: "aarch64",
     ppc64le: "ppc64le",
