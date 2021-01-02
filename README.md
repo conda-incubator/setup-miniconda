@@ -382,16 +382,12 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu", "macos", "windows"]
-        include:
-        - os: windows
-          miniforge-version: latest
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
-        id: setup-miniconda
         with:
           environment-file: etc/example-environment.yml
-          miniforge-version: ${{ matrix.miniforge-version }}
+          miniforge-version: latest
 ```
 
 In addition to `Miniforge3`, with `conda` and `CPython`, for each
@@ -424,7 +420,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
-        id: setup-miniconda
         with:
           condarc-file: ${{ matrix.condarc-file }}
           environment-file: ${{ matrix.environment-file }}

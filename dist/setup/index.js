@@ -34188,13 +34188,7 @@ function downloadMiniforge(inputs, options) {
         if (version === "latest") {
             // e.g. https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
             fileName = [tool, osName, `${arch}.${extension}`].join("-");
-            url = [
-                constants.MINIFORGE_URL_PREFIX,
-                "latest",
-                "download",
-                version,
-                fileName,
-            ].join("/");
+            url = [constants.MINIFORGE_URL_PREFIX, version, "download", fileName].join("/");
         }
         else {
             // e.g. https://github.com/conda-forge/miniforge/releases/download/4.9.2-5/Miniforge3-4.9.2-5-Linux-x86_64.sh
