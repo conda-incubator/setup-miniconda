@@ -9358,7 +9358,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 //-----------------------------------------------------------------------
@@ -9370,11 +9370,19 @@ exports.IS_MAC = process.platform === "darwin";
 exports.IS_LINUX = process.platform === "linux";
 exports.IS_UNIX = exports.IS_MAC || exports.IS_LINUX;
 exports.MINICONDA_BASE_URL = "https://repo.anaconda.com/miniconda/";
-exports.ARCHITECTURES = {
+/** Processor architectures supported by Miniconda */
+exports.MINICONDA_ARCHITECTURES = {
     x64: "x86_64",
     x86: "x86",
     ARM64: "aarch64",
     ARM32: "armv7l",
+};
+/** Processor architectures supported by Miniforge */
+exports.MINIFORGE_ARCHITECTURES = {
+    x86_64: "x86_64",
+    aarch64: "aarch64",
+    ppc64le: "ppc64le",
+    arm64: "arm64",
 };
 exports.OS_NAMES = {
     win32: "Windows",
@@ -9382,7 +9390,7 @@ exports.OS_NAMES = {
     linux: "Linux",
 };
 /** Common download prefix */
-exports.MINIFORGE_URL_PREFIX = "https://github.com/conda-forge/miniforge/releases/download";
+exports.MINIFORGE_URL_PREFIX = "https://github.com/conda-forge/miniforge/releases";
 /** Names for a conda `base` env */
 exports.BASE_ENV_NAMES = ["root", "base", ""];
 /**
@@ -28242,7 +28250,7 @@ function minicondaVersions(arch) {
 function downloadMiniconda(pythonMajorVersion, inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         // Check valid arch
-        const arch = constants.ARCHITECTURES[inputs.architecture];
+        const arch = constants.MINICONDA_ARCHITECTURES[inputs.architecture];
         if (!arch) {
             throw new Error(`Invalid arch "${inputs.architecture}"!`);
         }
@@ -34166,7 +34174,7 @@ const base = __importStar(__webpack_require__(122));
 function downloadMiniforge(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const version = inputs.miniforgeVersion.trim();
-        const arch = constants.ARCHITECTURES[inputs.architecture];
+        const arch = constants.MINIFORGE_ARCHITECTURES[inputs.architecture];
         // Check valid arch
         if (!arch) {
             throw new Error(`Invalid 'architecture: ${inputs.architecture}'`);
@@ -34174,8 +34182,24 @@ function downloadMiniforge(inputs, options) {
         const tool = inputs.miniforgeVariant.trim();
         const extension = constants.IS_UNIX ? "sh" : "exe";
         const osName = constants.OS_NAMES[process.platform];
-        const fileName = [tool, version, osName, `${arch}.${extension}`].join("-");
-        const url = [constants.MINIFORGE_URL_PREFIX, version, fileName].join("/");
+        let fileName;
+        let url;
+        if (version === "latest") {
+            // e.g. https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+            fileName = [tool, osName, `${arch}.${extension}`].join("-");
+            url = [
+                constants.MINIFORGE_URL_PREFIX,
+                "latest",
+                "download",
+                version,
+                fileName,
+            ].join("/");
+        }
+        else {
+            // e.g. https://github.com/conda-forge/miniforge/releases/download/4.9.2-5/Miniforge3-4.9.2-5-Linux-x86_64.sh
+            fileName = [tool, version, osName, `${arch}.${extension}`].join("-");
+            url = [constants.MINIFORGE_URL_PREFIX, "download", version, fileName].join("/");
+        }
         core.info(`Will fetch ${tool} ${version} from ${url}`);
         return yield base.ensureLocalInstaller({ url, tool, version, arch });
     });
