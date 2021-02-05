@@ -9358,7 +9358,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_DEFAULT_VERSION = exports.MINIFORGE_DEFAULT_VARIANT = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 //-----------------------------------------------------------------------
@@ -9392,6 +9392,10 @@ exports.OS_NAMES = {
 };
 /** Common download prefix */
 exports.MINIFORGE_URL_PREFIX = "https://github.com/conda-forge/miniforge/releases";
+/** Default miniforge if only miniforge-version is provided */
+exports.MINIFORGE_DEFAULT_VARIANT = "Miniforge3";
+/** Default miniforge if only miniforge-variant is provided */
+exports.MINIFORGE_DEFAULT_VERSION = "latest";
 /** Names for a conda `base` env */
 exports.BASE_ENV_NAMES = ["root", "base", ""];
 /**
@@ -19181,6 +19185,7 @@ exports.bundledMinicondaUser = {
     label: "use bundled Miniconda",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         return (inputs.minicondaVersion === "" &&
+            inputs.miniforgeVariant === "" &&
             inputs.miniforgeVersion === "" &&
             inputs.architecture === "x64" &&
             inputs.installerUrl === "");
@@ -34174,13 +34179,13 @@ const base = __importStar(__webpack_require__(122));
  */
 function downloadMiniforge(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        const version = inputs.miniforgeVersion.trim();
+        const tool = inputs.miniforgeVariant.trim() || constants.MINIFORGE_DEFAULT_VARIANT;
+        const version = inputs.miniforgeVersion.trim() || constants.MINIFORGE_DEFAULT_VERSION;
         const arch = constants.MINIFORGE_ARCHITECTURES[inputs.architecture];
         // Check valid arch
         if (!arch) {
             throw new Error(`Invalid 'architecture: ${inputs.architecture}'`);
         }
-        const tool = inputs.miniforgeVariant.trim();
         const extension = constants.IS_UNIX ? "sh" : "exe";
         const osName = constants.OS_NAMES[process.platform];
         let fileName;
@@ -34209,7 +34214,7 @@ exports.downloadMiniforge = downloadMiniforge;
  */
 exports.miniforgeDownloader = {
     label: "download Miniforge",
-    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return inputs.miniforgeVersion !== ""; }),
+    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return inputs.miniforgeVersion !== "" || inputs.miniforgeVariant !== ""; }),
     installerPath: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         return {
             localInstallerPath: yield downloadMiniforge(inputs, options),
