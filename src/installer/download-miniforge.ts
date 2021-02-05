@@ -12,7 +12,10 @@ export async function downloadMiniforge(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions
 ): Promise<string> {
-  const version = inputs.miniforgeVersion.trim();
+  const tool =
+    inputs.miniforgeVariant.trim() || constants.MINIFORGE_DEFAULT_VARIANT;
+  const version =
+    inputs.miniforgeVersion.trim() || constants.MINIFORGE_DEFAULT_VERSION;
   const arch = constants.MINIFORGE_ARCHITECTURES[inputs.architecture];
 
   // Check valid arch
@@ -20,7 +23,6 @@ export async function downloadMiniforge(
     throw new Error(`Invalid 'architecture: ${inputs.architecture}'`);
   }
 
-  const tool = inputs.miniforgeVariant.trim();
   const extension = constants.IS_UNIX ? "sh" : "exe";
   const osName = constants.OS_NAMES[process.platform];
 
@@ -54,7 +56,8 @@ export async function downloadMiniforge(
  */
 export const miniforgeDownloader: types.IInstallerProvider = {
   label: "download Miniforge",
-  provides: async (inputs, options) => inputs.miniforgeVersion !== "",
+  provides: async (inputs, options) =>
+    inputs.miniforgeVersion !== "" || inputs.miniforgeVariant !== "",
   installerPath: async (inputs, options) => {
     return {
       localInstallerPath: await downloadMiniforge(inputs, options),

@@ -42,6 +42,12 @@ export const OS_NAMES: types.IOperatingSystems = {
 export const MINIFORGE_URL_PREFIX =
   "https://github.com/conda-forge/miniforge/releases";
 
+/** Default miniforge if only miniforge-version is provided */
+export const MINIFORGE_DEFAULT_VARIANT = "Miniforge3";
+
+/** Default miniforge if only miniforge-variant is provided */
+export const MINIFORGE_DEFAULT_VERSION = "latest";
+
 /** Names for a conda `base` env */
 export const BASE_ENV_NAMES = ["root", "base", ""];
 

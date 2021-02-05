@@ -374,6 +374,8 @@ jobs:
 alternatives to Miniconda, built from the ground up with `conda-forge` packages
 and with only `conda-forge` in its default channels.
 
+If only `miniforge-version` is provided, `Miniforge3` will be used.
+
 ```yaml
 jobs:
   example-10-miniforge:
@@ -390,11 +392,11 @@ jobs:
           miniforge-version: latest
 ```
 
-In addition to `Miniforge3`, with `conda` and `CPython`, for each
+In addition to `Miniforge3` with `conda` and `CPython`, for each
 of its many supported platforms and architectures, additional variants including
 `Mambaforge` (which comes pre-installed `mamba` in addition to `conda` on all platforms)
 and `Miniforge-pypy3`/`Mamabaforge-pypy3` (which replace `CPython` with `pypy3`
-on Linux/MacOS) are available. A specific version can also be provided.
+on Linux/MacOS) are available.
 
 ```yaml
 jobs:

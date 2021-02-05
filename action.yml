@@ -19,6 +19,7 @@ inputs:
   miniforge-variant:
     description:
       "If provided, this variant of Miniforge will be downloaded and installed.
+      If `miniforge-version` is not provided, the `latest` version will be used.
       Currently-known values:
       - Miniforge3 (default)
       - Miniforge-pypy3
@@ -27,11 +28,11 @@ inputs:
       Visit https://github.com/conda-forge/miniforge/releases/ for more information
       on available variants"
     required: false
-    default: "Miniforge3"
+    default: ""
   miniforge-version:
     description:
       "If provided, this version of the given Miniforge variant will be downloaded
-      and installed.
+      and installed. If `miniforge-variant` is not provided, `Miniforge3` will be used.
       Visit https://github.com/conda-forge/miniforge/releases/ for more information
       on available versions"
     required: false
