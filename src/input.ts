@@ -61,9 +61,6 @@ const RULES: IRule[] = [
   (i) =>
     !!(i.minicondaVersion && i.architecture !== "x64") &&
     `'architecture: ${i.architecture}' requires "miniconda-version"`,
-  (i) =>
-    !!(i.architecture === "x86" && constants.IS_LINUX) &&
-    `'architecture: ${i.architecture}' is not supported by recent versions of Miniconda`,
 ];
 
 /*
