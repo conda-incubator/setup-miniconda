@@ -7,8 +7,8 @@
     "build": "ncc build -o dist/setup src/setup.ts && ncc build -o dist/delete src/delete.ts",
     "format": "npm run prettier:format && npm run eslint:format",
     "check": "npm run prettier:check && npm run eslint:check",
-    "prettier:format": "prettier --list-different --write \"src/**/*.ts\" \"{.,etc,.github}/**/*.{md,json,yml,js}\"",
-    "prettier:check": "prettier --list-different \"src/**/*.ts\" \"{.,etc,.github}/**/*.{md,json,yml,js}\"",
+    "prettier:format": "prettier --list-different --write \"src/**/*.ts\" \"{.,etc/**,.github/**}/*.{md,json,yml,js}\"",
+    "prettier:check": "prettier --list-different \"src/**/*.ts\" \"{.,etc/**,.github/**}/*.{md,json,yml,js}\"",
     "eslint:format": "eslint --ext .js,.jsx,.ts,.tsx --fix .",
     "eslint:check": "eslint --ext .js,.jsx,.ts,.tsx ."
   },

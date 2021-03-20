@@ -13596,8 +13596,6 @@ const RULES = [
         `'installer-url' extension '${urlExt(i.installerUrl)}' must be one of: ${constants.KNOWN_EXTENSIONS}`,
     (i) => !!(i.minicondaVersion && i.architecture !== "x64") &&
         `'architecture: ${i.architecture}' requires "miniconda-version"`,
-    (i) => !!(i.architecture === "x86" && constants.IS_LINUX) &&
-        `'architecture: ${i.architecture}' is not supported by recent versions of Miniconda`,
 ];
 /*
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
