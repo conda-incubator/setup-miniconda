@@ -5,8 +5,9 @@ inputs:
   installer-url:
     description:
       "If provided, this installer will be used instead of a miniconda
-      installer, and cached based on its full URL
-      Visit https://github.com/conda/constructor for more information on creating installers"
+      installer, and cached based on its full URL Visit
+      https://github.com/conda/constructor for more information on creating
+      installers"
     required: false
     default: ""
   miniconda-version:
@@ -20,21 +21,19 @@ inputs:
     description:
       "If provided, this variant of Miniforge will be downloaded and installed.
       If `miniforge-version` is not provided, the `latest` version will be used.
-      Currently-known values:
-      - Miniforge3 (default)
-      - Miniforge-pypy3
-      - Mambaforge
-      - Mambaforge-pypy3
-      Visit https://github.com/conda-forge/miniforge/releases/ for more information
-      on available variants"
+      Currently-known values: - Miniforge3 (default) - Miniforge-pypy3 -
+      Mambaforge - Mambaforge-pypy3 Visit
+      https://github.com/conda-forge/miniforge/releases/ for more information on
+      available variants"
     required: false
     default: ""
   miniforge-version:
     description:
-      "If provided, this version of the given Miniforge variant will be downloaded
-      and installed. If `miniforge-variant` is not provided, `Miniforge3` will be used.
-      Visit https://github.com/conda-forge/miniforge/releases/ for more information
-      on available versions"
+      "If provided, this version of the given Miniforge variant will be
+      downloaded and installed. If `miniforge-variant` is not provided,
+      `Miniforge3` will be used. Visit
+      https://github.com/conda-forge/miniforge/releases/ for more information on
+      available versions"
     required: false
     default: ""
   conda-version:
@@ -60,15 +59,15 @@ inputs:
     default: ""
   activate-environment:
     description:
-      'Environment name (or path) to activate on all shells. Default is
-      `test` which will be created in `$CONDA/envs/test`. If an empty string is used,
+      "Environment name (or path) to activate on all shells. Default is `test`
+      which will be created in `$CONDA/envs/test`. If an empty string is used,
       no environment is activated by default (For `base` activation see the
-      `auto-activate-base` option). If the environment
-      does not exist, it will be created and activated. If `environment-file` is
-      used and you want that to be the environment used, you need to explicitely
-      provide the name of that environment on `activate-environment`. If using
-      sh/bash/cmd.exe shells please read the IMPORTANT! section on the
-      README.md! to properly activate conda environments on these shells.'
+      `auto-activate-base` option). If the environment does not exist, it will
+      be created and activated. If `environment-file` is used and you want that
+      to be the environment used, you need to explicitely provide the name of
+      that environment on `activate-environment`. If using sh/bash/cmd.exe
+      shells please read the IMPORTANT! section on the README.md! to properly
+      activate conda environments on these shells."
     required: false
     default: "test"
   python-version:
@@ -211,8 +210,8 @@ inputs:
     default: ""
   use-mamba:
     description:
-      'Experimental. Use mamba as soon as available (either as provided by
-      `mamba-in-installer` or installation by `mamba-version`)'
+      "Experimental. Use mamba as soon as available (either as provided by
+      `mamba-in-installer` or installation by `mamba-version`)"
     required: false
     default: ""
   architecture:

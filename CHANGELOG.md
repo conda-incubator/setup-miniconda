@@ -5,7 +5,8 @@
 ### Features
 
 - [#130] installs all extra tools (e.g. `conda-build`) in a single solve
-- [#133], [#138], and [#140] add first-class support for [Miniforge] (and Mambaforge)
+- [#133], [#138], and [#140] add first-class support for [Miniforge] (and
+  Mambaforge)
 - [#137] allows `activate-environment` to be a path-like prefix
 
 ### Documentation
@@ -35,16 +36,16 @@
 [#138]: https://github.com/conda-incubator/setup-miniconda/pull/138
 [#140]: https://github.com/conda-incubator/setup-miniconda/pull/140
 [#148]: https://github.com/conda-incubator/setup-miniconda/pull/148
-[Miniforge]: https://github.com/conda-forge/miniforge
----
+
+## [Miniforge]: https://github.com/conda-forge/miniforge
 
 ## [v2.0.1] (2020-11-29)
 
 ### Fixes
 
 - [#97] fixes `installer-url` on Windows.
-- [#94], [#95] catches ignored errors when an environment file contains
-  invalid section names [#93].
+- [#94], [#95] catches ignored errors when an environment file contains invalid
+  section names [#93].
 - [#100] fixes `mamba` not being available on Windows if using a `bash` shell
   [#59].
 
@@ -151,8 +152,7 @@
 
 ### Fixes
 
-- [#47] fixes regression in systems where the cache folder has not been
-  created.
+- [#47] fixes regression in systems where the cache folder has not been created.
 
 [v1.3.1]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v1.3.1
 [#47]: https://github.com/conda-incubator/setup-miniconda/pull/47
@@ -163,8 +163,8 @@
 
 ### Features
 
-- [#35] adds the possibility of using the cache action to cache downloaded
-  conda packages and (hopefully) reduce build times.
+- [#35] adds the possibility of using the cache action to cache downloaded conda
+  packages and (hopefully) reduce build times.
 
 [v1.3.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v1.3.0
 [#35]: https://github.com/conda-incubator/setup-miniconda/pull/35
