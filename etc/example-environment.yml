@@ -1,4 +1,7 @@
 name: anaconda-client-env
+channels:
+  - conda-forge
+  - defaults
 dependencies:
   - black
   - anaconda-client
