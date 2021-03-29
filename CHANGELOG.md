@@ -36,7 +36,7 @@
 [#138]: https://github.com/conda-incubator/setup-miniconda/pull/138
 [#140]: https://github.com/conda-incubator/setup-miniconda/pull/140
 [#148]: https://github.com/conda-incubator/setup-miniconda/pull/148
-[Miniforge]: https://github.com/conda-forge/miniforge
+[miniforge]: https://github.com/conda-forge/miniforge
 
 ## [v2.0.1] (2020-11-29)
 
