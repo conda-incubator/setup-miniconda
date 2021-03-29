@@ -1,5 +1,9 @@
 # Contributing
 
+## Pull requests
+
+Make sure to make your pull requests against the `develop` branch.
+
 ## Build
 
 The build step transpiles the `src/` to `dist/`, with `ncc`. These files, by
