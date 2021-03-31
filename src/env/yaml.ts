@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
 
 import * as yaml from "js-yaml";
@@ -9,6 +8,7 @@ import * as types from "../types";
 import * as constants from "../constants";
 import * as conda from "../conda";
 import * as utils from "../utils";
+import * as outputs from "../outputs";
 
 /**
  * Describes whether and how a YAML env should be patched to add a specific package
@@ -108,14 +108,25 @@ export const ensureYaml: types.IEnvProvider = {
 
     if (patchesApplied.length) {
       const patchedYaml = yaml.safeDump({ ...yamlData, dependencies });
-      envFile = path.join(os.tmpdir(), "environment-patched.yml");
+      const origPath = path.resolve(inputs.environmentFile);
+      const origParent = path.dirname(origPath);
+      envFile = path.join(
+        origParent,
+        `setup-miniconda-patched-${path.basename(origPath)}`
+      );
       core.info(
         `Making patched copy of 'environment-file: ${inputs.environmentFile}'`
       );
-      core.info(patchedYaml);
+      core.info(`Using: ${envFile}\n${patchedYaml}`);
       fs.writeFileSync(envFile, patchedYaml, "utf8");
+      outputs.setEnvironmentFileOutputs(
+        envFile,
+        yaml.safeDump(patchedYaml),
+        true
+      );
     } else {
       core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
+      outputs.setEnvironmentFileOutputs(envFile, yaml.safeDump(yamlData));
     }
 
     return [

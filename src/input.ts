@@ -99,6 +99,9 @@ export async function parseInputs(): Promise<types.IActionInputs> {
       always_yes: "true",
       changeps1: "false",
     }),
+    cleanPatchedEnvironmentFile: core.getInput(
+      "clean-patched-environment-file"
+    ),
   });
 
   const errors = RULES.reduce((errors, rule) => {
