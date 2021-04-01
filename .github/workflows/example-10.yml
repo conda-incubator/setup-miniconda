@@ -100,6 +100,6 @@ jobs:
         if: contains(matrix.environment-file, '.yml') && matrix.python-version
         run: |
           set -eux
-          diff '${{ steps.setup-miniconda.outputs.environment-file }}' '${{ matrix.python-version }}' | grep 'python=${{ matrix.python-version }}'
+          diff '${{ steps.setup-miniconda.outputs.environment-file }}' '${{ matrix.environment-file }}' | grep 'python=${{ matrix.python-version }}'
           python --version | grep "Python ${{ matrix.python-version }}"
           awk '/- conda-forge/,/- defaults/' '${{ steps.setup-miniconda.outputs.environment-file }}'
