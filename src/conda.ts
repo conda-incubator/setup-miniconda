@@ -126,7 +126,8 @@ export async function applyCondaConfiguration(
   }
 
   // LIFO: reverse order to preserve higher priority as listed in the option
-  for (const channel of channels.reverse()) {
+  // .slice ensures working against a copy
+  for (const channel of channels.slice().reverse()) {
     core.info(`Adding channel '${channel}'`);
     await condaCommand(["config", "--add", "channels", channel], options);
   }

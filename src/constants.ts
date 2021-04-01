@@ -148,3 +148,18 @@ export const WIN_PERMS_FOLDERS = [
  * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
  */
 export const PYTHON_SPEC = /^(.*::)?python($|\s\=\<\>\!\|)/i;
+
+/**
+ * Output name for the effective environment-file path used.
+ */
+export const OUTPUT_ENV_FILE_PATH = "environment-file";
+
+/**
+ * Output name for the effective environment-file file content used.
+ */
+export const OUTPUT_ENV_FILE_CONTENT = "environment-file-content";
+
+/**
+ * Output name for whether the effective environment-file file was patched.
+ */
+export const OUTPUT_ENV_FILE_WAS_PATCHED = "environment-file-was-patched";

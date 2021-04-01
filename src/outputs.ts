@@ -34,3 +34,20 @@ export async function setCacheVariable(options: types.IDynamicOptions) {
   await conda.condaCommand(["config", "--add", "pkgs_dirs", folder], options);
   core.exportVariable(constants.ENV_VAR_CONDA_PKGS, folder);
 }
+
+/**
+ * Export the effective environment-file path
+ */
+export function setEnvironmentFileOutputs(
+  envFile: string,
+  envContent: string,
+  patched = false
+): void {
+  core.setOutput(constants.OUTPUT_ENV_FILE_PATH, path.resolve(envFile));
+  core.setOutput(constants.OUTPUT_ENV_FILE_CONTENT, envContent);
+  core.setOutput(
+    constants.OUTPUT_ENV_FILE_WAS_PATCHED,
+    patched ? "true" : "false"
+  );
+  core.saveState(constants.OUTPUT_ENV_FILE_WAS_PATCHED, patched);
+}

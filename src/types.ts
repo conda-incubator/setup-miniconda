@@ -86,6 +86,7 @@ export interface IActionInputs {
   readonly pythonVersion: string;
   readonly removeProfiles: string;
   readonly useMamba: string;
+  readonly cleanPatchedEnvironmentFile: string;
 }
 
 /**

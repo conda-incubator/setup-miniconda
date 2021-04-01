@@ -9358,7 +9358,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_DEFAULT_VERSION = exports.MINIFORGE_DEFAULT_VARIANT = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.OUTPUT_ENV_FILE_WAS_PATCHED = exports.OUTPUT_ENV_FILE_CONTENT = exports.OUTPUT_ENV_FILE_PATH = exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_DEFAULT_VERSION = exports.MINIFORGE_DEFAULT_VARIANT = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 //-----------------------------------------------------------------------
@@ -9485,6 +9485,18 @@ exports.WIN_PERMS_FOLDERS = [
  * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
  */
 exports.PYTHON_SPEC = /^(.*::)?python($|\s\=\<\>\!\|)/i;
+/**
+ * Output name for the effective environment-file path used.
+ */
+exports.OUTPUT_ENV_FILE_PATH = "environment-file";
+/**
+ * Output name for the effective environment-file file content used.
+ */
+exports.OUTPUT_ENV_FILE_CONTENT = "environment-file-content";
+/**
+ * Output name for whether the effective environment-file file was patched.
+ */
+exports.OUTPUT_ENV_FILE_WAS_PATCHED = "environment-file-was-patched";
 
 
 /***/ }),
@@ -13133,7 +13145,8 @@ function applyCondaConfiguration(inputs, options) {
             channels = options.envSpec.yaml.channels;
         }
         // LIFO: reverse order to preserve higher priority as listed in the option
-        for (const channel of channels.reverse()) {
+        // .slice ensures working against a copy
+        for (const channel of channels.slice().reverse()) {
             core.info(`Adding channel '${channel}'`);
             yield condaCommand(["config", "--add", "channels", channel], options);
         }
@@ -13632,6 +13645,7 @@ function parseInputs() {
                 always_yes: "true",
                 changeps1: "false",
             }),
+            cleanPatchedEnvironmentFile: core.getInput("clean-patched-environment-file"),
         });
         const errors = RULES.reduce((errors, rule) => {
             const msg = rule(inputs, inputs.condaConfig);
@@ -15870,6 +15884,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensureExplicit = void 0;
 const conda = __importStar(__webpack_require__(259));
+const outputs = __importStar(__webpack_require__(405));
 /**
  * Install an environment from an explicit file generated `conda list --explicit`
  * or `conda-lock`
@@ -15878,8 +15893,12 @@ exports.ensureExplicit = {
     label: "conda create (from explicit)",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { var _a, _b; return !!((_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.explicit) === null || _b === void 0 ? void 0 : _b.length); }),
     condaArgs: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        var _c;
         if (inputs.pythonVersion) {
             throw Error(`'python-version: ${inputs.pythonVersion}' is incompatible with an explicit 'environmentFile`);
+        }
+        if ((_c = options.envSpec) === null || _c === void 0 ? void 0 : _c.explicit) {
+            outputs.setEnvironmentFileOutputs(inputs.environmentFile, options.envSpec.explicit);
         }
         return [
             "create",
@@ -18014,7 +18033,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setCacheVariable = exports.setPathVariables = void 0;
+exports.setEnvironmentFileOutputs = exports.setCacheVariable = exports.setPathVariables = void 0;
 /**
  * Modify environment variables and action outputs.
  */
@@ -18050,6 +18069,16 @@ function setCacheVariable(options) {
     });
 }
 exports.setCacheVariable = setCacheVariable;
+/**
+ * Export the effective environment-file path
+ */
+function setEnvironmentFileOutputs(envFile, envContent, patched = false) {
+    core.setOutput(constants.OUTPUT_ENV_FILE_PATH, path.resolve(envFile));
+    core.setOutput(constants.OUTPUT_ENV_FILE_CONTENT, envContent);
+    core.setOutput(constants.OUTPUT_ENV_FILE_WAS_PATCHED, patched ? "true" : "false");
+    core.saveState(constants.OUTPUT_ENV_FILE_WAS_PATCHED, patched);
+}
+exports.setEnvironmentFileOutputs = setEnvironmentFileOutputs;
 
 
 /***/ }),
@@ -20557,6 +20586,18 @@ function setupMiniconda(inputs) {
         if (inputs.activateEnvironment) {
             yield core.group("Ensuring environment...", () => env.ensureEnvironment(inputs, options));
         }
+        if (core.getState(constants.OUTPUT_ENV_FILE_WAS_PATCHED)) {
+            yield core.group("Maybe cleaning up patched environment-file...", () => __awaiter(this, void 0, void 0, function* () {
+                const patchedEnv = core.getState(constants.OUTPUT_ENV_FILE_PATH);
+                if (inputs.cleanPatchedEnvironmentFile === "true") {
+                    fs.unlinkSync(patchedEnv);
+                    core.info(`Cleaned ${patchedEnv}`);
+                }
+                else {
+                    core.info(`Leaving ${patchedEnv} in place`);
+                }
+            }));
+        }
         core.info("setup-miniconda ran successfully");
     });
 }
@@ -20616,13 +20657,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensureYaml = void 0;
 const fs = __importStar(__webpack_require__(747));
-const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 const yaml = __importStar(__webpack_require__(414));
 const core = __importStar(__webpack_require__(470));
 const constants = __importStar(__webpack_require__(211));
 const conda = __importStar(__webpack_require__(259));
 const utils = __importStar(__webpack_require__(163));
+const outputs = __importStar(__webpack_require__(405));
 /**
  * The current known providers of patches to `environment.yml`
  *
@@ -20689,13 +20730,17 @@ exports.ensureYaml = {
         }
         if (patchesApplied.length) {
             const patchedYaml = yaml.safeDump(Object.assign(Object.assign({}, yamlData), { dependencies }));
-            envFile = path.join(os.tmpdir(), "environment-patched.yml");
+            const origPath = path.resolve(inputs.environmentFile);
+            const origParent = path.dirname(origPath);
+            envFile = path.join(origParent, `setup-miniconda-patched-${path.basename(origPath)}`);
             core.info(`Making patched copy of 'environment-file: ${inputs.environmentFile}'`);
-            core.info(patchedYaml);
+            core.info(`Using: ${envFile}\n${patchedYaml}`);
             fs.writeFileSync(envFile, patchedYaml, "utf8");
+            outputs.setEnvironmentFileOutputs(envFile, yaml.safeDump(patchedYaml), true);
         }
         else {
             core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
+            outputs.setEnvironmentFileOutputs(envFile, fs.readFileSync(inputs.environmentFile, "utf-8"));
         }
         return [
             "env",
@@ -29955,7 +30000,7 @@ module.exports.safeLoad    = safeLoad;
 /* 771 */
 /***/ (function(module) {
 
-module.exports = {"_args":[["cheerio@1.0.0-rc.3","/Users/gpenacastellanos/develop/conda-incubator/setup-miniconda"]],"_from":"cheerio@1.0.0-rc.3","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"cheerio@1.0.0-rc.3","name":"cheerio","escapedName":"cheerio","rawSpec":"1.0.0-rc.3","saveSpec":null,"fetchSpec":"1.0.0-rc.3"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_spec":"1.0.0-rc.3","_where":"/Users/gpenacastellanos/develop/conda-incubator/setup-miniconda","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
+module.exports = {"_args":[["cheerio@1.0.0-rc.3","/home/weg/projects/actions/setup-miniconda"]],"_from":"cheerio@1.0.0-rc.3","_id":"cheerio@1.0.0-rc.3","_inBundle":false,"_integrity":"sha512-0td5ijfUPuubwLUu0OBoe98gZj8C/AA+RW3v67GPlGOrvxWjZmBXiBCRU+I8VEiNyJzjth40POfHiz2RB3gImA==","_location":"/cheerio","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"cheerio@1.0.0-rc.3","name":"cheerio","escapedName":"cheerio","rawSpec":"1.0.0-rc.3","saveSpec":null,"fetchSpec":"1.0.0-rc.3"},"_requiredBy":["/get-hrefs"],"_resolved":"https://registry.npmjs.org/cheerio/-/cheerio-1.0.0-rc.3.tgz","_spec":"1.0.0-rc.3","_where":"/home/weg/projects/actions/setup-miniconda","author":{"name":"Matt Mueller","email":"mattmuelle@gmail.com","url":"mat.io"},"bugs":{"url":"https://github.com/cheeriojs/cheerio/issues"},"dependencies":{"css-select":"~1.2.0","dom-serializer":"~0.1.1","entities":"~1.1.1","htmlparser2":"^3.9.1","lodash":"^4.15.0","parse5":"^3.0.1"},"description":"Tiny, fast, and elegant implementation of core jQuery designed specifically for the server","devDependencies":{"benchmark":"^2.1.0","coveralls":"^2.11.9","expect.js":"~0.3.1","istanbul":"^0.4.3","jquery":"^3.0.0","jsdom":"^9.2.1","jshint":"^2.9.2","mocha":"^3.1.2","xyz":"~1.1.0"},"engines":{"node":">= 0.6"},"files":["index.js","lib"],"homepage":"https://github.com/cheeriojs/cheerio#readme","keywords":["htmlparser","jquery","selector","scraper","parser","html"],"license":"MIT","main":"./index.js","name":"cheerio","repository":{"type":"git","url":"git://github.com/cheeriojs/cheerio.git"},"scripts":{"test":"make test"},"version":"1.0.0-rc.3"};
 
 /***/ }),
 /* 772 */
