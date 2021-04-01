@@ -87,12 +87,18 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     );
   }
 
-  if (
-    inputs.cleanPatchedEnvironmentFile === "true" &&
-    core.getState(constants.OUTPUT_ENV_FILE_WAS_PATCHED)
-  ) {
-    await core.group("Cleaning up patched environment-file...", async () =>
-      fs.unlinkSync(core.getState(constants.OUTPUT_ENV_FILE_PATH))
+  if (core.getState(constants.OUTPUT_ENV_FILE_WAS_PATCHED)) {
+    await core.group(
+      "Maybe cleaning up patched environment-file...",
+      async () => {
+        const patchedEnv = core.getState(constants.OUTPUT_ENV_FILE_PATH);
+        if (inputs.cleanPatchedEnvironmentFile === "true") {
+          fs.unlinkSync(patchedEnv);
+          core.info(`Cleaned ${patchedEnv}`);
+        } else {
+          core.info(`Leaving ${patchedEnv} in place`);
+        }
+      }
     );
   }
 

@@ -20586,9 +20586,17 @@ function setupMiniconda(inputs) {
         if (inputs.activateEnvironment) {
             yield core.group("Ensuring environment...", () => env.ensureEnvironment(inputs, options));
         }
-        if (inputs.cleanPatchedEnvironmentFile === "true" &&
-            core.getState(constants.OUTPUT_ENV_FILE_WAS_PATCHED)) {
-            yield core.group("Cleaning up patched environment-file...", () => __awaiter(this, void 0, void 0, function* () { return fs.unlinkSync(core.getState(constants.OUTPUT_ENV_FILE_PATH)); }));
+        if (core.getState(constants.OUTPUT_ENV_FILE_WAS_PATCHED)) {
+            yield core.group("Maybe cleaning up patched environment-file...", () => __awaiter(this, void 0, void 0, function* () {
+                const patchedEnv = core.getState(constants.OUTPUT_ENV_FILE_PATH);
+                if (inputs.cleanPatchedEnvironmentFile === "true") {
+                    fs.unlinkSync(patchedEnv);
+                    core.info(`Cleaned ${patchedEnv}`);
+                }
+                else {
+                    core.info(`Leaving ${patchedEnv} in place`);
+                }
+            }));
         }
         core.info("setup-miniconda ran successfully");
     });
