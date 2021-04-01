@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [v2.1.1] (unreleased)
+## [v2.1.1] (2021-03-31)
 
 ### Features
 
