@@ -45,6 +45,9 @@ export function setEnvironmentFileOutputs(
 ): void {
   core.setOutput(constants.OUTPUT_ENV_FILE_PATH, path.resolve(envFile));
   core.setOutput(constants.OUTPUT_ENV_FILE_CONTENT, envContent);
-  core.setOutput(constants.OUTPUT_ENV_FILE_PATCHED, patched ? "true" : "false");
-  core.saveState(constants.OUTPUT_ENV_FILE_PATCHED, patched);
+  core.setOutput(
+    constants.OUTPUT_ENV_FILE_WAS_PATCHED,
+    patched ? "true" : "false"
+  );
+  core.saveState(constants.OUTPUT_ENV_FILE_WAS_PATCHED, patched);
 }

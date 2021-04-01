@@ -17,7 +17,7 @@ outputs:
     description: "The full path to the environment-file used"
   environment-file-content:
     description: "The content of the environment-file used"
-  environment-file-patched:
+  environment-file-was-patched:
     description: "Whether a patched environment-file was made due to inputs"
 
 inputs:

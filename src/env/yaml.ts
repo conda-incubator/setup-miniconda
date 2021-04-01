@@ -126,7 +126,10 @@ export const ensureYaml: types.IEnvProvider = {
       );
     } else {
       core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
-      outputs.setEnvironmentFileOutputs(envFile, yaml.safeDump(yamlData));
+      outputs.setEnvironmentFileOutputs(
+        envFile,
+        fs.readFileSync(inputs.environmentFile, "utf-8")
+      );
     }
 
     return [

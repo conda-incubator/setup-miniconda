@@ -82,8 +82,24 @@ jobs:
           mamba-version: ${{ matrix.mamba-version }}
           use-mamba: true
           python-version: ${{ matrix.python-version }}
+          clean-patched-environment-file: false
+
       - run: |
           mamba info
           mamba list
           python -VV
           printenv | sort
+      - name: verify unpatched environment.yml is reported and not cleaned
+        if: contains(matrix.environment-file, '.yml') && !matrix.python-version
+        run: |
+          set -eux
+          ls '${{ setup-miniconda.outputs.environment-file }}'
+          ls '${{ matrix.environment-file }}'
+          diff -s '${{ setup-miniconda.outputs.environment-file }}' '${{ matrix.environment-file }}' | grep 'are identical'
+      - name: verify patched output is reported, correct, and not cleaned
+        if: contains(matrix.environment-file, '.yml') && matrix.python-version
+        run: |
+          set -eux
+          diff '${{ setup-miniconda.outputs.environment-file }}' '${{ matrix.python-version }}' | grep 'python=${{ matrix.python-version }}'
+          python --version | grep "Python ${{ matrix.python-version }}"
+          awk '/- conda-forge/,/- defaults/' '${{ setup-miniconda.outputs.environment-file }}'

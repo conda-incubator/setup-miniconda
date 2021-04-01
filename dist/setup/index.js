@@ -9358,7 +9358,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.OUTPUT_ENV_FILE_PATCHED = exports.OUTPUT_ENV_FILE_CONTENT = exports.OUTPUT_ENV_FILE_PATH = exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_DEFAULT_VERSION = exports.MINIFORGE_DEFAULT_VARIANT = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.OUTPUT_ENV_FILE_WAS_PATCHED = exports.OUTPUT_ENV_FILE_CONTENT = exports.OUTPUT_ENV_FILE_PATH = exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_DEFAULT_VERSION = exports.MINIFORGE_DEFAULT_VARIANT = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 //-----------------------------------------------------------------------
@@ -9486,17 +9486,17 @@ exports.WIN_PERMS_FOLDERS = [
  */
 exports.PYTHON_SPEC = /^(.*::)?python($|\s\=\<\>\!\|)/i;
 /**
- * Output name for the actual environment-file path used.
+ * Output name for the effective environment-file path used.
  */
 exports.OUTPUT_ENV_FILE_PATH = "environment-file";
 /**
- * Output name for the actual environment-file file content used.
+ * Output name for the effective environment-file file content used.
  */
 exports.OUTPUT_ENV_FILE_CONTENT = "environment-file-content";
 /**
- * Output name for whether actual the environment-file file was patched.
+ * Output name for whether the effective environment-file file was patched.
  */
-exports.OUTPUT_ENV_FILE_PATCHED = "environment-file-patched";
+exports.OUTPUT_ENV_FILE_WAS_PATCHED = "environment-file-was-patched";
 
 
 /***/ }),
@@ -18075,8 +18075,8 @@ exports.setCacheVariable = setCacheVariable;
 function setEnvironmentFileOutputs(envFile, envContent, patched = false) {
     core.setOutput(constants.OUTPUT_ENV_FILE_PATH, path.resolve(envFile));
     core.setOutput(constants.OUTPUT_ENV_FILE_CONTENT, envContent);
-    core.setOutput(constants.OUTPUT_ENV_FILE_PATCHED, patched ? "true" : "false");
-    core.saveState(constants.OUTPUT_ENV_FILE_PATCHED, patched);
+    core.setOutput(constants.OUTPUT_ENV_FILE_WAS_PATCHED, patched ? "true" : "false");
+    core.saveState(constants.OUTPUT_ENV_FILE_WAS_PATCHED, patched);
 }
 exports.setEnvironmentFileOutputs = setEnvironmentFileOutputs;
 
@@ -20587,8 +20587,8 @@ function setupMiniconda(inputs) {
             yield core.group("Ensuring environment...", () => env.ensureEnvironment(inputs, options));
         }
         if (inputs.cleanPatchedEnvironmentFile === "true" &&
-            core.getState(constants.OUTPUT_ENV_FILE_PATCHED)) {
-            yield core.group("Cleaning up patched environment-file", () => __awaiter(this, void 0, void 0, function* () { return fs.unlinkSync(core.getState(constants.OUTPUT_ENV_FILE_PATH)); }));
+            core.getState(constants.OUTPUT_ENV_FILE_WAS_PATCHED)) {
+            yield core.group("Cleaning up patched environment-file...", () => __awaiter(this, void 0, void 0, function* () { return fs.unlinkSync(core.getState(constants.OUTPUT_ENV_FILE_PATH)); }));
         }
         core.info("setup-miniconda ran successfully");
     });
@@ -20732,7 +20732,7 @@ exports.ensureYaml = {
         }
         else {
             core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
-            outputs.setEnvironmentFileOutputs(envFile, yaml.safeDump(yamlData));
+            outputs.setEnvironmentFileOutputs(envFile, fs.readFileSync(inputs.environmentFile, "utf-8"));
         }
         return [
             "env",
