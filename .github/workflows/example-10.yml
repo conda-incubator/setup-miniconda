@@ -93,13 +93,13 @@ jobs:
         if: contains(matrix.environment-file, '.yml') && !matrix.python-version
         run: |
           set -eux
-          ls '${{ setup-miniconda.outputs.environment-file }}'
+          ls '${{ steps.setup-miniconda.outputs.environment-file }}'
           ls '${{ matrix.environment-file }}'
-          diff -s '${{ setup-miniconda.outputs.environment-file }}' '${{ matrix.environment-file }}' | grep 'are identical'
+          diff -s '${{ steps.setup-miniconda.outputs.environment-file }}' '${{ matrix.environment-file }}' | grep 'are identical'
       - name: verify patched output is reported, correct, and not cleaned
         if: contains(matrix.environment-file, '.yml') && matrix.python-version
         run: |
           set -eux
-          diff '${{ setup-miniconda.outputs.environment-file }}' '${{ matrix.python-version }}' | grep 'python=${{ matrix.python-version }}'
+          diff '${{ steps.setup-miniconda.outputs.environment-file }}' '${{ matrix.python-version }}' | grep 'python=${{ matrix.python-version }}'
           python --version | grep "Python ${{ matrix.python-version }}"
-          awk '/- conda-forge/,/- defaults/' '${{ setup-miniconda.outputs.environment-file }}'
+          awk '/- conda-forge/,/- defaults/' '${{ steps.setup-miniconda.outputs.environment-file }}'
