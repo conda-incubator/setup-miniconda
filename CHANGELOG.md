@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [v2.1.1] (unreleased)
+
+### Features
+
+- [#163] leaves the patched `setup-miniconda-patched-{environment.yml}` in-place
+  if `clean-patched-environment-file: false` is given (otherwise cleans up after
+  itself)
+- [#163] adds action outputs `environment-file`, `environment-file-content` and
+  `environment-file-was-patched`
+
+### Fixes
+
+- [#161] restores proper ordering of `channels` when `environment-file` is
+  patched
+- [#163] if necessary, writes `setup-miniconda-patched-environment.yml` to the
+  same location to work with relative paths, e.g. `pip: ["-r requirements.txt"]`
+
+[v2.1.1]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v2.1.0
+[#161]: https://github.com/conda-incubator/setup-miniconda/pull/161
+[#163]: https://github.com/conda-incubator/setup-miniconda/pull/163
+
 ## [v2.1.0] (2021-03-29)
 
 ### Features

@@ -16,12 +16,15 @@ A `conda-build-version` or `mamba-version` may be provided to install into
 The base `condabin/` folder is added to `$PATH` and shell integration is
 initialized across all platforms.
 
-By default, this action will then create, and activate an environment by one of:
+By default, this action will then create, and _activate_, an environment by one
+of:
 
 - creating a mostly-empty `test` environment, containing only the latest
   `python-version` and its dependencies
 - creating an `test` environment described in a given `environment-file`:
   - an `environment.yml`-like file (which can be patched with `python-version`)
+    - the patched environment will be cleaned up unless
+      `clean-patched-environment-file: false` is given
   - a [lockfile](#example-7-explicit-specification)
 
 This action correctly handles activation of environments and offers the
@@ -118,9 +121,9 @@ activate the `base` environment. This encourages the practice of not using the
 `base` environment to install packages used for the workflow and leave the
 `base` environment untouched, with only `conda` (and/or `mamba`) in it.
 
-## Inputs
+## Inputs and outputs
 
-For a full list of available inputs for this action see
+For a full list of available _inputs_ and _outputs_ for this action see
 [action.yml](action.yml).
 
 ### Use a different environment name or path

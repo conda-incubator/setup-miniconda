@@ -1,6 +1,25 @@
 name: "Setup Miniconda"
 author: Gonzalo Peña-Castellanos (@goanpeca)
 description: "Set up Conda package and environment manager with Miniconda."
+
+runs:
+  using: "node12"
+  main: "dist/setup/index.js"
+  post: "dist/delete/index.js"
+  post-if: "success()"
+
+branding:
+  icon: "code"
+  color: "green"
+
+outputs:
+  environment-file:
+    description: "The full path to the environment-file used"
+  environment-file-content:
+    description: "The content of the environment-file used"
+  environment-file-was-patched:
+    description: "Whether a patched environment-file was made due to inputs"
+
 inputs:
   installer-url:
     description:
@@ -220,11 +239,8 @@ inputs:
       GitHub-hosted runners are "x86" and "x64". Default is "x64".'
     required: false
     default: "x64"
-runs:
-  using: "node12"
-  main: "dist/setup/index.js"
-  post: "dist/delete/index.js"
-  post-if: "success()"
-branding:
-  icon: "code"
-  color: "green"
+  clean-patched-environment-file:
+    description:
+      "Whether a patched environment-file (if created) should be cleaned"
+    required: false
+    default: "true"

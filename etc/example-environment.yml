@@ -3,5 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - black
   - anaconda-client
+  - pip
+  - pip:
+      - -r requirements.txt
