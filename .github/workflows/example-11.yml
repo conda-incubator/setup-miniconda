@@ -1,0 +1,44 @@
+name: "Example 11: Alternative architectures"
+
+on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - "master"
+  schedule:
+    # Note that cronjobs run on master/main by default
+    - cron: "0 0 * * *"
+
+jobs:
+  example-11:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Ex11 (os=${{ matrix.os }}) architecture=${{ matrix.architecture }} miniconda-version=${{ matrix.miniconda-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "windows-latest"]
+        architecture: ["x86"]
+        miniconda-version: ["latest"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        with:
+          architecture: ${{ matrix.architecture }}
+          miniconda-version: $${{ matrix.miniconda-version }}
+          auto-update-conda: true
+          python-version: "3.8"
+      - name: Conda info
+        shell: bash -l {0}
+        run: conda info
+      - name: Conda list
+        shell: pwsh
+        run: conda list
+      - name: Environment
+        shell: bash -l {0}
+        run: printenv | sort
