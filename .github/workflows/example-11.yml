@@ -17,7 +17,9 @@ jobs:
     if:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
-    name: Ex11 (os=${{ matrix.os }}) architecture=${{ matrix.architecture }} miniconda-version=${{ matrix.miniconda-version }})
+    name:
+      Ex11 (os=${{ matrix.os }} architecture=${{ matrix.architecture }}
+      miniconda-version=${{ matrix.miniconda-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

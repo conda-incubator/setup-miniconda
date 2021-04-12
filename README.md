@@ -528,16 +528,21 @@ jobs:
 
 ### Example 11: Alternative Architectures
 
-In addition to the default 64-bit builds of Miniconda, 32-bit versions are available for Windows and Linux.
-When specifying an alternate architecture, the option `miniconda-version` is required.
+In addition to the default 64-bit builds of Miniconda, 32-bit versions are
+available for Windows and Linux. When specifying an alternate architecture, the
+option `miniconda-version` is required.
 
-***Warning***: [32-bit builds of Miniconda for Linux are no longer updated as of Decemeber, 2018](https://www.anaconda.com/blog/anaconda-distribution-2018-12-released).
-You are encouraged to specify a specific version for `miniconda-version` in this case.
+**_Warning_**:
+[32-bit builds of Miniconda for Linux are no longer updated as of Decemeber, 2018](https://www.anaconda.com/blog/anaconda-distribution-2018-12-released).
+You are encouraged to specify a specific version for `miniconda-version` in this
+case.
 
 ```yaml
 jobs:
   example-11:
-    name: Ex11 (os=${{ matrix.os }}) architecture=${{ matrix.architecture }} miniconda-version=${{ matrix.miniconda-version }})
+    name:
+      Ex11 (os=${{ matrix.os }} architecture=${{ matrix.architecture }}
+      miniconda-version=${{ matrix.miniconda-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
