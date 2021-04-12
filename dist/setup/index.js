@@ -13087,7 +13087,7 @@ function condaExecutable(options, subcommand) {
         commandName = "mamba";
     }
     commandName = constants.IS_WINDOWS ? commandName + ".bat" : commandName;
-    condaExe = path.join(dir, "condabin", commandName);
+    condaExe = path.join(dir, "bin", commandName);
     return condaExe;
 }
 exports.condaExecutable = condaExecutable;
