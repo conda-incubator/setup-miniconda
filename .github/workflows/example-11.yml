@@ -32,7 +32,7 @@ jobs:
       - uses: ./
         with:
           architecture: ${{ matrix.architecture }}
-          miniconda-version: $${{ matrix.miniconda-version }}
+          miniconda-version: ${{ matrix.miniconda-version }}
           auto-update-conda: true
           python-version: "3.8"
       - name: Conda info
