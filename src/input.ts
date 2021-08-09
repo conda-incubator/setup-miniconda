@@ -59,7 +59,7 @@ const RULES: IRule[] = [
       constants.KNOWN_EXTENSIONS
     }`,
   (i) =>
-    !!(i.minicondaVersion && i.architecture !== "x64") &&
+    !!(!i.minicondaVersion && i.architecture !== "x64") &&
     `'architecture: ${i.architecture}' requires "miniconda-version"`,
 ];
 
