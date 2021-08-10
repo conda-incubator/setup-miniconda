@@ -529,13 +529,8 @@ jobs:
 ### Example 11: Alternative Architectures
 
 In addition to the default 64-bit builds of Miniconda, 32-bit versions are
-available for Windows and Linux. When specifying an alternate architecture, the
-option `miniconda-version` is required.
-
-**_Warning_**:
-[32-bit builds of Miniconda for Linux are no longer updated as of Decemeber, 2018](https://www.anaconda.com/blog/anaconda-distribution-2018-12-released).
-You are encouraged to specify a specific version for `miniconda-version` in this
-case.
+available for Windows. Note that although some x86 builds are available for
+Linux and MacOS, these are too old (<4.6) to be supported by this action.
 
 ```yaml
 jobs:
@@ -547,7 +542,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest", "windows-latest"]
+        os: ["windows-latest"]
         architecture: ["x86"]
         miniconda-version: ["latest"]
     steps:
