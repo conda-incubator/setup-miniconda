@@ -37,10 +37,15 @@ jobs:
           miniconda-version: ${{ matrix.miniconda-version }}
           auto-update-conda: true
           python-version: "3.8"
-      - name: Check previous step failed on Ubuntu
+      - name: Check previous step outcome
         shell: bash
-        if: matrix.os == 'ubuntu-latest' && always()
-        run: ${{ steps.setup-miniconda.outcome == 'failure' }}
+        if: always()
+        run: |
+        if [[ ${{ matrix.os }} == 'ubuntu-latest' ]]; then
+          ${{ steps.setup-miniconda.outcome == 'failure' }}
+        else
+          ${{ steps.setup-miniconda.outcome == 'success' }}
+        fi
       - name: Conda info
         shell: bash -l {0}
         run: conda info
