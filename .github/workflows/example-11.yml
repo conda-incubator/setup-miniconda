@@ -30,11 +30,17 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: ./
+        id: setup-miniconda
+        continue-on-error: true
         with:
           architecture: ${{ matrix.architecture }}
           miniconda-version: ${{ matrix.miniconda-version }}
           auto-update-conda: true
           python-version: "3.8"
+      - name: Check previous step failed on Ubuntu
+        shell: bash
+        if: matrix.os == 'ubuntu-latest' && always()
+        run: ${{ steps.setup-miniconda.outcome == 'failure' }}
       - name: Conda info
         shell: bash -l {0}
         run: conda info
