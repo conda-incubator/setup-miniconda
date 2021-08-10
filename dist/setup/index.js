@@ -14694,8 +14694,9 @@ const RULES = [
     ) => !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
         `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
     (i // We only support miniconda 4.6 or later (`conda init` and /condabin were added here, which we need)
-    ) => !!(i.minicondaVersion !== "latest" && semver.lt(i.minicondaVersion, "4.6.0")) &&
-        `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose ${i.minicondaVersion}`,
+    ) => !!(!["latest", ""].includes(i.minicondaVersion) &&
+        semver.lt(i.minicondaVersion, "4.6.0")) &&
+        `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
 ];
 /*
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`

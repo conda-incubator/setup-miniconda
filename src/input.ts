@@ -71,9 +71,10 @@ const RULES: IRule[] = [
     i // We only support miniconda 4.6 or later (`conda init` and /condabin were added here, which we need)
   ) =>
     !!(
-      i.minicondaVersion !== "latest" && semver.lt(i.minicondaVersion, "4.6.0")
+      !["latest", ""].includes(i.minicondaVersion) &&
+      semver.lt(i.minicondaVersion, "4.6.0")
     ) &&
-    `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose ${i.minicondaVersion}`,
+    `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
 ];
 
 /*
