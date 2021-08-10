@@ -41,11 +41,11 @@ jobs:
         shell: bash
         if: always()
         run: |
-        if [[ ${{ matrix.os }} == 'ubuntu-latest' ]]; then
-          ${{ steps.setup-miniconda.outcome == 'failure' }}
-        else
-          ${{ steps.setup-miniconda.outcome == 'success' }}
-        fi
+          if [[ ${{ matrix.os }} == 'ubuntu-latest' ]]; then
+            ${{ steps.setup-miniconda.outcome == 'failure' }}
+          else
+            ${{ steps.setup-miniconda.outcome == 'success' }}
+          fi
       - name: Conda info
         shell: bash -l {0}
         run: conda info
