@@ -15170,7 +15170,7 @@ function parseInputs() {
                 always_yes: "true",
                 changeps1: "false",
                 // Disable conflict reports (conda only; mamba keeps them)
-                unsatisfiable_hints: core.getInput("use-mamba"),
+                unsatisfiable_hints: core.getInput("use-mamba") || "false",
             }),
             cleanPatchedEnvironmentFile: core.getInput("clean-patched-environment-file"),
         });
