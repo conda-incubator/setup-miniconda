@@ -112,6 +112,8 @@ export async function parseInputs(): Promise<types.IActionInputs> {
       // These are always set to avoid terminal issues
       always_yes: "true",
       changeps1: "false",
+      // Disable conflict reports (conda only; mamba keeps them)
+      unsatisfiable_hints: core.getInput("use-mamba"),
     }),
     cleanPatchedEnvironmentFile: core.getInput(
       "clean-patched-environment-file"

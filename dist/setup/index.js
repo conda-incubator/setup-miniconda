@@ -14905,6 +14905,446 @@ exports.createDocument = function () {
     };
 };
 
+<<<<<<< HEAD
+=======
+//Entry types
+FormattingElementList.MARKER_ENTRY = 'MARKER_ENTRY';
+FormattingElementList.ELEMENT_ENTRY = 'ELEMENT_ENTRY';
+
+//Noah Ark's condition
+//OPTIMIZATION: at first we try to find possible candidates for exclusion using
+//lightweight heuristics without thorough attributes check.
+FormattingElementList.prototype._getNoahArkConditionCandidates = function (newElement) {
+    var candidates = [];
+
+    if (this.length >= NOAH_ARK_CAPACITY) {
+        var neAttrsLength = this.treeAdapter.getAttrList(newElement).length,
+            neTagName = this.treeAdapter.getTagName(newElement),
+            neNamespaceURI = this.treeAdapter.getNamespaceURI(newElement);
+
+        for (var i = this.length - 1; i >= 0; i--) {
+            var entry = this.entries[i];
+
+            if (entry.type === FormattingElementList.MARKER_ENTRY)
+                break;
+
+            var element = entry.element,
+                elementAttrs = this.treeAdapter.getAttrList(element),
+                isCandidate = this.treeAdapter.getTagName(element) === neTagName &&
+                              this.treeAdapter.getNamespaceURI(element) === neNamespaceURI &&
+                              elementAttrs.length === neAttrsLength;
+
+            if (isCandidate)
+                candidates.push({idx: i, attrs: elementAttrs});
+        }
+    }
+
+    return candidates.length < NOAH_ARK_CAPACITY ? [] : candidates;
+};
+
+FormattingElementList.prototype._ensureNoahArkCondition = function (newElement) {
+    var candidates = this._getNoahArkConditionCandidates(newElement),
+        cLength = candidates.length;
+
+    if (cLength) {
+        var neAttrs = this.treeAdapter.getAttrList(newElement),
+            neAttrsLength = neAttrs.length,
+            neAttrsMap = Object.create(null);
+
+        //NOTE: build attrs map for the new element so we can perform fast lookups
+        for (var i = 0; i < neAttrsLength; i++) {
+            var neAttr = neAttrs[i];
+
+            neAttrsMap[neAttr.name] = neAttr.value;
+        }
+
+        for (i = 0; i < neAttrsLength; i++) {
+            for (var j = 0; j < cLength; j++) {
+                var cAttr = candidates[j].attrs[i];
+
+                if (neAttrsMap[cAttr.name] !== cAttr.value) {
+                    candidates.splice(j, 1);
+                    cLength--;
+                }
+
+                if (candidates.length < NOAH_ARK_CAPACITY)
+                    return;
+            }
+        }
+
+        //NOTE: remove bottommost candidates until Noah's Ark condition will not be met
+        for (i = cLength - 1; i >= NOAH_ARK_CAPACITY - 1; i--) {
+            this.entries.splice(candidates[i].idx, 1);
+            this.length--;
+        }
+    }
+};
+
+//Mutations
+FormattingElementList.prototype.insertMarker = function () {
+    this.entries.push({type: FormattingElementList.MARKER_ENTRY});
+    this.length++;
+};
+
+FormattingElementList.prototype.pushElement = function (element, token) {
+    this._ensureNoahArkCondition(element);
+
+    this.entries.push({
+        type: FormattingElementList.ELEMENT_ENTRY,
+        element: element,
+        token: token
+    });
+
+    this.length++;
+};
+
+FormattingElementList.prototype.insertElementAfterBookmark = function (element, token) {
+    var bookmarkIdx = this.length - 1;
+
+    for (; bookmarkIdx >= 0; bookmarkIdx--) {
+        if (this.entries[bookmarkIdx] === this.bookmark)
+            break;
+    }
+
+    this.entries.splice(bookmarkIdx + 1, 0, {
+        type: FormattingElementList.ELEMENT_ENTRY,
+        element: element,
+        token: token
+    });
+
+    this.length++;
+};
+
+FormattingElementList.prototype.removeEntry = function (entry) {
+    for (var i = this.length - 1; i >= 0; i--) {
+        if (this.entries[i] === entry) {
+            this.entries.splice(i, 1);
+            this.length--;
+            break;
+        }
+    }
+};
+
+FormattingElementList.prototype.clearToLastMarker = function () {
+    while (this.length) {
+        var entry = this.entries.pop();
+
+        this.length--;
+
+        if (entry.type === FormattingElementList.MARKER_ENTRY)
+            break;
+    }
+};
+
+//Search
+FormattingElementList.prototype.getElementEntryInScopeWithTagName = function (tagName) {
+    for (var i = this.length - 1; i >= 0; i--) {
+        var entry = this.entries[i];
+
+        if (entry.type === FormattingElementList.MARKER_ENTRY)
+            return null;
+
+        if (this.treeAdapter.getTagName(entry.element) === tagName)
+            return entry;
+    }
+
+    return null;
+};
+
+FormattingElementList.prototype.getElementEntry = function (element) {
+    for (var i = this.length - 1; i >= 0; i--) {
+        var entry = this.entries[i];
+
+        if (entry.type === FormattingElementList.ELEMENT_ENTRY && entry.element === element)
+            return entry;
+    }
+
+    return null;
+};
+
+
+/***/ }),
+/* 263 */,
+/* 264 */,
+/* 265 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.parseInputs = void 0;
+const path = __importStar(__webpack_require__(622));
+const core = __importStar(__webpack_require__(470));
+const constants = __importStar(__webpack_require__(211));
+const urlExt = (url) => path.posix.extname(new URL(url).pathname);
+/**
+ * The currrent known set of input validation rules.
+ *
+ * ### Note
+ * Adding a new validation rule:
+ * - implement IRule
+ * - add it here
+ * - add a test!
+ *
+ * When the #107 changes have been completed, some of these rules can be moved to
+ * specific providers, but still checked up-front, with the name and type of provider
+ * for additional context.
+ */
+const RULES = [
+    (i, c) => !!(i.condaVersion && c.auto_update_conda === "true") &&
+        `only one of 'conda-version: ${i.condaVersion}' or 'auto-update-conda: true' may be provided`,
+    (i) => !!(i.pythonVersion && !i.activateEnvironment) &&
+        `'python-version: ${i.pythonVersion}' requires 'activate-environment: true'`,
+    (i) => !!(i.minicondaVersion && i.miniforgeVersion) &&
+        `only one of 'miniconda-version: ${i.minicondaVersion}' or 'miniforge-version: ${i.miniforgeVersion}' may be provided`,
+    (i) => !!(i.installerUrl && i.minicondaVersion) &&
+        `only one of 'installer-url: ${i.installerUrl}' or 'miniconda-version: ${i.minicondaVersion}' may be provided`,
+    (i) => !!(i.installerUrl && i.miniforgeVersion) &&
+        `only one of 'installer-url: ${i.installerUrl}' or 'miniforge-version: ${i.miniforgeVersion}' may be provided`,
+    (i) => !!(i.installerUrl &&
+        !constants.KNOWN_EXTENSIONS.includes(urlExt(i.installerUrl))) &&
+        `'installer-url' extension '${urlExt(i.installerUrl)}' must be one of: ${constants.KNOWN_EXTENSIONS}`,
+    (i) => !!(i.minicondaVersion && i.architecture !== "x64") &&
+        `'architecture: ${i.architecture}' requires "miniconda-version"`,
+];
+/*
+ * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
+ */
+function parseInputs() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const inputs = Object.freeze({
+            activateEnvironment: core.getInput("activate-environment"),
+            architecture: core.getInput("architecture"),
+            condaBuildVersion: core.getInput("conda-build-version"),
+            condaConfigFile: core.getInput("condarc-file"),
+            condaVersion: core.getInput("conda-version"),
+            environmentFile: core.getInput("environment-file"),
+            installerUrl: core.getInput("installer-url"),
+            mambaVersion: core.getInput("mamba-version"),
+            useMamba: core.getInput("use-mamba"),
+            minicondaVersion: core.getInput("miniconda-version"),
+            miniforgeVariant: core.getInput("miniforge-variant"),
+            miniforgeVersion: core.getInput("miniforge-version"),
+            pythonVersion: core.getInput("python-version"),
+            removeProfiles: core.getInput("remove-profiles"),
+            condaConfig: Object.freeze({
+                add_anaconda_token: core.getInput("add-anaconda-token"),
+                add_pip_as_python_dependency: core.getInput("add-pip-as-python-dependency"),
+                allow_softlinks: core.getInput("allow-softlinks"),
+                auto_activate_base: core.getInput("auto-activate-base"),
+                auto_update_conda: core.getInput("auto-update-conda"),
+                channel_alias: core.getInput("channel-alias"),
+                channel_priority: core.getInput("channel-priority"),
+                channels: core.getInput("channels"),
+                show_channel_urls: core.getInput("show-channel-urls"),
+                use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
+                // These are always set to avoid terminal issues
+                always_yes: "true",
+                changeps1: "false",
+                // Disable conflict reports (conda only; mamba keeps them)
+                unsatisfiable_hints: core.getInput("use-mamba"),
+            }),
+            cleanPatchedEnvironmentFile: core.getInput("clean-patched-environment-file"),
+        });
+        const errors = RULES.reduce((errors, rule) => {
+            const msg = rule(inputs, inputs.condaConfig);
+            if (msg) {
+                core.error(msg);
+                errors.push(msg);
+            }
+            return errors;
+        }, []);
+        if (errors.length) {
+            throw Error(`${errors.length} errors found in action inputs`);
+        }
+        return inputs;
+    });
+}
+exports.parseInputs = parseInputs;
+
+
+/***/ }),
+/* 266 */,
+/* 267 */,
+/* 268 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+var assocIndexOf = __webpack_require__(820);
+
+/**
+ * Sets the list cache `key` to `value`.
+ *
+ * @private
+ * @name set
+ * @memberOf ListCache
+ * @param {string} key The key of the value to set.
+ * @param {*} value The value to set.
+ * @returns {Object} Returns the list cache instance.
+ */
+function listCacheSet(key, value) {
+  var data = this.__data__,
+      index = assocIndexOf(data, key);
+
+  if (index < 0) {
+    ++this.size;
+    data.push([key, value]);
+  } else {
+    data[index][1] = value;
+  }
+  return this;
+}
+
+module.exports = listCacheSet;
+
+
+/***/ }),
+/* 269 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.updateMamba = void 0;
+const fs = __importStar(__webpack_require__(747));
+const core = __importStar(__webpack_require__(470));
+const constants = __importStar(__webpack_require__(211));
+const utils = __importStar(__webpack_require__(163));
+const conda = __importStar(__webpack_require__(259));
+/** Install `mamba` in the `base` env at a specified version */
+exports.updateMamba = {
+    label: "update mamba",
+    provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return inputs.mambaVersion !== "" || options.mambaInInstaller; }),
+    toolPackages: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
+        return {
+            tools: inputs.mambaVersion !== ""
+                ? [utils.makeSpec("mamba", inputs.mambaVersion)]
+                : [],
+            options: Object.assign(Object.assign({}, options), { useMamba: true }),
+        };
+    }),
+    postInstall: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        if (!constants.IS_WINDOWS) {
+            core.info("`mamba` is already executable");
+            return;
+        }
+        core.info("Creating bash wrapper for `mamba`...");
+        // Add bat-less forwarder for bash users on Windows
+        const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
+        const contents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
+        fs.writeFileSync(mambaBat.slice(0, -4), contents);
+        core.info(`... wrote ${mambaBat}:\n${contents}`);
+    }),
+};
+
+
+/***/ }),
+/* 270 */,
+/* 271 */,
+/* 272 */
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+var identity = __webpack_require__(83),
+    overRest = __webpack_require__(430),
+    setToString = __webpack_require__(70);
+
+/**
+ * The base implementation of `_.rest` which doesn't validate or coerce arguments.
+ *
+ * @private
+ * @param {Function} func The function to apply a rest parameter to.
+ * @param {number} [start=func.length-1] The start position of the rest parameter.
+ * @returns {Function} Returns the new function.
+ */
+function baseRest(func, start) {
+  return setToString(overRest(func, start, identity), func + '');
+}
+
+module.exports = baseRest;
+
+
+/***/ }),
+/* 273 */
+/***/ (function(module) {
+
+module.exports = {"amp":"&","apos":"'","gt":">","lt":"<","quot":"\""};
+
+/***/ }),
+/* 274 */,
+/* 275 */
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+
+var DOCUMENT_MODE = __webpack_require__(621).DOCUMENT_MODE;
+
+//Node construction
+exports.createDocument = function () {
+    return {
+        nodeName: '#document',
+        mode: DOCUMENT_MODE.NO_QUIRKS,
+        childNodes: []
+    };
+};
+
+>>>>>>> cleaner implementation
 exports.createDocumentFragment = function () {
     return {
         nodeName: '#document-fragment',
