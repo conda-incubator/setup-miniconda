@@ -145,6 +145,18 @@ export async function applyCondaConfiguration(
     }
   }
 
+  // Disable conflict reports (conda only; mamba keeps them)
+  if (!inputs.useMamba) {
+    try {
+      await condaCommand(
+        ["config", "--set", "unsatisfiable_hints", "false"],
+        options
+      );
+    } catch (err) {
+      core.warning(err);
+    }
+  }
+
   // Log all configuration information
   await condaCommand(["config", "--show-sources"], options);
   await condaCommand(["config", "--show"], options);
