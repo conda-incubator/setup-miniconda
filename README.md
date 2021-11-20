@@ -607,7 +607,7 @@ specifying a environment file.
         with:
             miniforge-variant: Mambaforge
             miniforge-version: latest
-            activate-environment: foo
+            activate-environment: your-env-name
             use-mamba: true
 ```
 
