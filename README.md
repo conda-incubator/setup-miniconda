@@ -579,9 +579,9 @@ Miniconda installation path requires succesive changes of folder ownership in
 order to work with the `cache` action.
 
 Every operating system use a different Miniforge `prefix`, so if you want to
-cache the environment on all of them you must use a `matrix` strategy:
+cache the environment on all of them you must use a `matrix` strategy.
 
-```
+```yaml
     strategy:
       matrix:
         include:
@@ -601,7 +601,7 @@ cache the environment on all of them you must use a `matrix` strategy:
 Then, the first installation step should setup a Miniconda variant without
 specifying a environment file.
 
-```
+```yaml
       - name: Setup Mambaforge
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -616,7 +616,7 @@ of package versions between the CI pipeline and local installations. You can
 skip this step if you use an environment file product of `conda env export`
 or `conda list --explicit`.
 
-```
+```yaml
       - name: Set cache date
         run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
         
@@ -633,7 +633,7 @@ or `conda list --explicit`.
 Finally,  update the environment based on the environment file if the cache
 does not exist.
 
-```
+```yaml
       - name: Update environment
         run: mamba env update -n your-env-name -f environment.yml
         if: steps.cache.outputs.cache-hit != 'true'
