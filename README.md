@@ -528,6 +528,8 @@ jobs:
 
 ## Caching
 
+### Caching packages
+
 If you want to enable package caching for conda you can use the
 [cache action](https://github.com/actions/cache) using `~/conda_pkgs_dir` as
 path for conda packages.
@@ -569,6 +571,73 @@ If you are using pip to resolve any dependencies in your conda environment then
 you may want to
 [cache those dependencies separately](https://docs.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#caching-dependencies),
 as they are not included in the conda package cache.
+
+### Caching environments
+
+A Miniforge variant is recommended to cache deployed environments, since the
+Miniconda installation path requires succesive changes of folder ownership in
+order to work with the `cache` action.
+
+Every operating system use a different Miniforge `prefix`, so if you want to
+cache the environment on all of them you must use a `matrix` strategy:
+
+```
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-64
+            prefix: /usr/share/miniconda3/envs/your-env-name
+
+          - os: macos-latest
+            label: osx-64
+            prefix: /Users/runner/miniconda3/envs/your-env-name
+
+          - os: windows-latest
+            label: win-64
+            prefix: C:\Miniconda3\envs\your-env-name
+```
+
+Then, the first installation step should setup a Miniconda variant without
+specifying a environment file.
+
+```
+      - name: Setup Mambaforge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+            miniforge-variant: Mambaforge
+            miniforge-version: latest
+            activate-environment: foo
+            use-mamba: true
+```
+
+It's a good idea to refresh the cache every 24 hours to avoid inconsistencies
+of package versions between the CI pipeline and local installations. You can 
+skip this step if you use an environment file product of `conda env export`
+or `conda list --explicit`.
+
+```
+      - name: Set cache date
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+        
+      - uses: actions/cache@v2
+        with:
+          path: ${{ matrix.prefix }}
+          key: ${{ matrix.label }}-conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+        env:
+          # Increase this value to reset cache if environment.yml has not changed
+          CACHE_NUMBER: 0
+        id: cache
+```
+
+Finally,  update the environment based on the environment file if the cache
+does not exist.
+
+```
+      - name: Update environment
+        run: mamba env update -n your-env-name -f environment.yml
+        if: steps.cache.outputs.cache-hit != 'true'
+```
 
 ### Use a default shell
 
