@@ -44,17 +44,18 @@ possibility of automatically activating the `test` environment on all shells.
 
 > Each of the examples below is discussed in a dedicated section below.
 
-| Documentation                                   | Workflow Status                                     |
-| ----------------------------------------------- | --------------------------------------------------- |
-| [Basic usage](#example-1-basic-usage)           | [![Basic Usage Status][ex1-badge]][ex1]             |
-| [Other shells](#example-2-other-shells)         | [![Other Shells Status][ex2-badge]][ex2]            |
-| [Other options](#example-3-other-options)       | [![Other Options Status][ex3-badge]][ex3]           |
-| [Channels](#example-4-conda-options)            | [![Channels Status][ex4-badge]][ex4]                |
-| [Custom installer](#example-5-custom-installer) | [![Custom Installer Status][ex5-badge]][ex5]        |
-| [Mamba](#example-6-mamba)                       | [![Mamba Status][ex6-badge]][ex6]                   |
-| [Lockfiles](#example-7-explicit-specification)  | [![ Lockfiles Status][ex7-badge]][ex7]              |
-| [Miniforge](#example-10-miniforge)              | [![Miniforge Status][ex10-badge]][ex10]             |
-| [Caching](#caching)                             | [![Caching Example Status][caching-badge]][caching] |
+| Documentation                                   | Workflow Status                                                 |
+| ----------------------------------------------- | ----------------------------------------------------------------|
+| [Basic usage](#example-1-basic-usage)           | [![Basic Usage Status][ex1-badge]][ex1]                         |
+| [Other shells](#example-2-other-shells)         | [![Other Shells Status][ex2-badge]][ex2]                        |
+| [Other options](#example-3-other-options)       | [![Other Options Status][ex3-badge]][ex3]                       |
+| [Channels](#example-4-conda-options)            | [![Channels Status][ex4-badge]][ex4]                            |
+| [Custom installer](#example-5-custom-installer) | [![Custom Installer Status][ex5-badge]][ex5]                    |
+| [Mamba](#example-6-mamba)                       | [![Mamba Status][ex6-badge]][ex6]                               |
+| [Lockfiles](#example-7-explicit-specification)  | [![Lockfiles Status][ex7-badge]][ex7]                           |
+| [Miniforge](#example-10-miniforge)              | [![Miniforge Status][ex10-badge]][ex10]                         |
+| [Caching packages](#caching-packages)           | [![Caching Example Status][caching-badge]][caching]             |
+| [Caching environments](#caching-environments)   | [![Caching Env Example Status][caching-env-badge]][caching-env] |
 
 [ex1]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml?query=branch%3Amaster

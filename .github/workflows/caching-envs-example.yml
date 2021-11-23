@@ -13,7 +13,7 @@ on:
 
 jobs:
   caching-example:
-    name: Caching
+    name: Caching-Env
 
     # prevent cronjobs from running on forks
     if:
