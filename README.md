@@ -614,8 +614,8 @@ specifying a environment file.
 
 It's a good idea to refresh the cache every 24 hours to avoid inconsistencies
 of package versions between the CI pipeline and local installations. You can 
-skip this step if you use an environment file product of `conda env export`
-or `conda list --explicit`.
+skip that step if you use a resolved environment file product of
+`conda env export` or `conda list --explicit`.
 
 ```yaml
       - name: Set cache date
@@ -630,6 +630,18 @@ or `conda list --explicit`.
           CACHE_NUMBER: 0
         id: cache
 ```
+
+Keep in mind that hashing `etc/example-environment-caching.yml` is not the
+same as hashing a resolved environment file. `conda` (and `mamba`) resolves
+the dependencies declared in the YAML file according to the packages
+available on the channels at installation time. Since packages are updated
+all the time, you will not see these changes reflected in the cache until
+the key gets updated by date.
+
+**This means that the same environment file can make your tests pass locally
+but fail on CI, or the other way around. In that case, reset the cache
+manually to see if that leads to consistent results, or use a resolved
+environment file.**
 
 Finally,  update the environment based on the environment file if the cache
 does not exist.
