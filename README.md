@@ -587,15 +587,15 @@ cache the environment on all of them you must use a `matrix` strategy.
         include:
           - os: ubuntu-latest
             label: linux-64
-            prefix: /usr/share/miniconda3/envs/your-env-name
+            prefix: /usr/share/miniconda3/envs/anaconda-client-env
 
           - os: macos-latest
             label: osx-64
-            prefix: /Users/runner/miniconda3/envs/your-env-name
+            prefix: /Users/runner/miniconda3/envs/anaconda-client-env
 
           - os: windows-latest
             label: win-64
-            prefix: C:\Miniconda3\envs\your-env-name
+            prefix: C:\Miniconda3\envs\anaconda-client-env
 ```
 
 Then, the first installation step should setup a Miniconda variant without
@@ -607,7 +607,7 @@ specifying a environment file.
         with:
             miniforge-variant: Mambaforge
             miniforge-version: latest
-            activate-environment: your-env-name
+            activate-environment: anaconda-client-env
             use-mamba: true
 ```
 
@@ -623,9 +623,9 @@ or `conda list --explicit`.
       - uses: actions/cache@v2
         with:
           path: ${{ matrix.prefix }}
-          key: ${{ matrix.label }}-conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+          key: ${{ matrix.label }}-conda-${{ hashFiles('etc/example-environment-caching.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
         env:
-          # Increase this value to reset cache if environment.yml has not changed
+          # Increase this value to reset cache if etc/example-environment.yml has not changed
           CACHE_NUMBER: 0
         id: cache
 ```
@@ -635,7 +635,7 @@ does not exist.
 
 ```yaml
       - name: Update environment
-        run: mamba env update -n your-env-name -f environment.yml
+        run: mamba env update -n anaconda-client-env -f etc/example-environment-caching.yml
         if: steps.cache.outputs.cache-hit != 'true'
 ```
 
