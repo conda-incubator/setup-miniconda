@@ -643,7 +643,7 @@ but fail on CI, or the other way around. In that case, reset the cache
 manually to see if that leads to consistent results, or use a resolved
 environment file.**
 
-Finally,  update the environment based on the environment file if the cache
+Finally, update the environment based on the environment file if the cache
 does not exist.
 
 ```yaml
