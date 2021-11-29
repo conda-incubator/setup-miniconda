@@ -526,6 +526,35 @@ jobs:
           use-mamba: true
 ```
 
+### Example 11: Alternative Architectures
+
+In addition to the default 64-bit builds of Miniconda, 32-bit versions are
+available for Windows. Note that although some x86 builds are available for
+Linux and MacOS, these are too old (<4.6) to be supported by this action.
+
+```yaml
+jobs:
+  example-11:
+    name:
+      Ex11 (os=${{ matrix.os }} architecture=${{ matrix.architecture }}
+      miniconda-version=${{ matrix.miniconda-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["windows-latest"]
+        architecture: ["x86"]
+        miniconda-version: ["latest"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        with:
+          architecture: ${{ matrix.architecture }}
+          miniconda-version: $${{ matrix.miniconda-version }}
+          auto-update-conda: true
+          python-version: "3.8"
+```
+
 ## Caching
 
 If you want to enable package caching for conda you can use the
