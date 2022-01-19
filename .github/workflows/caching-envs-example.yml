@@ -20,21 +20,6 @@ jobs:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
 
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            label: linux-64
-            prefix: /usr/share/miniconda3/envs/anaconda-client-env
-
-          - os: macos-latest
-            label: osx-64
-            prefix: /Users/runner/miniconda3/envs/anaconda-client-env
-
-          - os: windows-latest
-            label: win-64
-            prefix: C:\Miniconda3\envs\anaconda-client-env
-
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -47,14 +32,16 @@ jobs:
             activate-environment: anaconda-client-env
             use-mamba: true
 
-      - name: Set cache date
-        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
-        
-      - name: Cache conda env
+      - name: Set Conda cache env vars
+        shell: bash
+        run: |
+          echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+          echo "CONDA_PREFIX=$(mamba info --base)" >> $GITHUB_ENV
+      - name: Cache Conda env
         uses: actions/cache@v2
         with:
-          path: ${{ matrix.prefix }}
-          key: ${{ matrix.label }}-conda-${{ hashFiles('etc/example-environment-caching.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+          path: ${{ env.CONDA_PREFIX }}
+          key: ${{ env.RUNNER_OS }}-conda-${{ hashFiles('etc/example-environment-caching.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
         env:
           # Increase this value to reset cache if etc/example-environment.yml has not changed
           CACHE_NUMBER: 0
