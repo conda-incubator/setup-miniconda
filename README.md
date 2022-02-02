@@ -591,21 +591,20 @@ specifying a environment file.
 It's a good idea to refresh the cache every 24 hours to avoid inconsistencies
 of package versions between the CI pipeline and local installations.
 Here we ensure that this happens by adding the current date to the cache key.
-You can remove the `DATE` line below if you use a resolved environment file product of
+You can remove the "Get Date" step below if you use a resolved environment file product of
 `conda env export` or `conda list --explicit`.
 
 ```yaml
-      - name: Set Conda cache env vars
+      - name: Get Date
+        id: get-date
+        run: echo "::set-output name=today::$(/bin/date -u '+%Y%m%d')"
         shell: bash
-        run: |
-          echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
-          echo "CONDA_PREFIX=$(mamba info --base)" >> $GITHUB_ENV
 
       - name: Cache Conda env
         uses: actions/cache@v2
         with:
-          path: ${{ env.CONDA_PREFIX }}
-          key: ${{ env.RUNNER_OS }}-conda-${{ hashFiles('etc/example-environment-caching.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+          path: ${{ env.CONDA }}/envs
+          key: conda-${{ runner.os }}--${{ runner.arch }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('etc/example-environment-caching.yml') }}-${{ env.CACHE_NUMBER }}
         env:
           # Increase this value to reset cache if etc/example-environment.yml has not changed
           CACHE_NUMBER: 0
