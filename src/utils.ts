@@ -59,7 +59,7 @@ export async function execute(command: string[]): Promise<void> {
  * Generally favors '=' unless specified more tightly.
  */
 export function makeSpec(pkg: string, spec: string) {
-  if (spec.match(/=<>!\|/)) {
+  if (spec.match(/[=<>!\|]/)) {
     return `${pkg}${spec}`;
   } else {
     return `${pkg}=${spec}`;

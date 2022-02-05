@@ -61,6 +61,12 @@ jobs:
             miniforge-version: 4.9.2-2
             mamba-version: 0.7.6
             python-version: 3.6
+          # should use mamba >= 0.20
+          - os: ubuntu
+            environment-file: etc/example-environment-no-name.yml
+            miniforge-variant: Mambaforge
+            mamba-version: ">=0.20"
+          # should use mamabforge-pypy `latest`
           - os: macos
             environment-file: etc/example-empty-channels-environment.yml
             miniforge-variant: Mambaforge-pypy3
