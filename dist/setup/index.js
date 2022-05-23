@@ -6951,7 +6951,7 @@ function ensureLocalInstaller(options) {
             let cacheDirectoryPath = tc.find(installerName, version, ...(options.arch ? [options.arch] : []));
             if (cacheDirectoryPath !== "") {
                 core.info(`Found ${installerName} cache at ${cacheDirectoryPath}!`);
-                executablePath = cacheDirectoryPath + "/" + installerName;
+                executablePath = path.join(cacheDirectoryPath, installerName);
                 core.info(`executablePath is ${executablePath}`);
             }
             else {
@@ -24283,31 +24283,7 @@ module.exports = YAMLException;
 /* 559 */,
 /* 560 */,
 /* 561 */,
-/* 562 */
-/***/ (function(module) {
-
-/** Used to match a single whitespace character. */
-var reWhitespace = /\s/;
-
-/**
- * Used by `_.trim` and `_.trimEnd` to get the index of the last non-whitespace
- * character of `string`.
- *
- * @private
- * @param {string} string The string to inspect.
- * @returns {number} Returns the index of the last non-whitespace character.
- */
-function trimmedEndIndex(string) {
-  var index = string.length;
-
-  while (index-- && reWhitespace.test(string.charAt(index))) {}
-  return index;
-}
-
-module.exports = trimmedEndIndex;
-
-
-/***/ }),
+/* 562 */,
 /* 563 */
 /***/ (function(module) {
 
@@ -32289,12 +32265,14 @@ module.exports = getWrapDetails;
 /* 790 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-var baseTrim = __webpack_require__(984),
-    isObject = __webpack_require__(988),
+var isObject = __webpack_require__(988),
     isSymbol = __webpack_require__(186);
 
 /** Used as references for various `Number` constants. */
 var NAN = 0 / 0;
+
+/** Used to match leading and trailing whitespace. */
+var reTrim = /^\s+|\s+$/g;
 
 /** Used to detect bad signed hexadecimal string values. */
 var reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
@@ -32345,7 +32323,7 @@ function toNumber(value) {
   if (typeof value != 'string') {
     return value === 0 ? value : +value;
   }
-  value = baseTrim(value);
+  value = value.replace(reTrim, '');
   var isBinary = reIsBinary.test(value);
   return (isBinary || reIsOctal.test(value))
     ? freeParseInt(value.slice(2), isBinary ? 2 : 8)
@@ -38437,31 +38415,7 @@ module.exports = cacheHas;
 
 
 /***/ }),
-/* 984 */
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-var trimmedEndIndex = __webpack_require__(562);
-
-/** Used to match leading whitespace. */
-var reTrimStart = /^\s+/;
-
-/**
- * The base implementation of `_.trim`.
- *
- * @private
- * @param {string} string The string to trim.
- * @returns {string} Returns the trimmed string.
- */
-function baseTrim(string) {
-  return string
-    ? string.slice(0, trimmedEndIndex(string) + 1).replace(reTrimStart, '')
-    : string;
-}
-
-module.exports = baseTrim;
-
-
-/***/ }),
+/* 984 */,
 /* 985 */
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
