@@ -53,7 +53,7 @@ export async function ensureLocalInstaller(
     );
     if (cacheDirectoryPath !== "") {
       core.info(`Found ${installerName} cache at ${cacheDirectoryPath}!`);
-      executablePath = cacheDirectoryPath + "/" + installerName;
+      executablePath = path.join([cacheDirectoryPath, installerName]);
       core.info(`executablePath is ${executablePath}`);
     } else {
       core.info(`Did not find ${installerName} ${version} in cache`);
