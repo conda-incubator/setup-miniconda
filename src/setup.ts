@@ -48,7 +48,12 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
   }
 
   if (!fs.existsSync(basePath)) {
-    throw Error(`No installed conda 'base' enviroment found at ${basePath}`);
+    throw Error(`No installed conda 'base' environment found at ${basePath}!` +
+                'If you are using this action in a self-hosted runner that already provides ' +
+                'its own Miniconda installation, please specify its location with a `CONDA` ' +
+                'environment variable. If you want us to download and install Miniconda or ' +
+                'Miniforge for you, add `miniconda-version: "latest"` or `miniforge-version: "latest"`, ' +
+                'respectively, to the parameters for this action.');
   }
 
   await core.group("Setup environment variables...", () =>
