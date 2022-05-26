@@ -21,7 +21,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     mambaInInstaller: false,
     condaConfig: { ...inputs.condaConfig },
   };
-
+  // Warn about the deprecation of the master branch
   await core.group(
     `Creating bootstrap condarc file in ${constants.CONDARC_PATH}...`,
     conda.bootstrapConfig
@@ -110,6 +110,13 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
  */
 async function run(): Promise<void> {
   try {
+    core.warning(`
+  The 'master' branch is deprecated and will be removed from the repository in the future.
+  
+  Please ensure your action is using the latest version, or point it to the 'main' branch.
+
+    "conda-incubator/setup-minicando@main"
+  `);
     const inputs = await core.group("Gathering Inputs...", input.parseInputs);
     await setupMiniconda(inputs);
   } catch (err) {
