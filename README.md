@@ -604,31 +604,7 @@ as they are not included in the conda package cache.
 
 ### Caching environments
 
-A Miniforge variant is recommended to cache deployed environments, since the
-Miniconda installation path requires succesive changes of folder ownership in
-order to work with the `cache` action.
-
-Every operating system use a different Miniforge `prefix`, so if you want to
-cache the environment on all of them you must use a `matrix` strategy.
-
-```yaml
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            label: linux-64
-            prefix: /usr/share/miniconda3/envs/anaconda-client-env
-
-          - os: macos-latest
-            label: osx-64
-            prefix: /Users/runner/miniconda3/envs/anaconda-client-env
-
-          - os: windows-latest
-            label: win-64
-            prefix: C:\Miniconda3\envs\anaconda-client-env
-```
-
-Then, the first installation step should setup a Miniconda variant without
+The first installation step should setup a Miniconda variant without
 specifying a environment file.
 
 ```yaml
@@ -642,18 +618,22 @@ specifying a environment file.
 ```
 
 It's a good idea to refresh the cache every 24 hours to avoid inconsistencies
-of package versions between the CI pipeline and local installations. You can 
-skip that step if you use a resolved environment file product of
+of package versions between the CI pipeline and local installations.
+Here we ensure that this happens by adding the current date to the cache key.
+You can remove the "Get Date" step below if you use a resolved environment file product of
 `conda env export` or `conda list --explicit`.
 
 ```yaml
-      - name: Set cache date
-        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
-        
-      - uses: actions/cache@v2
+      - name: Get Date
+        id: get-date
+        run: echo "::set-output name=today::$(/bin/date -u '+%Y%m%d')"
+        shell: bash
+
+      - name: Cache Conda env
+        uses: actions/cache@v2
         with:
-          path: ${{ matrix.prefix }}
-          key: ${{ matrix.label }}-conda-${{ hashFiles('etc/example-environment-caching.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+          path: ${{ env.CONDA }}/envs
+          key: conda-${{ runner.os }}--${{ runner.arch }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('etc/example-environment-caching.yml') }}-${{ env.CACHE_NUMBER }}
         env:
           # Increase this value to reset cache if etc/example-environment.yml has not changed
           CACHE_NUMBER: 0
