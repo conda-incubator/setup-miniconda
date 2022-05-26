@@ -33,6 +33,7 @@ jobs:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
           environment-file: etc/example-empty-channels-environment.yml
+          run-post: false
       - run: |
           conda info
           conda list
