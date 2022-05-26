@@ -1,0 +1,43 @@
+name: "Regression checks"
+
+on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - "master"
+  schedule:
+    # Note that cronjobs run on master/main by default
+    - cron: "0 0 * * *"
+
+jobs:
+  issue-114:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Issue 114 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu", "macos", "windows"]
+        python-version: ["3.9"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        id: setup-miniconda
+        with:
+          environment-file: etc/example-environment-explicit.yml
+          python-version: ${{ matrix.python-version }}
+      - run: |
+          conda info
+          conda list
+          printenv | sort
+      - run: |
+          set -x
+          python -c "import sys; assert f'{sys.version_info.major}.{sys.version_info.minor}' == '${{ matrix.python-version }}'"
