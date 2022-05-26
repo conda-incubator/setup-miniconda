@@ -44,17 +44,18 @@ possibility of automatically activating the `test` environment on all shells.
 
 > Each of the examples below is discussed in a dedicated section below.
 
-| Documentation                                   | Workflow Status                                     |
-| ----------------------------------------------- | --------------------------------------------------- |
-| [Basic usage](#example-1-basic-usage)           | [![Basic Usage Status][ex1-badge]][ex1]             |
-| [Other shells](#example-2-other-shells)         | [![Other Shells Status][ex2-badge]][ex2]            |
-| [Other options](#example-3-other-options)       | [![Other Options Status][ex3-badge]][ex3]           |
-| [Channels](#example-4-conda-options)            | [![Channels Status][ex4-badge]][ex4]                |
-| [Custom installer](#example-5-custom-installer) | [![Custom Installer Status][ex5-badge]][ex5]        |
-| [Mamba](#example-6-mamba)                       | [![Mamba Status][ex6-badge]][ex6]                   |
-| [Lockfiles](#example-7-explicit-specification)  | [![ Lockfiles Status][ex7-badge]][ex7]              |
-| [Miniforge](#example-10-miniforge)              | [![Miniforge Status][ex10-badge]][ex10]             |
-| [Caching](#caching)                             | [![Caching Example Status][caching-badge]][caching] |
+| Documentation                                   | Workflow Status                                                 |
+| ----------------------------------------------- | ----------------------------------------------------------------|
+| [Basic usage](#example-1-basic-usage)           | [![Basic Usage Status][ex1-badge]][ex1]                         |
+| [Other shells](#example-2-other-shells)         | [![Other Shells Status][ex2-badge]][ex2]                        |
+| [Other options](#example-3-other-options)       | [![Other Options Status][ex3-badge]][ex3]                       |
+| [Channels](#example-4-conda-options)            | [![Channels Status][ex4-badge]][ex4]                            |
+| [Custom installer](#example-5-custom-installer) | [![Custom Installer Status][ex5-badge]][ex5]                    |
+| [Mamba](#example-6-mamba)                       | [![Mamba Status][ex6-badge]][ex6]                               |
+| [Lockfiles](#example-7-explicit-specification)  | [![Lockfiles Status][ex7-badge]][ex7]                           |
+| [Miniforge](#example-10-miniforge)              | [![Miniforge Status][ex10-badge]][ex10]                         |
+| [Caching packages](#caching-packages)           | [![Caching Example Status][caching-badge]][caching]             |
+| [Caching environments](#caching-environments)   | [![Caching Env Example Status][caching-env-badge]][caching-env] |
 
 [ex1]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml?query=branch%3Amaster
@@ -557,6 +558,8 @@ jobs:
 
 ## Caching
 
+### Caching packages
+
 If you want to enable package caching for conda you can use the
 [cache action](https://github.com/actions/cache) using `~/conda_pkgs_dir` as
 path for conda packages.
@@ -598,6 +601,85 @@ If you are using pip to resolve any dependencies in your conda environment then
 you may want to
 [cache those dependencies separately](https://docs.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#caching-dependencies),
 as they are not included in the conda package cache.
+
+### Caching environments
+
+A Miniforge variant is recommended to cache deployed environments, since the
+Miniconda installation path requires succesive changes of folder ownership in
+order to work with the `cache` action.
+
+Every operating system use a different Miniforge `prefix`, so if you want to
+cache the environment on all of them you must use a `matrix` strategy.
+
+```yaml
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-64
+            prefix: /usr/share/miniconda3/envs/anaconda-client-env
+
+          - os: macos-latest
+            label: osx-64
+            prefix: /Users/runner/miniconda3/envs/anaconda-client-env
+
+          - os: windows-latest
+            label: win-64
+            prefix: C:\Miniconda3\envs\anaconda-client-env
+```
+
+Then, the first installation step should setup a Miniconda variant without
+specifying a environment file.
+
+```yaml
+      - name: Setup Mambaforge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+            miniforge-variant: Mambaforge
+            miniforge-version: latest
+            activate-environment: anaconda-client-env
+            use-mamba: true
+```
+
+It's a good idea to refresh the cache every 24 hours to avoid inconsistencies
+of package versions between the CI pipeline and local installations. You can 
+skip that step if you use a resolved environment file product of
+`conda env export` or `conda list --explicit`.
+
+```yaml
+      - name: Set cache date
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+        
+      - uses: actions/cache@v2
+        with:
+          path: ${{ matrix.prefix }}
+          key: ${{ matrix.label }}-conda-${{ hashFiles('etc/example-environment-caching.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+        env:
+          # Increase this value to reset cache if etc/example-environment.yml has not changed
+          CACHE_NUMBER: 0
+        id: cache
+```
+
+Keep in mind that hashing `etc/example-environment-caching.yml` is not the
+same as hashing a resolved environment file. `conda` (and `mamba`) resolves
+the dependencies declared in the YAML file according to the packages
+available on the channels at installation time. Since packages are updated
+all the time, you will not see these changes reflected in the cache until
+the key gets updated by date.
+
+**This means that the same environment file can make your tests pass locally
+but fail on CI, or the other way around. In that case, reset the cache
+manually to see if that leads to consistent results, or use a resolved
+environment file.**
+
+Finally, update the environment based on the environment file if the cache
+does not exist.
+
+```yaml
+      - name: Update environment
+        run: mamba env update -n anaconda-client-env -f etc/example-environment-caching.yml
+        if: steps.cache.outputs.cache-hit != 'true'
+```
 
 ### Use a default shell
 
