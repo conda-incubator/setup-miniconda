@@ -597,7 +597,7 @@ You can remove the "Get Date" step below if you use a resolved environment file 
 ```yaml
       - name: Get Date
         id: get-date
-        run: echo "::set-output name=today::$(/bin/date -u '+%Y%m%d')"
+        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Cache Conda env
