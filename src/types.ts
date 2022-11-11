@@ -87,6 +87,7 @@ export interface IActionInputs {
   readonly removeProfiles: string;
   readonly useMamba: string;
   readonly cleanPatchedEnvironmentFile: string;
+  readonly runPost: string;
 }
 
 /**
