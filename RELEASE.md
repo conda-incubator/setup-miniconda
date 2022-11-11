@@ -1,9 +1,10 @@
 # Release
 
-- Update dependencies
+- Update dependencies and fix any outdated dependencies
 
 ```bash
-npm update @actions/core @actions/exec @actions/io @actions/tool-cache get-hrefs js-yaml semver --save
+npm install -g npm-check-updates
+npm-check-updates
 ```
 
 - Ensure the [CHANGELOG](./CHANGELOG.md) is up-to-date.

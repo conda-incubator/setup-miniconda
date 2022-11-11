@@ -2,16 +2,53 @@
 
 ## [v2.2.0] (2021-11-11)
 
+### Documentation
+
+- [#187] Document missing bundled conda for self hosted runners
+- [#200] Provided instructions on how to cache deployed environments for
+  Miniforge variants.
+- [#246] Fix broken link in README.
+- [#251] Fix typo in README.
+- [#256] Update bash commands to include error flag.
+
 ### Features
 
-- [#170] TODO
+- [#234] Add input option (`run-post: false`) to skip post processing.
 
 ### Fixes
 
-- TODO
+- [#189] Error on miniconda-version _not_ specified instead of when it _is_
+  specified.
+- [#190] Add regression checks for pinning python version in the created
+  environment.
+- [#209] Do not move non-existing files.
+- [#212] Fix caching example. No need to hardcode paths. Write date to step
+  output.
+- [#230] Fix path handling inconsistency in installer caching.
+
+### Tasks and Maintenance
+
+- [#210] Use 'npm run ...' to run scripts.
+- [#233] Add deprecation warning on `master` branch.
+- [#252] use Node.js 16 instead of deprecated Node.js 12
+- [#257] Update dependencies.
 
 [v2.2.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v2.2.0
-[#170]: https://github.com/conda-incubator/setup-miniconda/pull/170
+[#187]: https://github.com/conda-incubator/setup-miniconda/pull/187
+[#189]: https://github.com/conda-incubator/setup-miniconda/pull/189
+[#190]: https://github.com/conda-incubator/setup-miniconda/pull/190
+[#200]: https://github.com/conda-incubator/setup-miniconda/pull/200
+[#209]: https://github.com/conda-incubator/setup-miniconda/pull/209
+[#210]: https://github.com/conda-incubator/setup-miniconda/pull/210
+[#212]: https://github.com/conda-incubator/setup-miniconda/pull/212
+[#230]: https://github.com/conda-incubator/setup-miniconda/pull/230
+[#233]: https://github.com/conda-incubator/setup-miniconda/pull/233
+[#234]: https://github.com/conda-incubator/setup-miniconda/pull/234
+[#246]: https://github.com/conda-incubator/setup-miniconda/pull/246
+[#251]: https://github.com/conda-incubator/setup-miniconda/pull/251
+[#252]: https://github.com/conda-incubator/setup-miniconda/pull/252
+[#256]: https://github.com/conda-incubator/setup-miniconda/pull/256
+[#257]: https://github.com/conda-incubator/setup-miniconda/pull/257
 
 ## [v2.1.1] (2021-03-31)
 
