@@ -26347,7 +26347,10 @@ function parseInputs() {
                 changeps1: "false",
             }),
             cleanPatchedEnvironmentFile: core.getInput("clean-patched-environment-file"),
+            runPost: core.getInput("run-post"),
         });
+        // Export input var to be able to skip `post-if` using the env context
+        core.exportVariable("INPUT_RUN_POST", inputs.runPost);
         const errors = RULES.reduce((errors, rule) => {
             const msg = rule(inputs, inputs.condaConfig);
             if (msg) {

@@ -6,7 +6,7 @@ runs:
   using: "node16"
   main: "dist/setup/index.js"
   post: "dist/delete/index.js"
-  post-if: "success()"
+  post-if: "success() && env.INPUT_RUN_POST == 'true'"
 
 branding:
   icon: "code"
@@ -242,5 +242,11 @@ inputs:
   clean-patched-environment-file:
     description:
       "Whether a patched environment-file (if created) should be cleaned"
+    required: false
+    default: "true"
+  run-post:
+    description:
+      'Set this option to "false" to disable running the post cleanup step of
+      the action. Default is "true"'
     required: false
     default: "true"
