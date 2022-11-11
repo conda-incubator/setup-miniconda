@@ -22,6 +22,10 @@ jobs:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
 
+    strategy:
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
