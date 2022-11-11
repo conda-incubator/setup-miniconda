@@ -45,7 +45,7 @@ possibility of automatically activating the `test` environment on all shells.
 > Each of the examples below is discussed in a dedicated section below.
 
 | Documentation                                   | Workflow Status                                                 |
-| ----------------------------------------------- | ----------------------------------------------------------------|
+| ----------------------------------------------- | --------------------------------------------------------------- |
 | [Basic usage](#example-1-basic-usage)           | [![Basic Usage Status][ex1-badge]][ex1]                         |
 | [Other shells](#example-2-other-shells)         | [![Other Shells Status][ex2-badge]][ex2]                        |
 | [Other options](#example-3-other-options)       | [![Other Options Status][ex3-badge]][ex3]                       |
@@ -608,61 +608,66 @@ as they are not included in the conda package cache.
 
 ### Caching environments
 
-The first installation step should setup a Miniconda variant without
-specifying a environment file.
+The first installation step should setup a Miniconda variant without specifying
+a environment file.
 
 ```yaml
-      - name: Setup Mambaforge
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-            miniforge-variant: Mambaforge
-            miniforge-version: latest
-            activate-environment: anaconda-client-env
-            use-mamba: true
+- name: Setup Mambaforge
+  uses: conda-incubator/setup-miniconda@v2
+  with:
+    miniforge-variant: Mambaforge
+    miniforge-version: latest
+    activate-environment: anaconda-client-env
+    use-mamba: true
 ```
 
-It's a good idea to refresh the cache every 24 hours to avoid inconsistencies
-of package versions between the CI pipeline and local installations.
-Here we ensure that this happens by adding the current date to the cache key.
-You can remove the "Get Date" step below if you use a resolved environment file product of
+It's a good idea to refresh the cache every 24 hours to avoid inconsistencies of
+package versions between the CI pipeline and local installations. Here we ensure
+that this happens by adding the current date to the cache key. You can remove
+the "Get Date" step below if you use a resolved environment file product of
 `conda env export` or `conda list --explicit`.
 
 ```yaml
-      - name: Get Date
-        id: get-date
-        run: echo "::set-output name=today::$(/bin/date -u '+%Y%m%d')"
-        shell: bash
+- name: Get Date
+  id: get-date
+  run: echo "::set-output name=today::$(/bin/date -u '+%Y%m%d')"
+  shell: bash
 
-      - name: Cache Conda env
-        uses: actions/cache@v2
-        with:
-          path: ${{ env.CONDA }}/envs
-          key: conda-${{ runner.os }}--${{ runner.arch }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('etc/example-environment-caching.yml') }}-${{ env.CACHE_NUMBER }}
-        env:
-          # Increase this value to reset cache if etc/example-environment.yml has not changed
-          CACHE_NUMBER: 0
-        id: cache
+- name: Cache Conda env
+  uses: actions/cache@v2
+  with:
+    path: ${{ env.CONDA }}/envs
+    key:
+      conda-${{ runner.os }}--${{ runner.arch }}--${{
+      steps.get-date.outputs.today }}-${{
+      hashFiles('etc/example-environment-caching.yml') }}-${{ env.CACHE_NUMBER
+      }}
+  env:
+    # Increase this value to reset cache if etc/example-environment.yml has not changed
+    CACHE_NUMBER: 0
+  id: cache
 ```
 
-Keep in mind that hashing `etc/example-environment-caching.yml` is not the
-same as hashing a resolved environment file. `conda` (and `mamba`) resolves
-the dependencies declared in the YAML file according to the packages
-available on the channels at installation time. Since packages are updated
-all the time, you will not see these changes reflected in the cache until
-the key gets updated by date.
+Keep in mind that hashing `etc/example-environment-caching.yml` is not the same
+as hashing a resolved environment file. `conda` (and `mamba`) resolves the
+dependencies declared in the YAML file according to the packages available on
+the channels at installation time. Since packages are updated all the time, you
+will not see these changes reflected in the cache until the key gets updated by
+date.
 
-**This means that the same environment file can make your tests pass locally
-but fail on CI, or the other way around. In that case, reset the cache
-manually to see if that leads to consistent results, or use a resolved
-environment file.**
+**This means that the same environment file can make your tests pass locally but
+fail on CI, or the other way around. In that case, reset the cache manually to
+see if that leads to consistent results, or use a resolved environment file.**
 
-Finally, update the environment based on the environment file if the cache
-does not exist.
+Finally, update the environment based on the environment file if the cache does
+not exist.
 
 ```yaml
-      - name: Update environment
-        run: mamba env update -n anaconda-client-env -f etc/example-environment-caching.yml
-        if: steps.cache.outputs.cache-hit != 'true'
+- name: Update environment
+  run:
+    mamba env update -n anaconda-client-env -f
+    etc/example-environment-caching.yml
+  if: steps.cache.outputs.cache-hit != 'true'
 ```
 
 ### Use a default shell
@@ -702,10 +707,10 @@ jobs:
 ## IMPORTANT
 
 - Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
-  explicitely declared as `shell: bash -el {0}` on steps that need to be properly
-  activated (or use a default shell). This is because bash shells are executed
-  with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash
-  profile files made by `conda init bash`. See
+  explicitely declared as `shell: bash -el {0}` on steps that need to be
+  properly activated (or use a default shell). This is because bash shells are
+  executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated
+  on bash profile files made by `conda init bash`. See
   [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell)
   and
   [thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).
