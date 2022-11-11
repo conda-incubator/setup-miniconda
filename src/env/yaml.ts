@@ -107,7 +107,7 @@ export const ensureYaml: types.IEnvProvider = {
     }
 
     if (patchesApplied.length) {
-      const patchedYaml = yaml.safeDump({ ...yamlData, dependencies });
+      const patchedYaml = yaml.dump({ ...yamlData, dependencies });
       const origPath = path.resolve(inputs.environmentFile);
       const origParent = path.dirname(origPath);
       envFile = path.join(
@@ -119,11 +119,7 @@ export const ensureYaml: types.IEnvProvider = {
       );
       core.info(`Using: ${envFile}\n${patchedYaml}`);
       fs.writeFileSync(envFile, patchedYaml, "utf8");
-      outputs.setEnvironmentFileOutputs(
-        envFile,
-        yaml.safeDump(patchedYaml),
-        true
-      );
+      outputs.setEnvironmentFileOutputs(envFile, yaml.dump(patchedYaml), true);
     } else {
       core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
       outputs.setEnvironmentFileOutputs(

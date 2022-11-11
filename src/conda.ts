@@ -141,7 +141,7 @@ export async function applyCondaConfiguration(
     try {
       await condaCommand(["config", "--set", key, value], options);
     } catch (err) {
-      core.warning(err);
+      core.warning(err as Error);
     }
   }
 
@@ -195,7 +195,7 @@ export async function condaInit(
           await io.rmRF(file);
         }
       } catch (err) {
-        core.warning(err);
+        core.warning(err as Error);
       }
     }
   }

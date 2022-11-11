@@ -6,6 +6,8 @@ on:
       - "*"
   push:
     branches:
+      - "develop"
+      - "main"
       - "master"
   schedule:
     # Note that cronjobs run on master/main by default

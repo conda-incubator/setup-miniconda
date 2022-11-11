@@ -81,5 +81,5 @@ export async function getEnvSpec(
     return { explicit: source, yaml: {} };
   }
 
-  return { yaml: yaml.safeLoad(source) as types.IEnvironment };
+  return { yaml: yaml.load(source) as types.IEnvironment };
 }

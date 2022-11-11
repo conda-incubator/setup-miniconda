@@ -120,7 +120,7 @@ async function run(): Promise<void> {
     const inputs = await core.group("Gathering Inputs...", input.parseInputs);
     await setupMiniconda(inputs);
   } catch (err) {
-    core.setFailed(err.message);
+    core.setFailed((err as Error).message);
   }
 }
 
