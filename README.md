@@ -25,7 +25,7 @@ of:
   - an `environment.yml`-like file (which can be patched with `python-version`)
     - the patched environment will be cleaned up unless
       `clean-patched-environment-file: false` is given
-  - a [lockfile](#example-7-explicit-specification)
+  - a [lockfile](#example-7-lockfiles)
 
 This action correctly handles activation of environments and offers the
 possibility of automatically activating the `test` environment on all shells.
