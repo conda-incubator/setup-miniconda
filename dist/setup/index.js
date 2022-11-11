@@ -25596,18 +25596,24 @@ function condaInit(inputs, options) {
         for (let cmd of ["--all"]) {
             yield condaCommand(["init", cmd], options);
         }
-        // Rename files
-        if (constants.IS_LINUX) {
-            let source = "~/.bashrc".replace("~", os.homedir());
-            let dest = "~/.profile".replace("~", os.homedir());
-            core.info(`Renaming "${source}" to "${dest}"\n`);
-            yield io.mv(source, dest);
-        }
-        else if (constants.IS_MAC) {
-            let source = "~/.bash_profile".replace("~", os.homedir());
-            let dest = "~/.profile".replace("~", os.homedir());
-            core.info(`Renaming "${source}" to "${dest}"\n`);
-            yield io.mv(source, dest);
+        if (inputs.removeProfiles == "true") {
+            // Rename files
+            if (constants.IS_LINUX) {
+                let source = "~/.bashrc".replace("~", os.homedir());
+                let dest = "~/.profile".replace("~", os.homedir());
+                if (fs.existsSync(source)) {
+                    core.info(`Renaming "${source}" to "${dest}"\n`);
+                    yield io.mv(source, dest);
+                }
+            }
+            else if (constants.IS_MAC) {
+                let source = "~/.bash_profile".replace("~", os.homedir());
+                let dest = "~/.profile".replace("~", os.homedir());
+                if (fs.existsSync(source)) {
+                    core.info(`Renaming "${source}" to "${dest}"\n`);
+                    yield io.mv(source, dest);
+                }
+            }
         }
         // PowerShell profiles
         let powerExtraText = `
