@@ -15,6 +15,7 @@ We use NodeJS version 16 for now.
 
 ```bash
 conda create -n github-action nodejs=16 -c conda-forge
+conda activate
 ```
 
 - Install NodeJS dependencies:

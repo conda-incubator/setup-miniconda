@@ -6,6 +6,8 @@ on:
       - "*"
   push:
     branches:
+      - "develop"
+      - "main"
       - "master"
   schedule:
     # Note that cronjobs run on master/main by default
@@ -23,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.7", "2.7"]
+        python-version: ["3.8", "2.7"]
     steps:
       - uses: actions/checkout@v2
       - uses: ./

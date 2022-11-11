@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [v2.2.0] (2021-11-11)
+
+### Features
+
+- [#170] TODO
+
+### Fixes
+
+- TODO
+
+[v2.2.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v2.2.0
+[#170]: https://github.com/conda-incubator/setup-miniconda/pull/170
+
 ## [v2.1.1] (2021-03-31)
 
 ### Features
