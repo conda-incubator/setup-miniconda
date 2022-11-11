@@ -193,7 +193,7 @@ jobs:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
       - name: Conda info
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: conda info
       - name: Conda list
         shell: pwsh
@@ -217,7 +217,7 @@ jobs:
           miniconda-version: "latest"
           activate-environment: foo
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
@@ -241,7 +241,7 @@ jobs:
           conda info
           conda list
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
@@ -260,7 +260,7 @@ jobs:
           miniconda-version: "latest"
           activate-environment: foo
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
@@ -296,7 +296,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -328,7 +328,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -368,7 +368,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -412,14 +412,14 @@ jobs:
           channel-priority: true
           activate-environment: anaconda-client-env
           environment-file: etc/example-environment.yml
-      - shell: bash -l {0}
+      - shell: bash -el {0}
         run: |
           conda info
           conda list
           conda config --show-sources
           conda config --show
           printenv | sort
-      - shell: bash -l {0}
+      - shell: bash -el {0}
         run: mamba install jupyterlab
 ```
 
@@ -453,7 +453,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -667,11 +667,11 @@ does not exist.
 
 ### Use a default shell
 
-Assuming you are using the bash shell, now adding to `shell: bash -l {0}` to
+Assuming you are using the bash shell, now adding to `shell: bash -el {0}` to
 every single step can be avoided if your workflow uses the same shell for all
 the steps.
 
-By adding a `defaults` section and specifying the `bash -l {0}`, all steps in
+By adding a `defaults` section and specifying the `bash -el {0}`, all steps in
 the job will default to that value.
 
 For other shells, make sure to use the right `shell` parameter as the default
@@ -687,7 +687,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -702,7 +702,7 @@ jobs:
 ## IMPORTANT
 
 - Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
-  explicitely declared as `shell: bash -l {0}` on steps that need to be properly
+  explicitely declared as `shell: bash -el {0}` on steps that need to be properly
   activated (or use a default shell). This is because bash shells are executed
   with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash
   profile files made by `conda init bash`. See
