@@ -3,7 +3,7 @@ author: Gonzalo Peña-Castellanos (@goanpeca)
 description: "Set up Conda package and environment manager with Miniconda."
 
 runs:
-  using: "node12"
+  using: "node16"
   main: "dist/setup/index.js"
   post: "dist/delete/index.js"
   post-if: "success()"

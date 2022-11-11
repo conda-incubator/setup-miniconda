@@ -25,7 +25,7 @@ of:
   - an `environment.yml`-like file (which can be patched with `python-version`)
     - the patched environment will be cleaned up unless
       `clean-patched-environment-file: false` is given
-  - a [lockfile](#example-7-explicit-specification)
+  - a [lockfile](#example-7-lockfiles)
 
 This action correctly handles activation of environments and offers the
 possibility of automatically activating the `test` environment on all shells.
@@ -45,7 +45,7 @@ possibility of automatically activating the `test` environment on all shells.
 > Each of the examples below is discussed in a dedicated section below.
 
 | Documentation                                   | Workflow Status                                                 |
-| ----------------------------------------------- | ----------------------------------------------------------------|
+| ----------------------------------------------- | --------------------------------------------------------------- |
 | [Basic usage](#example-1-basic-usage)           | [![Basic Usage Status][ex1-badge]][ex1]                         |
 | [Other shells](#example-2-other-shells)         | [![Other Shells Status][ex2-badge]][ex2]                        |
 | [Other options](#example-3-other-options)       | [![Other Options Status][ex3-badge]][ex3]                       |
@@ -85,6 +85,10 @@ possibility of automatically activating the `test` environment on all shells.
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-example.yml?query=branch%3Amaster
 [caching-badge]:
   https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Caching%20Example/master
+[caching-env]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-envs-example.yml?query=branch%3Amaster
+[caching-env-badge]:
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Caching%20Env%20Example/master
 [ex7]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-7.yml?query=branch%3Amaster
 [ex7-badge]:
@@ -189,7 +193,7 @@ jobs:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
       - name: Conda info
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: conda info
       - name: Conda list
         shell: pwsh
@@ -213,7 +217,7 @@ jobs:
           miniconda-version: "latest"
           activate-environment: foo
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
@@ -237,7 +241,7 @@ jobs:
           conda info
           conda list
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
@@ -256,7 +260,7 @@ jobs:
           miniconda-version: "latest"
           activate-environment: foo
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
@@ -292,7 +296,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -324,7 +328,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -364,7 +368,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -408,14 +412,14 @@ jobs:
           channel-priority: true
           activate-environment: anaconda-client-env
           environment-file: etc/example-environment.yml
-      - shell: bash -l {0}
+      - shell: bash -el {0}
         run: |
           conda info
           conda list
           conda config --show-sources
           conda config --show
           printenv | sort
-      - shell: bash -l {0}
+      - shell: bash -el {0}
         run: mamba install jupyterlab
 ```
 
@@ -449,7 +453,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -527,6 +531,35 @@ jobs:
           use-mamba: true
 ```
 
+### Example 11: Alternative Architectures
+
+In addition to the default 64-bit builds of Miniconda, 32-bit versions are
+available for Windows. Note that although some x86 builds are available for
+Linux and MacOS, these are too old (<4.6) to be supported by this action.
+
+```yaml
+jobs:
+  example-11:
+    name:
+      Ex11 (os=${{ matrix.os }} architecture=${{ matrix.architecture }}
+      miniconda-version=${{ matrix.miniconda-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["windows-latest"]
+        architecture: ["x86"]
+        miniconda-version: ["latest"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        with:
+          architecture: ${{ matrix.architecture }}
+          miniconda-version: $${{ matrix.miniconda-version }}
+          auto-update-conda: true
+          python-version: "3.8"
+```
+
 ## Caching
 
 ### Caching packages
@@ -564,7 +597,7 @@ jobs:
         with:
           activate-environment: anaconda-client-env
           channel-priority: strict
-          environment-file: etc/example-environment-caching.yml
+          environment-file: etc/example-environment.yml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
 ```
 
@@ -575,70 +608,75 @@ as they are not included in the conda package cache.
 
 ### Caching environments
 
-The first installation step should setup a Miniconda variant without
-specifying a environment file.
+The first installation step should setup a Miniconda variant without specifying
+a environment file.
 
 ```yaml
-      - name: Setup Mambaforge
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-            miniforge-variant: Mambaforge
-            miniforge-version: latest
-            activate-environment: anaconda-client-env
-            use-mamba: true
+- name: Setup Mambaforge
+  uses: conda-incubator/setup-miniconda@v2
+  with:
+    miniforge-variant: Mambaforge
+    miniforge-version: latest
+    activate-environment: anaconda-client-env
+    use-mamba: true
 ```
 
-It's a good idea to refresh the cache every 24 hours to avoid inconsistencies
-of package versions between the CI pipeline and local installations.
-Here we ensure that this happens by adding the current date to the cache key.
-You can remove the "Get Date" step below if you use a resolved environment file product of
+It's a good idea to refresh the cache every 24 hours to avoid inconsistencies of
+package versions between the CI pipeline and local installations. Here we ensure
+that this happens by adding the current date to the cache key. You can remove
+the "Get Date" step below if you use a resolved environment file product of
 `conda env export` or `conda list --explicit`.
 
 ```yaml
-      - name: Get Date
-        id: get-date
-        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
-        shell: bash
+- name: Get Date
+  id: get-date
+  run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
+  shell: bash
 
-      - name: Cache Conda env
-        uses: actions/cache@v2
-        with:
-          path: ${{ env.CONDA }}/envs
-          key: conda-${{ runner.os }}--${{ runner.arch }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('etc/example-environment-caching.yml') }}-${{ env.CACHE_NUMBER }}
-        env:
-          # Increase this value to reset cache if etc/example-environment.yml has not changed
-          CACHE_NUMBER: 0
-        id: cache
+- name: Cache Conda env
+  uses: actions/cache@v2
+  with:
+    path: ${{ env.CONDA }}/envs
+    key:
+      conda-${{ runner.os }}--${{ runner.arch }}--${{
+      steps.get-date.outputs.today }}-${{
+      hashFiles('etc/example-environment-caching.yml') }}-${{ env.CACHE_NUMBER
+      }}
+  env:
+    # Increase this value to reset cache if etc/example-environment.yml has not changed
+    CACHE_NUMBER: 0
+  id: cache
 ```
 
-Keep in mind that hashing `etc/example-environment-caching.yml` is not the
-same as hashing a resolved environment file. `conda` (and `mamba`) resolves
-the dependencies declared in the YAML file according to the packages
-available on the channels at installation time. Since packages are updated
-all the time, you will not see these changes reflected in the cache until
-the key gets updated by date.
+Keep in mind that hashing `etc/example-environment-caching.yml` is not the same
+as hashing a resolved environment file. `conda` (and `mamba`) resolves the
+dependencies declared in the YAML file according to the packages available on
+the channels at installation time. Since packages are updated all the time, you
+will not see these changes reflected in the cache until the key gets updated by
+date.
 
-**This means that the same environment file can make your tests pass locally
-but fail on CI, or the other way around. In that case, reset the cache
-manually to see if that leads to consistent results, or use a resolved
-environment file.**
+**This means that the same environment file can make your tests pass locally but
+fail on CI, or the other way around. In that case, reset the cache manually to
+see if that leads to consistent results, or use a resolved environment file.**
 
-Finally, update the environment based on the environment file if the cache
-does not exist.
+Finally, update the environment based on the environment file if the cache does
+not exist.
 
 ```yaml
-      - name: Update environment
-        run: mamba env update -n anaconda-client-env -f etc/example-environment-caching.yml
-        if: steps.cache.outputs.cache-hit != 'true'
+- name: Update environment
+  run:
+    mamba env update -n anaconda-client-env -f
+    etc/example-environment-caching.yml
+  if: steps.cache.outputs.cache-hit != 'true'
 ```
 
 ### Use a default shell
 
-Assuming you are using the bash shell, now adding to `shell: bash -l {0}` to
+Assuming you are using the bash shell, now adding to `shell: bash -el {0}` to
 every single step can be avoided if your workflow uses the same shell for all
 the steps.
 
-By adding a `defaults` section and specifying the `bash -l {0}`, all steps in
+By adding a `defaults` section and specifying the `bash -el {0}`, all steps in
 the job will default to that value.
 
 For other shells, make sure to use the right `shell` parameter as the default
@@ -654,7 +692,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -669,10 +707,10 @@ jobs:
 ## IMPORTANT
 
 - Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
-  explicitely declared as `shell: bash -l {0}` on steps that need to be properly
-  activated (or use a default shell). This is because bash shells are executed
-  with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash
-  profile files made by `conda init bash`. See
+  explicitely declared as `shell: bash -el {0}` on steps that need to be
+  properly activated (or use a default shell). This is because bash shells are
+  executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated
+  on bash profile files made by `conda init bash`. See
   [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell)
   and
   [thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).

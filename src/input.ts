@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as core from "@actions/core";
+import * as semver from "semver";
 import * as constants from "./constants";
 import * as types from "./types";
 
@@ -59,8 +60,21 @@ const RULES: IRule[] = [
       constants.KNOWN_EXTENSIONS
     }`,
   (i) =>
-    !!(i.minicondaVersion && i.architecture !== "x64") &&
+    !!(!i.minicondaVersion && i.architecture !== "x64") &&
     `'architecture: ${i.architecture}' requires "miniconda-version"`,
+  (
+    i // Miniconda x86 is only published for Windows lately (last Linux was 2019, last MacOS 2015)
+  ) =>
+    !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
+    `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
+  (
+    i // We only support miniconda 4.6 or later (`conda init` and /condabin were added here, which we need)
+  ) =>
+    !!(
+      !["latest", ""].includes(i.minicondaVersion) &&
+      semver.lt(i.minicondaVersion, "4.6.0")
+    ) &&
+    `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
 ];
 
 /*
