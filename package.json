@@ -1,5 +1,5 @@
 {
-  "name": "action-setup-conda",
+  "name": "setup-miniconda",
   "version": "2.1.0",
   "description": "GitHub action for setting up conda from default or custom installers",
   "main": "lib/main.js",
@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/goanpeca/action-setup-conda.git"
+    "url": "git+https://github.com/conda-incubator/setup-miniconda.git"
   },
   "keywords": [
     "action",
@@ -22,44 +22,45 @@
     "environment",
     "github",
     "miniconda",
+    "miniforge",
+    "mamba",
     "python",
-    "starter"
+    "starter",
+    "setup"
   ],
   "author": "Gonzalo Peña-Castellanos",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/goanpeca/action-setup-conda"
+    "url": "https://github.com/conda-incubator/setup-miniconda"
   },
-  "homepage": "https://github.com/goanpeca/action-setup-conda#readme",
+  "homepage": "https://github.com/conda-incubator/setup-miniconda#conda-incubatorsetup-miniconda",
   "dependencies": {
-    "@actions/core": "^1.2.6",
-    "@actions/exec": "^1.0.2",
-    "@actions/io": "^1.0.1",
-    "@actions/tool-cache": "^1.1.2",
-    "@types/semver": "^7.3.8",
-    "@vercel/ncc": "^0.34.0",
+    "@actions/core": "^1.10.0",
+    "@actions/exec": "^1.1.1",
+    "@actions/io": "^1.1.2",
+    "@actions/tool-cache": "^2.0.1",
     "get-hrefs": "^4.0.0",
-    "js-yaml": "^3.13.1",
-    "semver": "^7.3.5"
+    "js-yaml": "^4.1.0",
+    "semver": "^7.3.8"
   },
   "devDependencies": {
-    "@types/js-yaml": "^3.12.4",
-    "@types/node": "^12.0.4",
-    "@types/semver": "^7.3.9",
-    "@typescript-eslint/eslint-plugin": "^2.27.0",
-    "@typescript-eslint/parser": "^2.27.0",
-    "@zeit/ncc": "^0.22.3",
-    "dot-prop": ">=4.2.1",
-    "eslint": "^6.8.0",
-    "eslint-config-prettier": "^6.7.0",
-    "eslint-plugin-prettier": "^3.1.1",
-    "husky": "^3.1.0",
+    "@types/js-yaml": "^4.0.5",
+    "@types/node": "^18.11.9",
+    "@types/semver": "^7.3.13",
+    "@typescript-eslint/eslint-plugin": "^5.42.1",
+    "@typescript-eslint/parser": "^5.42.1",
+    "@vercel/ncc": "^0.34.0",
+    "dot-prop": ">=7.2.0",
+    "eslint": "^8.27.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "husky": "^8.0.2",
     "lerna": "^6.0.3",
-    "lint-staged": "^9.5.0",
-    "lodash": ">=4.17.19",
-    "prettier": "^2.1.2",
-    "shell-quote": "^1.7.2",
-    "typescript": "^3.7.2"
+    "lint-staged": "^13.0.3",
+    "lodash": ">=4.17.21",
+    "prettier": "^2.7.1",
+    "shell-quote": "^1.7.4",
+    "typescript": "^4.8.4"
   },
   "husky": {
     "hooks": {

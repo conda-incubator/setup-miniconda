@@ -30,7 +30,7 @@ async function minicondaVersions(arch: string): Promise<string[]> {
     hrefs = hrefs.map((item: string) => item.substring(1));
     return hrefs;
   } catch (err) {
-    core.warning(err);
+    core.warning(err as Error);
     return [];
   }
 }
