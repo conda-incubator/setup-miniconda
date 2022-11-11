@@ -115,7 +115,7 @@ async function run(): Promise<void> {
   
   Please ensure your action is using the latest version, or point it to the 'main' branch.
 
-    "conda-incubator/setup-minicando@main"
+    "conda-incubator/setup-miniconda@main"
   `);
     const inputs = await core.group("Gathering Inputs...", input.parseInputs);
     await setupMiniconda(inputs);
