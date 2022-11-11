@@ -25,7 +25,7 @@ of:
   - an `environment.yml`-like file (which can be patched with `python-version`)
     - the patched environment will be cleaned up unless
       `clean-patched-environment-file: false` is given
-  - a [lockfile](#example-7-explicit-specification)
+  - a [lockfile](#example-7-lockfiles)
 
 This action correctly handles activation of environments and offers the
 possibility of automatically activating the `test` environment on all shells.
@@ -85,6 +85,10 @@ possibility of automatically activating the `test` environment on all shells.
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-example.yml?query=branch%3Amaster
 [caching-badge]:
   https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Caching%20Example/master
+[caching-env]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-envs-example.yml?query=branch%3Amaster
+[caching-env-badge]:
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Caching%20Env%20Example/master
 [ex7]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-7.yml?query=branch%3Amaster
 [ex7-badge]:
@@ -189,7 +193,7 @@ jobs:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
       - name: Conda info
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: conda info
       - name: Conda list
         shell: pwsh
@@ -213,7 +217,7 @@ jobs:
           miniconda-version: "latest"
           activate-environment: foo
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
@@ -237,7 +241,7 @@ jobs:
           conda info
           conda list
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
@@ -256,7 +260,7 @@ jobs:
           miniconda-version: "latest"
           activate-environment: foo
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
@@ -292,7 +296,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -324,7 +328,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -364,7 +368,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -408,14 +412,14 @@ jobs:
           channel-priority: true
           activate-environment: anaconda-client-env
           environment-file: etc/example-environment.yml
-      - shell: bash -l {0}
+      - shell: bash -el {0}
         run: |
           conda info
           conda list
           conda config --show-sources
           conda config --show
           printenv | sort
-      - shell: bash -l {0}
+      - shell: bash -el {0}
         run: mamba install jupyterlab
 ```
 
@@ -449,7 +453,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -668,11 +672,11 @@ not exist.
 
 ### Use a default shell
 
-Assuming you are using the bash shell, now adding to `shell: bash -l {0}` to
+Assuming you are using the bash shell, now adding to `shell: bash -el {0}` to
 every single step can be avoided if your workflow uses the same shell for all
 the steps.
 
-By adding a `defaults` section and specifying the `bash -l {0}`, all steps in
+By adding a `defaults` section and specifying the `bash -el {0}`, all steps in
 the job will default to that value.
 
 For other shells, make sure to use the right `shell` parameter as the default
@@ -688,7 +692,7 @@ jobs:
     runs-on: "ubuntu-latest"
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -703,10 +707,10 @@ jobs:
 ## IMPORTANT
 
 - Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
-  explicitely declared as `shell: bash -l {0}` on steps that need to be properly
-  activated (or use a default shell). This is because bash shells are executed
-  with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash
-  profile files made by `conda init bash`. See
+  explicitely declared as `shell: bash -el {0}` on steps that need to be
+  properly activated (or use a default shell). This is because bash shells are
+  executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated
+  on bash profile files made by `conda init bash`. See
   [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell)
   and
   [thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).

@@ -26,7 +26,7 @@ jobs:
           miniconda-version: "latest"
           activate-environment: foo
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
@@ -54,7 +54,7 @@ jobs:
           conda list
           printenv | sort
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
@@ -77,7 +77,7 @@ jobs:
           activate-environment: foo
           use-only-tar-bz2: true
       - name: Bash
-        shell: bash -l {0}
+        shell: bash -el {0}
         run: |
           conda info
           conda list
