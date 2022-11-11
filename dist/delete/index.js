@@ -4173,7 +4173,7 @@ exports.execute = execute;
  * Generally favors '=' unless specified more tightly.
  */
 function makeSpec(pkg, spec) {
-    if (spec.match(/=<>!\|/)) {
+    if (spec.match(/[=<>!\|]/)) {
         return `${pkg}${spec}`;
     }
     else {
