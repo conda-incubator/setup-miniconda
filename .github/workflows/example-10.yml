@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.os }}-latest
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     strategy:
       fail-fast: false
       matrix:
@@ -48,7 +48,7 @@ jobs:
     runs-on: ${{ matrix.os }}-latest
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     strategy:
       fail-fast: false
       matrix:
