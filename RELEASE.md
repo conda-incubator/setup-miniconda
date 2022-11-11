@@ -1,6 +1,6 @@
 # Release
 
-- Update dependencies and fix any outdated dependencies
+- Update dependencies and fix any outdated dependencies.
 
 ```bash
 npm install -g npm-check-updates
