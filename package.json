@@ -10,7 +10,8 @@
     "prettier:format": "prettier --list-different --write \"src/**/*.ts\" \"*.{md,json,yml}\" \"{etc,.github}/**/*.{md,json,yml,js}\"",
     "prettier:check": "prettier --list-different \"src/**/*.ts\" \"*.{md,json,yml}\" \"{etc,.github}/**/*.{md,json,yml,js}\"",
     "eslint:format": "eslint --ext .js,.jsx,.ts,.tsx --fix .",
-    "eslint:check": "eslint --ext .js,.jsx,.ts,.tsx ."
+    "eslint:check": "eslint --ext .js,.jsx,.ts,.tsx .",
+    "prepare": "husky install"
   },
   "repository": {
     "type": "git",
@@ -64,7 +65,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "npm run format && npm run build"
+      "pre-commit": "npm run format && npm run check && npm run build"
     }
   }
 }
