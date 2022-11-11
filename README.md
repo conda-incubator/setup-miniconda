@@ -85,6 +85,10 @@ possibility of automatically activating the `test` environment on all shells.
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-example.yml?query=branch%3Amaster
 [caching-badge]:
   https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Caching%20Example/master
+[caching-env]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-envs-example.yml?query=branch%3Amaster
+[caching-env-badge]:
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Caching%20Env%20Example/master
 [ex7]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-7.yml?query=branch%3Amaster
 [ex7-badge]:
