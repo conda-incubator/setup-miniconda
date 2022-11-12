@@ -45,11 +45,12 @@ Replace `X.Y.Z` by the appropriate version number.
 - Point the old `vX` tag to latest `vX.Y.Z` tag:
 
 ```bash
+git checkout main
 git tag -d vX
 git push origin :refs/tags/vX
 git tag -a vX -m 'Release version vX.Y.Z'
 git push origin --tags
-git push origin master
+git push origin main
 ```
 
 Replace `X.Y.Z` by the appropriate version number.

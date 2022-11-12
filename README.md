@@ -741,9 +741,9 @@ jobs:
 ## Project History and Contributing
 
 See the
-[CHANGELOG](https://github.com/conda-incubator/setup-miniconda/blob/master/CHANGELOG.md)
+[CHANGELOG](https://github.com/conda-incubator/setup-miniconda/blob/develop/CHANGELOG.md)
 for project history, or
-[CONTRIBUTING](https://github.com/conda-incubator/setup-miniconda/blob/master/CONTRIBUTING.md)
+[CONTRIBUTING](https://github.com/conda-incubator/setup-miniconda/blob/develop/CONTRIBUTING.md)
 to get started adding features you need.
 
 ## Contributors
