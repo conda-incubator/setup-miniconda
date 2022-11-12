@@ -57,45 +57,45 @@ possibility of automatically activating the `test` environment on all shells.
 | [Caching environments](#caching-environments)   | [![Caching Env Example Status][caching-env-badge]][caching-env] |
 
 [ex1]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml?query=branch%3Amain
 [ex1-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%201:%20Basic%20usage/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%201:%20Basic%20usage/main
 [ex2]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-2.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-2.yml?query=branch%3Amain
 [ex2-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%202:%20Other%20shells/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%202:%20Other%20shells/main
 [ex3]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-3.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-3.yml?query=branch%3Amain
 [ex3-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%203:%20Other%20options/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%203:%20Other%20options/main
 [ex4]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-4.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-4.yml?query=branch%3Amain
 [ex4-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%204:%20Channels/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%204:%20Channels/main
 [ex5]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-5.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-5.yml?query=branch%3Amain
 [ex5-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%205:%20Custom%20installer/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%205:%20Custom%20installer/main
 [ex6]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-6.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-6.yml?query=branch%3Amain
 [ex6-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%206:%20Mamba/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%206:%20Mamba/main
 [caching]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-example.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-example.yml?query=branch%3Amain
 [caching-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Caching%20Example/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Caching%20Example/main
 [caching-env]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-envs-example.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-envs-example.yml?query=branch%3Amain
 [caching-env-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Caching%20Env%20Example/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Caching%20Env%20Example/main
 [ex7]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-7.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-7.yml?query=branch%3Amain
 [ex7-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%207:%20Explicit%20Environment%20Specification/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%207:%20Explicit%20Environment%20Specification/main
 [ex10]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-10.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-10.yml?query=branch%3Amain
 [ex10-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%2010:%20Miniforge,%20etc/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%2010:%20Miniforge,%20etc/main
 
 ## Other Workflows
 
@@ -106,17 +106,17 @@ possibility of automatically activating the `test` environment on all shells.
 | Workflow Status | [![Linting Status][linting-badge]][linting] | [![Catch Invalid Environments Status][ex8-badge]][ex8] | [![Handle Empty Channels Status][ex9-badge]][ex9] |
 
 [linting]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/lint.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/lint.yml?query=branch%3Amain
 [linting-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Linting/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Linting/main
 [ex8]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-8.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-8.yml?query=branch%3Amain
 [ex8-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%208:%20Catch%20invalid%20environment%20files/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%208:%20Catch%20invalid%20environment%20files/main
 [ex9]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-9.yml?query=branch%3Adevelop
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-9.yml?query=branch%3Amain
 [ex9-badge]:
-  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%209:%20Empty%20Channels%20in%20file%20dont%20crash%20setup/develop
+  https://img.shields.io/github/workflow/status/conda-incubator/setup-miniconda/Example%209:%20Empty%20Channels%20in%20file%20dont%20crash%20setup/main
 
 ## Environment activation
 
