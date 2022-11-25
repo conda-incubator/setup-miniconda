@@ -17,7 +17,7 @@ import * as baseTools from "./base-tools";
 async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
   let options: types.IDynamicOptions = {
     useBundled: true,
-    useMamba: false,
+    useMamba: constants.TRUST_BUNDLED ? inputs.useMamba === "true" : false,
     mambaInInstaller: false,
     condaConfig: { ...inputs.condaConfig },
   };

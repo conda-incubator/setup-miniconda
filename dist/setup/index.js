@@ -26765,7 +26765,7 @@ function setupMiniconda(inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         let options = {
             useBundled: true,
-            useMamba: false,
+            useMamba: constants.TRUST_BUNDLED ? inputs.useMamba === "true" : false,
             mambaInInstaller: false,
             condaConfig: Object.assign({}, inputs.condaConfig),
         };
