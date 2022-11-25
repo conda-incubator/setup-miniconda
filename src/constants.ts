@@ -7,6 +7,7 @@ import * as types from "./types";
 // Constants
 //-----------------------------------------------------------------------
 export const MINICONDA_DIR_PATH: string = process.env["CONDA"] || "";
+export const TRUST_BUNDLED: boolean = process.env["TRUST_CONDA"] === "true" || false;
 export const IS_WINDOWS: boolean = process.platform === "win32";
 export const IS_MAC: boolean = process.platform === "darwin";
 export const IS_LINUX: boolean = process.platform === "linux";
