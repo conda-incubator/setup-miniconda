@@ -3984,13 +3984,14 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OUTPUT_ENV_FILE_WAS_PATCHED = exports.OUTPUT_ENV_FILE_CONTENT = exports.OUTPUT_ENV_FILE_PATH = exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_DEFAULT_VERSION = exports.MINIFORGE_DEFAULT_VARIANT = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.OUTPUT_ENV_FILE_WAS_PATCHED = exports.OUTPUT_ENV_FILE_CONTENT = exports.OUTPUT_ENV_FILE_PATH = exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_DEFAULT_VERSION = exports.MINIFORGE_DEFAULT_VARIANT = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.TRUST_BUNDLED = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__nccwpck_require__(37));
 const path = __importStar(__nccwpck_require__(17));
 //-----------------------------------------------------------------------
 // Constants
 //-----------------------------------------------------------------------
 exports.MINICONDA_DIR_PATH = process.env["CONDA"] || "";
+exports.TRUST_BUNDLED = process.env["TRUST_CONDA"] === "true" || false;
 exports.IS_WINDOWS = process.platform === "win32";
 exports.IS_MAC = process.platform === "darwin";
 exports.IS_LINUX = process.platform === "linux";

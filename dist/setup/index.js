@@ -25094,7 +25094,7 @@ const utils = __importStar(__nccwpck_require__(1314));
  */
 function condaBasePath(options) {
     let condaPath = constants.MINICONDA_DIR_PATH;
-    if (!options.useBundled) {
+    if (!options.useBundled && !constants.TRUST_BUNDLED) {
         if (constants.IS_MAC) {
             condaPath = "/Users/runner/miniconda3";
         }
@@ -25137,6 +25137,7 @@ exports.condaExecutable = condaExecutable;
 /** Detect the presence of mamba */
 function isMambaInstalled(options) {
     const mamba = condaExecutable(Object.assign(Object.assign({}, options), { useMamba: true }));
+    core.info("testing existence: ${mamba}, trust: ${constants.TRUST_BUNDLED}");
     return fs.existsSync(mamba);
 }
 exports.isMambaInstalled = isMambaInstalled;
@@ -25392,13 +25393,14 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OUTPUT_ENV_FILE_WAS_PATCHED = exports.OUTPUT_ENV_FILE_CONTENT = exports.OUTPUT_ENV_FILE_PATH = exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_DEFAULT_VERSION = exports.MINIFORGE_DEFAULT_VARIANT = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.OUTPUT_ENV_FILE_WAS_PATCHED = exports.OUTPUT_ENV_FILE_CONTENT = exports.OUTPUT_ENV_FILE_PATH = exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_DEFAULT_VERSION = exports.MINIFORGE_DEFAULT_VARIANT = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.TRUST_BUNDLED = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__nccwpck_require__(2037));
 const path = __importStar(__nccwpck_require__(1017));
 //-----------------------------------------------------------------------
 // Constants
 //-----------------------------------------------------------------------
 exports.MINICONDA_DIR_PATH = process.env["CONDA"] || "";
+exports.TRUST_BUNDLED = process.env["TRUST_CONDA"] === "true" || false;
 exports.IS_WINDOWS = process.platform === "win32";
 exports.IS_MAC = process.platform === "darwin";
 exports.IS_LINUX = process.platform === "linux";
