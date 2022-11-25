@@ -25137,7 +25137,6 @@ exports.condaExecutable = condaExecutable;
 /** Detect the presence of mamba */
 function isMambaInstalled(options) {
     const mamba = condaExecutable(Object.assign(Object.assign({}, options), { useMamba: true }));
-    core.info("testing existence: ${mamba}, trust: ${constants.TRUST_BUNDLED}");
     return fs.existsSync(mamba);
 }
 exports.isMambaInstalled = isMambaInstalled;
