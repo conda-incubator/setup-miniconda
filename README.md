@@ -702,24 +702,24 @@ jobs:
 ## IMPORTANT
 
 - Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
-  explicitely declared as `shell: bash -el {0}` on steps that need to be
+  explicitly declared as `shell: bash -el {0}` on steps that need to be
   properly activated (or use a default shell). This is because bash shells are
   executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated
   on bash profile files made by `conda init bash`. See
-  [Github Actions Documentation](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#custom-shell)
-  and
-  [thread](https://github.com/orgs/community/discussions/25061).
+  [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell)
+  and this 
+  [community thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).
 - Sh shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
-  explicitely declared as `shell: sh -l {0}` on steps that need to be properly
+  explicitly declared as `shell: sh -l {0}` on steps that need to be properly
   activated (or use a default shell). This is because sh shells are executed
-  with `sh -e {0}` thus ignoring updated on bash profile files made by
+  with `sh -e {0}` thus ignoring updates on bash profile files made by
   `conda init bash`. See
   [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
 - Cmd shells do not run `Autorun` commands so these shells need to be
-  explicitely declared as `shell: cmd /C call {0}` on steps that need to be
+  explicitly declared as `shell: cmd /C call {0}` on steps that need to be
   properly activated (or use a default shell). This is because cmd shells are
   executed with `%ComSpec% /D /E:ON /V:OFF /S /C "CALL "{0}""` and the `/D` flag
-  disabled execution of `Command Processor/Autorun` Windows registry keys, which
+  disables execution of `Command Processor/Autorun` Windows registry keys, which
   is what `conda init cmd.exe` sets. See
   [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
 - For caching to work properly, you will need to set the `use-only-tar-bz2`
