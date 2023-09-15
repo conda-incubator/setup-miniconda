@@ -233,6 +233,13 @@ inputs:
       `mamba-in-installer` or installation by `mamba-version`)"
     required: false
     default: ""
+  conda-solver:
+    description: 
+      "Which conda solver plugin to use. Only applies to the `conda` client, not `mamba`.
+      Starting with Miniconda 23.5.2 and Miniforge 23.3.1, you can choose between `classic`
+      and `libmamba`."
+    required: false
+    default: "libmamba"
   architecture:
     description:
       'Architecture of Miniconda that should be installed. Available options on
