@@ -1,0 +1,49 @@
+name: "Example 11: Configure conda solver"
+
+on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - "develop"
+      - "main"
+      - "master"
+  schedule:
+    # Note that cronjobs run on master/main by default
+    - cron: "0 0 * * *"
+
+jobs:
+  example-11:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Ex12 (os=${{ matrix.os }} solver=${{ matrix.solver }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        solver: ["classic", "libmamba"]
+        os: ["ubuntu-latest", "windows-latest"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          auto-update-conda: true
+          conda-solver: ${{ matrix.solver }}
+          python-version: "3.9"
+      - name: Conda info
+        shell: bash -el {0}
+        run: conda info
+      - name: Conda list
+        shell: pwsh
+        run: conda list
+      - name: Environment
+        shell: bash -el {0}
+        run: printenv | sort
+      - name: Create an environment
+        shell: bash -el {0}
+        run: conda create -n unused --dry-run zlib
