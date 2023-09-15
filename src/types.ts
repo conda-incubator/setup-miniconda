@@ -65,6 +65,7 @@ export interface ICondaConfig {
   use_only_tar_bz2: string;
   always_yes: string;
   changeps1: string;
+  solver: string;
 }
 
 /**
