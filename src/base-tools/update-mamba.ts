@@ -14,9 +14,6 @@ export const updateMamba: types.IToolProvider = {
   provides: async (inputs, options) =>
     inputs.mambaVersion !== "" || options.mambaInInstaller,
   toolPackages: async (inputs, options) => {
-    core.warning(
-      `Mamba support is still experimental and can result in differently solved environments!`
-    );
     return {
       tools:
         inputs.mambaVersion !== ""

@@ -222,14 +222,14 @@ inputs:
     default: "true"
   mamba-version:
     description:
-      'Experimental. Use mamba (https://github.com/QuantStack/mamba) as a faster
+      'Use mamba (https://github.com/QuantStack/mamba) as a faster
       drop-in replacement for conda installs. Disabled by default. To enable,
       use "*" or a "x.y" version string.'
     required: false
     default: ""
   use-mamba:
     description:
-      "Experimental. Use mamba as soon as available (either as provided by
+      "Use mamba as soon as available (either as provided by
       `mamba-in-installer` or installation by `mamba-version`)"
     required: false
     default: ""
