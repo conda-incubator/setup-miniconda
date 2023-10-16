@@ -24,11 +24,11 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
 
   await core.group(
     `Creating bootstrap condarc file in ${constants.CONDARC_PATH}...`,
-    conda.bootstrapConfig
+    conda.bootstrapConfig,
   );
 
   const installerInfo = await core.group("Ensuring installer...", () =>
-    installer.getLocalInstallerPath(inputs, options)
+    installer.getLocalInstallerPath(inputs, options),
   );
 
   // The desired installer may change the options
@@ -42,8 +42,8 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
         installerInfo.localInstallerPath,
         basePath,
         inputs,
-        options
-      )
+        options,
+      ),
     );
   }
 
@@ -54,12 +54,12 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
         "its own Miniconda installation, please specify its location with a `CONDA` " +
         "environment variable. If you want us to download and install Miniconda or " +
         'Miniforge for you, add `miniconda-version: "latest"` or `miniforge-version: "latest"`, ' +
-        "respectively, to the parameters for this action."
+        "respectively, to the parameters for this action.",
     );
   }
 
   await core.group("Setup environment variables...", () =>
-    outputs.setPathVariables(options)
+    outputs.setPathVariables(options),
   );
 
   if (inputs.condaConfigFile) {
@@ -68,29 +68,29 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
 
   // For potential 'channels' that may alter configuration
   options.envSpec = await core.group("Parsing environment...", () =>
-    env.getEnvSpec(inputs)
+    env.getEnvSpec(inputs),
   );
 
   await core.group("Configuring conda package cache...", () =>
-    outputs.setCacheVariable(options)
+    outputs.setCacheVariable(options),
   );
 
   await core.group("Applying initial configuration...", () =>
-    conda.applyCondaConfiguration(inputs, options)
+    conda.applyCondaConfiguration(inputs, options),
   );
 
   await core.group("Initializing conda shell integration...", () =>
-    conda.condaInit(inputs, options)
+    conda.condaInit(inputs, options),
   );
 
   // New base tools may change options
   options = await core.group("Adding tools to 'base' env...", () =>
-    baseTools.installBaseTools(inputs, options)
+    baseTools.installBaseTools(inputs, options),
   );
 
   if (inputs.activateEnvironment) {
     await core.group("Ensuring environment...", () =>
-      env.ensureEnvironment(inputs, options)
+      env.ensureEnvironment(inputs, options),
     );
   }
 
@@ -105,7 +105,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
         } else {
           core.info(`Leaving ${patchedEnv} in place`);
         }
-      }
+      },
     );
   }
 

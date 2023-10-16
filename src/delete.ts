@@ -16,7 +16,7 @@ async function run(): Promise<void> {
 
     if (fs.existsSync(cacheFolder) && fs.lstatSync(cacheFolder).isDirectory()) {
       core.startGroup(
-        "Removing uncompressed packages to trim down cache folder..."
+        "Removing uncompressed packages to trim down cache folder...",
       );
       let fullPath: string;
       for (let folder_or_file of fs.readdirSync(cacheFolder)) {

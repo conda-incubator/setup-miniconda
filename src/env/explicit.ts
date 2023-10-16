@@ -12,14 +12,14 @@ export const ensureExplicit: types.IEnvProvider = {
   condaArgs: async (inputs, options) => {
     if (inputs.pythonVersion) {
       throw Error(
-        `'python-version: ${inputs.pythonVersion}' is incompatible with an explicit 'environmentFile`
+        `'python-version: ${inputs.pythonVersion}' is incompatible with an explicit 'environmentFile`,
       );
     }
 
     if (options.envSpec?.explicit) {
       outputs.setEnvironmentFileOutputs(
         inputs.environmentFile,
-        options.envSpec.explicit
+        options.envSpec.explicit,
       );
     }
 
