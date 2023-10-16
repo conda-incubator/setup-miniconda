@@ -185,7 +185,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.7", "2.7"]
+        python-version: ["3.7", "3.11"]
     steps:
       - uses: conda-incubator/setup-miniconda@v2
         with:
@@ -711,8 +711,7 @@ jobs:
   executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated
   on bash profile files made by `conda init bash`. See
   [Github Actions Documentation](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#custom-shell)
-  and
-  [thread](https://github.com/orgs/community/discussions/25061).
+  and [thread](https://github.com/orgs/community/discussions/25061).
 - Sh shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
   explicitely declared as `shell: sh -l {0}` on steps that need to be properly
   activated (or use a default shell). This is because sh shells are executed
