@@ -710,9 +710,9 @@ jobs:
   properly activated (or use a default shell). This is because bash shells are
   executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated
   on bash profile files made by `conda init bash`. See
-  [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell)
+  [Github Actions Documentation](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#custom-shell)
   and
-  [thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).
+  [thread](https://github.com/orgs/community/discussions/25061).
 - Sh shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
   explicitely declared as `shell: sh -l {0}` on steps that need to be properly
   activated (or use a default shell). This is because sh shells are executed
