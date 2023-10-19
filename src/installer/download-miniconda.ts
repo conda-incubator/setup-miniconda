@@ -47,7 +47,7 @@ export async function downloadMiniconda(
   inputs: types.IActionInputs
 ): Promise<string> {
   // Check valid arch
-  const arch: string = constants.MINICONDA_ARCHITECTURES[inputs.architecture];
+  const arch: string = constants.MINICONDA_ARCHITECTURES[inputs.architecture.toLowerCase()];
   if (!arch) {
     throw new Error(`Invalid arch "${inputs.architecture}"!`);
   }
