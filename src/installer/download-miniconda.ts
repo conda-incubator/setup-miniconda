@@ -47,13 +47,14 @@ export async function downloadMiniconda(
   inputs: types.IActionInputs
 ): Promise<string> {
   // Check valid arch
-  let arch: string = constants.MINICONDA_ARCHITECTURES[inputs.architecture.toLowerCase()];
+  let arch: string =
+    constants.MINICONDA_ARCHITECTURES[inputs.architecture.toLowerCase()];
   if (!arch) {
     throw new Error(`Invalid arch "${inputs.architecture}"!`);
   }
   // Backwards compatibility: ARM64 used to map to aarch64
-  if (arch === "arm64" && constants.is_LINUX) {
-    arch = constants.MINICONDA_ARCHITECTURES["aarch64"]
+  if (arch === "arm64" && constants.IS_LINUX) {
+    arch = constants.MINICONDA_ARCHITECTURES["aarch64"];
   }
 
   let extension: string = constants.IS_UNIX ? "sh" : "exe";

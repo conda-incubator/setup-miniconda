@@ -235,9 +235,9 @@ inputs:
     default: ""
   architecture:
     description:
-      'Architecture of Miniconda that should be installed. Default is "x64".
-      It is recommended to provide this value because the CPU architecture
-      of the runner is not detected by the workflow.'
+      'Architecture of Miniconda that should be installed. Default is "x64". It
+      is recommended to provide this value because the CPU architecture of the
+      runner is not detected by the workflow.'
     required: false
     default: "x64"
   clean-patched-environment-file:
