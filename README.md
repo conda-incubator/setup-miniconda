@@ -705,7 +705,6 @@ jobs:
 
 ## IMPORTANT
 
-
 - Conda activation does not correctly work on `sh`. Please use `bash`.
 - Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
   explicitely declared as `shell: bash -el {0}` on steps that need to be

@@ -25489,10 +25489,14 @@ exports.IS_UNIX = exports.IS_MAC || exports.IS_LINUX;
 exports.MINICONDA_BASE_URL = "https://repo.anaconda.com/miniconda/";
 /** Processor architectures supported by Miniconda */
 exports.MINICONDA_ARCHITECTURES = {
+    aarch64: "aarch64",
+    arm64: "arm64",
+    ppc64le: "ppc64le",
+    s390x: "s390x",
     x64: "x86_64",
+    x86_64: "x86_64",
     x86: "x86",
-    ARM64: "aarch64",
-    ARM32: "armv7l", // To be supported by github runners
+    arm32: "armv7l", // To be supported by github runners
 };
 /** Processor architectures supported by Miniforge */
 exports.MINIFORGE_ARCHITECTURES = {
@@ -26377,9 +26381,13 @@ function minicondaVersions(arch) {
 function downloadMiniconda(pythonMajorVersion, inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         // Check valid arch
-        const arch = constants.MINICONDA_ARCHITECTURES[inputs.architecture];
+        let arch = constants.MINICONDA_ARCHITECTURES[inputs.architecture.toLowerCase()];
         if (!arch) {
             throw new Error(`Invalid arch "${inputs.architecture}"!`);
+        }
+        // Backwards compatibility: ARM64 used to map to aarch64
+        if (arch === "arm64" && constants.IS_LINUX) {
+            arch = constants.MINICONDA_ARCHITECTURES["aarch64"];
         }
         let extension = constants.IS_UNIX ? "sh" : "exe";
         let osName = constants.OS_NAMES[process.platform];

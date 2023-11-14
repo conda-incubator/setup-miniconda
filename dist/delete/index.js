@@ -3962,10 +3962,14 @@ exports.IS_UNIX = exports.IS_MAC || exports.IS_LINUX;
 exports.MINICONDA_BASE_URL = "https://repo.anaconda.com/miniconda/";
 /** Processor architectures supported by Miniconda */
 exports.MINICONDA_ARCHITECTURES = {
+    aarch64: "aarch64",
+    arm64: "arm64",
+    ppc64le: "ppc64le",
+    s390x: "s390x",
     x64: "x86_64",
+    x86_64: "x86_64",
     x86: "x86",
-    ARM64: "aarch64",
-    ARM32: "armv7l", // To be supported by github runners
+    arm32: "armv7l", // To be supported by github runners
 };
 /** Processor architectures supported by Miniforge */
 exports.MINIFORGE_ARCHITECTURES = {
