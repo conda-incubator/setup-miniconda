@@ -3957,14 +3957,42 @@ var MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER ||
 // Max safe segment length for coercion.
 var MAX_SAFE_COMPONENT_LENGTH = 16
 
+var MAX_SAFE_BUILD_LENGTH = MAX_LENGTH - 6
+
 // The actual regexps go on exports.re
 var re = exports.re = []
+var safeRe = exports.safeRe = []
 var src = exports.src = []
 var t = exports.tokens = {}
 var R = 0
 
 function tok (n) {
   t[n] = R++
+}
+
+var LETTERDASHNUMBER = '[a-zA-Z0-9-]'
+
+// Replace some greedy regex tokens to prevent regex dos issues. These regex are
+// used internally via the safeRe object since all inputs in this library get
+// normalized first to trim and collapse all extra whitespace. The original
+// regexes are exported for userland consumption and lower level usage. A
+// future breaking change could export the safer regex only with a note that
+// all input should have extra whitespace removed.
+var safeRegexReplacements = [
+  ['\\s', 1],
+  ['\\d', MAX_LENGTH],
+  [LETTERDASHNUMBER, MAX_SAFE_BUILD_LENGTH],
+]
+
+function makeSafeRe (value) {
+  for (var i = 0; i < safeRegexReplacements.length; i++) {
+    var token = safeRegexReplacements[i][0]
+    var max = safeRegexReplacements[i][1]
+    value = value
+      .split(token + '*').join(token + '{0,' + max + '}')
+      .split(token + '+').join(token + '{1,' + max + '}')
+  }
+  return value
 }
 
 // The following Regular Expressions can be used for tokenizing,
@@ -3976,14 +4004,14 @@ function tok (n) {
 tok('NUMERICIDENTIFIER')
 src[t.NUMERICIDENTIFIER] = '0|[1-9]\\d*'
 tok('NUMERICIDENTIFIERLOOSE')
-src[t.NUMERICIDENTIFIERLOOSE] = '[0-9]+'
+src[t.NUMERICIDENTIFIERLOOSE] = '\\d+'
 
 // ## Non-numeric Identifier
 // Zero or more digits, followed by a letter or hyphen, and then zero or
 // more letters, digits, or hyphens.
 
 tok('NONNUMERICIDENTIFIER')
-src[t.NONNUMERICIDENTIFIER] = '\\d*[a-zA-Z-][a-zA-Z0-9-]*'
+src[t.NONNUMERICIDENTIFIER] = '\\d*[a-zA-Z-]' + LETTERDASHNUMBER + '*'
 
 // ## Main Version
 // Three dot-separated numeric identifiers.
@@ -4025,7 +4053,7 @@ src[t.PRERELEASELOOSE] = '(?:-?(' + src[t.PRERELEASEIDENTIFIERLOOSE] +
 // Any combination of digits, letters, or hyphens.
 
 tok('BUILDIDENTIFIER')
-src[t.BUILDIDENTIFIER] = '[0-9A-Za-z-]+'
+src[t.BUILDIDENTIFIER] = LETTERDASHNUMBER + '+'
 
 // ## Build Metadata
 // Plus sign, followed by one or more period-separated build metadata
@@ -4105,6 +4133,7 @@ src[t.COERCE] = '(^|[^\\d])' +
               '(?:$|[^\\d])'
 tok('COERCERTL')
 re[t.COERCERTL] = new RegExp(src[t.COERCE], 'g')
+safeRe[t.COERCERTL] = new RegExp(makeSafeRe(src[t.COERCE]), 'g')
 
 // Tilde ranges.
 // Meaning is "reasonably at or greater than"
@@ -4114,6 +4143,7 @@ src[t.LONETILDE] = '(?:~>?)'
 tok('TILDETRIM')
 src[t.TILDETRIM] = '(\\s*)' + src[t.LONETILDE] + '\\s+'
 re[t.TILDETRIM] = new RegExp(src[t.TILDETRIM], 'g')
+safeRe[t.TILDETRIM] = new RegExp(makeSafeRe(src[t.TILDETRIM]), 'g')
 var tildeTrimReplace = '$1~'
 
 tok('TILDE')
@@ -4129,6 +4159,7 @@ src[t.LONECARET] = '(?:\\^)'
 tok('CARETTRIM')
 src[t.CARETTRIM] = '(\\s*)' + src[t.LONECARET] + '\\s+'
 re[t.CARETTRIM] = new RegExp(src[t.CARETTRIM], 'g')
+safeRe[t.CARETTRIM] = new RegExp(makeSafeRe(src[t.CARETTRIM]), 'g')
 var caretTrimReplace = '$1^'
 
 tok('CARET')
@@ -4150,6 +4181,7 @@ src[t.COMPARATORTRIM] = '(\\s*)' + src[t.GTLT] +
 
 // this one has to use the /g flag
 re[t.COMPARATORTRIM] = new RegExp(src[t.COMPARATORTRIM], 'g')
+safeRe[t.COMPARATORTRIM] = new RegExp(makeSafeRe(src[t.COMPARATORTRIM]), 'g')
 var comparatorTrimReplace = '$1$2$3'
 
 // Something like `1.2.3 - 1.2.4`
@@ -4178,6 +4210,14 @@ for (var i = 0; i < R; i++) {
   debug(i, src[i])
   if (!re[i]) {
     re[i] = new RegExp(src[i])
+
+    // Replace all greedy whitespace to prevent regex dos issues. These regex are
+    // used internally via the safeRe object since all inputs in this library get
+    // normalized first to trim and collapse all extra whitespace. The original
+    // regexes are exported for userland consumption and lower level usage. A
+    // future breaking change could export the safer regex only with a note that
+    // all input should have extra whitespace removed.
+    safeRe[i] = new RegExp(makeSafeRe(src[i]))
   }
 }
 
@@ -4202,7 +4242,7 @@ function parse (version, options) {
     return null
   }
 
-  var r = options.loose ? re[t.LOOSE] : re[t.FULL]
+  var r = options.loose ? safeRe[t.LOOSE] : safeRe[t.FULL]
   if (!r.test(version)) {
     return null
   }
@@ -4257,7 +4297,7 @@ function SemVer (version, options) {
   this.options = options
   this.loose = !!options.loose
 
-  var m = version.trim().match(options.loose ? re[t.LOOSE] : re[t.FULL])
+  var m = version.trim().match(options.loose ? safeRe[t.LOOSE] : safeRe[t.FULL])
 
   if (!m) {
     throw new TypeError('Invalid Version: ' + version)
@@ -4702,6 +4742,7 @@ function Comparator (comp, options) {
     return new Comparator(comp, options)
   }
 
+  comp = comp.trim().split(/\s+/).join(' ')
   debug('comparator', comp, options)
   this.options = options
   this.loose = !!options.loose
@@ -4718,7 +4759,7 @@ function Comparator (comp, options) {
 
 var ANY = {}
 Comparator.prototype.parse = function (comp) {
-  var r = this.options.loose ? re[t.COMPARATORLOOSE] : re[t.COMPARATOR]
+  var r = this.options.loose ? safeRe[t.COMPARATORLOOSE] : safeRe[t.COMPARATOR]
   var m = comp.match(r)
 
   if (!m) {
@@ -4842,9 +4883,16 @@ function Range (range, options) {
   this.loose = !!options.loose
   this.includePrerelease = !!options.includePrerelease
 
-  // First, split based on boolean or ||
+  // First reduce all whitespace as much as possible so we do not have to rely
+  // on potentially slow regexes like \s*. This is then stored and used for
+  // future error messages as well.
   this.raw = range
-  this.set = range.split(/\s*\|\|\s*/).map(function (range) {
+    .trim()
+    .split(/\s+/)
+    .join(' ')
+
+  // First, split based on boolean or ||
+  this.set = this.raw.split('||').map(function (range) {
     return this.parseRange(range.trim())
   }, this).filter(function (c) {
     // throw out any that are not relevant for whatever reason
@@ -4852,7 +4900,7 @@ function Range (range, options) {
   })
 
   if (!this.set.length) {
-    throw new TypeError('Invalid SemVer Range: ' + range)
+    throw new TypeError('Invalid SemVer Range: ' + this.raw)
   }
 
   this.format()
@@ -4871,20 +4919,19 @@ Range.prototype.toString = function () {
 
 Range.prototype.parseRange = function (range) {
   var loose = this.options.loose
-  range = range.trim()
   // `1.2.3 - 1.2.4` => `>=1.2.3 <=1.2.4`
-  var hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE]
+  var hr = loose ? safeRe[t.HYPHENRANGELOOSE] : safeRe[t.HYPHENRANGE]
   range = range.replace(hr, hyphenReplace)
   debug('hyphen replace', range)
   // `> 1.2.3 < 1.2.5` => `>1.2.3 <1.2.5`
-  range = range.replace(re[t.COMPARATORTRIM], comparatorTrimReplace)
-  debug('comparator trim', range, re[t.COMPARATORTRIM])
+  range = range.replace(safeRe[t.COMPARATORTRIM], comparatorTrimReplace)
+  debug('comparator trim', range, safeRe[t.COMPARATORTRIM])
 
   // `~ 1.2.3` => `~1.2.3`
-  range = range.replace(re[t.TILDETRIM], tildeTrimReplace)
+  range = range.replace(safeRe[t.TILDETRIM], tildeTrimReplace)
 
   // `^ 1.2.3` => `^1.2.3`
-  range = range.replace(re[t.CARETTRIM], caretTrimReplace)
+  range = range.replace(safeRe[t.CARETTRIM], caretTrimReplace)
 
   // normalize spaces
   range = range.split(/\s+/).join(' ')
@@ -4892,7 +4939,7 @@ Range.prototype.parseRange = function (range) {
   // At this point, the range is completely trimmed and
   // ready to be split into comparators.
 
-  var compRe = loose ? re[t.COMPARATORLOOSE] : re[t.COMPARATOR]
+  var compRe = loose ? safeRe[t.COMPARATORLOOSE] : safeRe[t.COMPARATOR]
   var set = range.split(' ').map(function (comp) {
     return parseComparator(comp, this.options)
   }, this).join(' ').split(/\s+/)
@@ -4992,7 +5039,7 @@ function replaceTildes (comp, options) {
 }
 
 function replaceTilde (comp, options) {
-  var r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE]
+  var r = options.loose ? safeRe[t.TILDELOOSE] : safeRe[t.TILDE]
   return comp.replace(r, function (_, M, m, p, pr) {
     debug('tilde', comp, _, M, m, p, pr)
     var ret
@@ -5033,7 +5080,7 @@ function replaceCarets (comp, options) {
 
 function replaceCaret (comp, options) {
   debug('caret', comp, options)
-  var r = options.loose ? re[t.CARETLOOSE] : re[t.CARET]
+  var r = options.loose ? safeRe[t.CARETLOOSE] : safeRe[t.CARET]
   return comp.replace(r, function (_, M, m, p, pr) {
     debug('caret', comp, _, M, m, p, pr)
     var ret
@@ -5092,7 +5139,7 @@ function replaceXRanges (comp, options) {
 
 function replaceXRange (comp, options) {
   comp = comp.trim()
-  var r = options.loose ? re[t.XRANGELOOSE] : re[t.XRANGE]
+  var r = options.loose ? safeRe[t.XRANGELOOSE] : safeRe[t.XRANGE]
   return comp.replace(r, function (ret, gtlt, M, m, p, pr) {
     debug('xRange', comp, ret, gtlt, M, m, p, pr)
     var xM = isX(M)
@@ -5167,7 +5214,7 @@ function replaceXRange (comp, options) {
 function replaceStars (comp, options) {
   debug('replaceStars', comp, options)
   // Looseness is ignored here.  star is always as loose as it gets!
-  return comp.trim().replace(re[t.STAR], '')
+  return comp.trim().replace(safeRe[t.STAR], '')
 }
 
 // This function is passed to string.replace(re[t.HYPHENRANGE])
@@ -5493,7 +5540,7 @@ function coerce (version, options) {
 
   var match = null
   if (!options.rtl) {
-    match = version.match(re[t.COERCE])
+    match = version.match(safeRe[t.COERCE])
   } else {
     // Find the right-most coercible string that does not share
     // a terminus with a more left-ward coercible string.
@@ -5504,17 +5551,17 @@ function coerce (version, options) {
     // Stop when we get a match that ends at the string end, since no
     // coercible string can be more right-ward without the same terminus.
     var next
-    while ((next = re[t.COERCERTL].exec(version)) &&
+    while ((next = safeRe[t.COERCERTL].exec(version)) &&
       (!match || match.index + match[0].length !== version.length)
     ) {
       if (!match ||
           next.index + next[0].length !== match.index + match[0].length) {
         match = next
       }
-      re[t.COERCERTL].lastIndex = next.index + next[1].length + next[2].length
+      safeRe[t.COERCERTL].lastIndex = next.index + next[1].length + next[2].length
     }
     // leave it in a clean state
-    re[t.COERCERTL].lastIndex = -1
+    safeRe[t.COERCERTL].lastIndex = -1
   }
 
   if (match === null) {
@@ -5609,6 +5656,76 @@ function v4(options, buf, offset) {
 }
 
 module.exports = v4;
+
+
+/***/ }),
+
+/***/ 1530:
+/***/ ((module) => {
+
+"use strict";
+
+
+// there's 3 implementations written in increasing order of efficiency
+
+// 1 - no Set type is defined
+function uniqNoSet(arr) {
+	var ret = [];
+
+	for (var i = 0; i < arr.length; i++) {
+		if (ret.indexOf(arr[i]) === -1) {
+			ret.push(arr[i]);
+		}
+	}
+
+	return ret;
+}
+
+// 2 - a simple Set type is defined
+function uniqSet(arr) {
+	var seen = new Set();
+	return arr.filter(function (el) {
+		if (!seen.has(el)) {
+			seen.add(el);
+			return true;
+		}
+
+		return false;
+	});
+}
+
+// 3 - a standard Set type is defined and it has a forEach method
+function uniqSetWithForEach(arr) {
+	var ret = [];
+
+	(new Set(arr)).forEach(function (el) {
+		ret.push(el);
+	});
+
+	return ret;
+}
+
+// V8 currently has a broken implementation
+// https://github.com/joyent/node/issues/8449
+function doesForEachActuallyWork() {
+	var ret = false;
+
+	(new Set([true])).forEach(function (el) {
+		ret = el;
+	});
+
+	return ret === true;
+}
+
+if ('Set' in global) {
+	if (typeof Set.prototype.forEach === 'function' && doesForEachActuallyWork()) {
+		module.exports = uniqSetWithForEach;
+	} else {
+		module.exports = uniqSet;
+	}
+} else {
+	module.exports = uniqNoSet;
+}
 
 
 /***/ }),
@@ -14350,93 +14467,108 @@ Object.defineProperty(exports, "decodeXMLStrict", ({ enumerable: true, get: func
 
 /***/ }),
 
+/***/ 7198:
+/***/ ((module) => {
+
+"use strict";
+/*!
+ * for-in <https://github.com/jonschlinkert/for-in>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+
+
+module.exports = function forIn(obj, fn, thisArg) {
+  for (var key in obj) {
+    if (fn.call(thisArg, obj[key], key, obj) === false) {
+      break;
+    }
+  }
+};
+
+
+/***/ }),
+
+/***/ 7281:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+/*!
+ * for-own <https://github.com/jonschlinkert/for-own>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+
+
+var forIn = __nccwpck_require__(7198);
+var hasOwn = Object.prototype.hasOwnProperty;
+
+module.exports = function forOwn(obj, fn, thisArg) {
+  forIn(obj, function(val, key) {
+    if (hasOwn.call(obj, key)) {
+      return fn.call(thisArg, obj[key], key, obj);
+    }
+  });
+};
+
+
+/***/ }),
+
 /***/ 5013:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
-const {URL} = __nccwpck_require__(7310);
+const url = __nccwpck_require__(7310);
 const cheerio = __nccwpck_require__(4612);
 const normalizeUrl = __nccwpck_require__(7952);
+const arrayUniq = __nccwpck_require__(1530);
+const omit = __nccwpck_require__(3627);
 
-const FAKE_PROTOCOL = 'fake:';
-const FAKE_HOSTNAME = 'base.url';
+module.exports = getHrefs;
 
-const defaultNormalizeOpts = {
-	stripWWW: false,
-	defaultProtocol: ''
-};
-const defaultAllowedProtocols = {
-	http: true,
-	https: true
-};
-
-const unique = arr => [...new Set(arr)];
-
-const tryNormalize = (url, opts) => {
-	try {
-		return normalizeUrl(url, opts);
-	} catch (error) {
-		return url;
-	}
-};
-
-const isFake = url =>
-	url.protocol === FAKE_PROTOCOL && url.hostname === FAKE_HOSTNAME;
-
-const stripFake = url =>
-	url.slice(FAKE_PROTOCOL.length + FAKE_HOSTNAME.length + 2);
-
-const getHrefs = (
-	html,
-	{
-		baseUrl = `${FAKE_PROTOCOL}//${FAKE_HOSTNAME}`,
-		allowedProtocols,
-		...normalizeOpts
-	} = {}
-) => {
+function getHrefs(html, opts) {
 	if (typeof html !== 'string') {
-		throw new TypeError(
-			`getHrefs expected a \`string\` but got: \`${typeof html}\``
-		);
+		throw new TypeError('getHrefs expected a `string` but got: `' + typeof html + '`');
 	}
-
-	const opts = {...defaultNormalizeOpts, ...normalizeOpts};
-	const protocols = {...defaultAllowedProtocols, ...allowedProtocols};
+	opts = opts || {};
 	const $ = cheerio.load(html);
+	let baseUrl = opts.baseUrl || '';
 	const base = $('base');
+	const normalizeOpts = omit(opts, ['baseUrl']);
 
 	if (base.length !== 0) {
-		baseUrl = new URL(base.first().attr('href') || '', baseUrl).toString();
+		baseUrl = url.resolve(baseUrl, base.first().attr('href') || '');
 	}
 
 	const hrefs = $('a')
-		.map((_, el) => $(el).attr('href'))
+		.filter(function () {
+			/* eslint no-script-url: 0 */
+			const href = $(this).attr('href');
+			return href &&
+				href !== '#' &&
+				href.indexOf('javascript:') !== 0;
+		})
+		.map(function () {
+			let href = $(this).attr('href');
+			href = url.resolve(baseUrl, href);
+			if (hasProtocol(href)) {
+				return normalizeUrl(href, normalizeOpts);
+			}
+			return href;
+		})
 		.get();
 
-	const filteredHrefs = hrefs.reduce((hrefs, href) => {
-		if (!href || href === '#') {
-			return hrefs;
-		}
+	return arrayUniq(hrefs);
+}
 
-		try {
-			const url = new URL(href, baseUrl);
-			if (isFake(url)) {
-				hrefs.push(stripFake(tryNormalize(url.toString(), opts)));
-			} else if (protocols[url.protocol.slice(0, -1)]) {
-				hrefs.push(tryNormalize(url.toString(), opts));
-			}
-		} catch (error) {
-			// Ignore errors (they are caused by invalid URLs and we don't care about them anyway)
-		}
-
-		return hrefs;
-	}, []);
-
-	return unique(filteredHrefs);
-};
-
-module.exports = getHrefs;
+function hasProtocol(href) {
+	return href.indexOf('://') !== -1 || href.indexOf('//') === 0;
+}
 
 
 /***/ }),
@@ -15977,6 +16109,42 @@ function parseFeed(feed, options) {
 exports.parseFeed = parseFeed;
 exports.DomUtils = __importStar(__nccwpck_require__(1754));
 //# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ 429:
+/***/ ((module) => {
+
+"use strict";
+/*!
+ * is-extendable <https://github.com/jonschlinkert/is-extendable>
+ *
+ * Copyright (c) 2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+
+
+module.exports = function isExtendable(val) {
+  return typeof val !== 'undefined' && val !== null
+    && (typeof val === 'object' || typeof val === 'function');
+};
+
+
+/***/ }),
+
+/***/ 864:
+/***/ ((module) => {
+
+"use strict";
+
+var toString = Object.prototype.toString;
+
+module.exports = function (x) {
+	var prototype;
+	return toString.call(x) === '[object Object]' && (prototype = Object.getPrototypeOf(x), prototype === null || prototype === Object.getPrototypeOf({}));
+};
+
 
 /***/ }),
 
@@ -20093,226 +20261,218 @@ module.exports = new Type('tag:yaml.org,2002:timestamp', {
 
 "use strict";
 
-// TODO: Use the `URL` global when targeting Node.js 10
-const URLParser = typeof URL === 'undefined' ? (__nccwpck_require__(7310).URL) : URL;
+var url = __nccwpck_require__(7310);
+var punycode = __nccwpck_require__(5477);
+var queryString = __nccwpck_require__(293);
+var prependHttp = __nccwpck_require__(6143);
+var sortKeys = __nccwpck_require__(4376);
+var objectAssign = __nccwpck_require__(7426);
 
-// https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs
-const DATA_URL_DEFAULT_MIME_TYPE = 'text/plain';
-const DATA_URL_DEFAULT_CHARSET = 'us-ascii';
-
-const testParameter = (name, filters) => {
-	return filters.some(filter => filter instanceof RegExp ? filter.test(name) : filter === name);
+var DEFAULT_PORTS = {
+	'http:': 80,
+	'https:': 443,
+	'ftp:': 21
 };
 
-const normalizeDataURL = (urlString, {stripHash}) => {
-	const parts = urlString.match(/^data:([^,]*?),([^#]*?)(?:#(.*))?$/);
-
-	if (!parts) {
-		throw new Error(`Invalid URL: ${urlString}`);
-	}
-
-	const mediaType = parts[1].split(';');
-	const body = parts[2];
-	const hash = stripHash ? '' : parts[3];
-
-	let base64 = false;
-
-	if (mediaType[mediaType.length - 1] === 'base64') {
-		mediaType.pop();
-		base64 = true;
-	}
-
-	// Lowercase MIME type
-	const mimeType = (mediaType.shift() || '').toLowerCase();
-	const attributes = mediaType
-		.map(attribute => {
-			let [key, value = ''] = attribute.split('=').map(string => string.trim());
-
-			// Lowercase `charset`
-			if (key === 'charset') {
-				value = value.toLowerCase();
-
-				if (value === DATA_URL_DEFAULT_CHARSET) {
-					return '';
-				}
-			}
-
-			return `${key}${value ? `=${value}` : ''}`;
-		})
-		.filter(Boolean);
-
-	const normalizedMediaType = [
-		...attributes
-	];
-
-	if (base64) {
-		normalizedMediaType.push('base64');
-	}
-
-	if (normalizedMediaType.length !== 0 || (mimeType && mimeType !== DATA_URL_DEFAULT_MIME_TYPE)) {
-		normalizedMediaType.unshift(mimeType);
-	}
-
-	return `data:${normalizedMediaType.join(';')},${base64 ? body.trim() : body}${hash ? `#${hash}` : ''}`;
+// protocols that always contain a `//`` bit
+var slashedProtocol = {
+	'http': true,
+	'https': true,
+	'ftp': true,
+	'gopher': true,
+	'file': true,
+	'http:': true,
+	'https:': true,
+	'ftp:': true,
+	'gopher:': true,
+	'file:': true
 };
 
-const normalizeUrl = (urlString, options) => {
-	options = {
-		defaultProtocol: 'http:',
+function testParameter(name, filters) {
+	return filters.some(function (filter) {
+		return filter instanceof RegExp ? filter.test(name) : filter === name;
+	});
+}
+
+module.exports = function (str, opts) {
+	opts = objectAssign({
 		normalizeProtocol: true,
-		forceHttp: false,
-		forceHttps: false,
-		stripAuthentication: true,
-		stripHash: false,
+		normalizeHttps: false,
+		stripFragment: true,
 		stripWWW: true,
 		removeQueryParameters: [/^utm_\w+/i],
 		removeTrailingSlash: true,
-		removeDirectoryIndex: false,
-		sortQueryParameters: true,
-		...options
-	};
+		removeDirectoryIndex: false
+	}, opts);
 
-	// TODO: Remove this at some point in the future
-	if (Reflect.has(options, 'normalizeHttps')) {
-		throw new Error('options.normalizeHttps is renamed to options.forceHttp');
+	if (typeof str !== 'string') {
+		throw new TypeError('Expected a string');
 	}
 
-	if (Reflect.has(options, 'normalizeHttp')) {
-		throw new Error('options.normalizeHttp is renamed to options.forceHttps');
-	}
+	var hasRelativeProtocol = str.indexOf('//') === 0;
 
-	if (Reflect.has(options, 'stripFragment')) {
-		throw new Error('options.stripFragment is renamed to options.stripHash');
-	}
+	// prepend protocol
+	str = prependHttp(str.trim()).replace(/^\/\//, 'http://');
 
-	urlString = urlString.trim();
+	var urlObj = url.parse(str);
 
-	// Data URL
-	if (/^data:/i.test(urlString)) {
-		return normalizeDataURL(urlString, options);
-	}
-
-	const hasRelativeProtocol = urlString.startsWith('//');
-	const isRelativeUrl = !hasRelativeProtocol && /^\.*\//.test(urlString);
-
-	// Prepend protocol
-	if (!isRelativeUrl) {
-		urlString = urlString.replace(/^(?!(?:\w+:)?\/\/)|^\/\//, options.defaultProtocol);
-	}
-
-	const urlObj = new URLParser(urlString);
-
-	if (options.forceHttp && options.forceHttps) {
-		throw new Error('The `forceHttp` and `forceHttps` options cannot be used together');
-	}
-
-	if (options.forceHttp && urlObj.protocol === 'https:') {
+	if (opts.normalizeHttps && urlObj.protocol === 'https:') {
 		urlObj.protocol = 'http:';
 	}
 
-	if (options.forceHttps && urlObj.protocol === 'http:') {
-		urlObj.protocol = 'https:';
+	if (!urlObj.hostname && !urlObj.pathname) {
+		throw new Error('Invalid URL');
 	}
 
-	// Remove auth
-	if (options.stripAuthentication) {
-		urlObj.username = '';
-		urlObj.password = '';
+	// prevent these from being used by `url.format`
+	delete urlObj.host;
+	delete urlObj.query;
+
+	// remove fragment
+	if (opts.stripFragment) {
+		delete urlObj.hash;
 	}
 
-	// Remove hash
-	if (options.stripHash) {
-		urlObj.hash = '';
+	// remove default port
+	var port = DEFAULT_PORTS[urlObj.protocol];
+	if (Number(urlObj.port) === port) {
+		delete urlObj.port;
 	}
 
-	// Remove duplicate slashes if not preceded by a protocol
+	// remove duplicate slashes
 	if (urlObj.pathname) {
-		// TODO: Use the following instead when targeting Node.js 10
-		// `urlObj.pathname = urlObj.pathname.replace(/(?<!https?:)\/{2,}/g, '/');`
-		urlObj.pathname = urlObj.pathname.replace(/((?!:).|^)\/{2,}/g, (_, p1) => {
-			if (/^(?!\/)/g.test(p1)) {
-				return `${p1}/`;
-			}
-
-			return '/';
-		});
+		urlObj.pathname = urlObj.pathname.replace(/\/{2,}/g, '/');
 	}
 
-	// Decode URI octets
+	// decode URI octets
 	if (urlObj.pathname) {
 		urlObj.pathname = decodeURI(urlObj.pathname);
 	}
 
-	// Remove directory index
-	if (options.removeDirectoryIndex === true) {
-		options.removeDirectoryIndex = [/^index\.[a-z]+$/];
+	// remove directory index
+	if (opts.removeDirectoryIndex === true) {
+		opts.removeDirectoryIndex = [/^index\.[a-z]+$/];
 	}
 
-	if (Array.isArray(options.removeDirectoryIndex) && options.removeDirectoryIndex.length > 0) {
-		let pathComponents = urlObj.pathname.split('/');
-		const lastComponent = pathComponents[pathComponents.length - 1];
+	if (Array.isArray(opts.removeDirectoryIndex) && opts.removeDirectoryIndex.length) {
+		var pathComponents = urlObj.pathname.split('/');
+		var lastComponent = pathComponents[pathComponents.length - 1];
 
-		if (testParameter(lastComponent, options.removeDirectoryIndex)) {
+		if (testParameter(lastComponent, opts.removeDirectoryIndex)) {
 			pathComponents = pathComponents.slice(0, pathComponents.length - 1);
 			urlObj.pathname = pathComponents.slice(1).join('/') + '/';
 		}
 	}
 
+	// resolve relative paths, but only for slashed protocols
+	if (slashedProtocol[urlObj.protocol]) {
+		var domain = urlObj.protocol + '//' + urlObj.hostname;
+		var relative = url.resolve(domain, urlObj.pathname);
+		urlObj.pathname = relative.replace(domain, '');
+	}
+
 	if (urlObj.hostname) {
-		// Remove trailing dot
+		// IDN to Unicode
+		urlObj.hostname = punycode.toUnicode(urlObj.hostname).toLowerCase();
+
+		// remove trailing dot
 		urlObj.hostname = urlObj.hostname.replace(/\.$/, '');
 
-		// Remove `www.`
-		if (options.stripWWW && /^www\.([a-z\-\d]{2,63})\.([a-z.]{2,5})$/.test(urlObj.hostname)) {
-			// Each label should be max 63 at length (min: 2).
-			// The extension should be max 5 at length (min: 2).
-			// Source: https://en.wikipedia.org/wiki/Hostname#Restrictions_on_valid_host_names
+		// remove `www.`
+		if (opts.stripWWW) {
 			urlObj.hostname = urlObj.hostname.replace(/^www\./, '');
 		}
 	}
 
-	// Remove query unwanted parameters
-	if (Array.isArray(options.removeQueryParameters)) {
-		for (const key of [...urlObj.searchParams.keys()]) {
-			if (testParameter(key, options.removeQueryParameters)) {
-				urlObj.searchParams.delete(key);
+	// remove URL with empty query string
+	if (urlObj.search === '?') {
+		delete urlObj.search;
+	}
+
+	var queryParameters = queryString.parse(urlObj.search);
+
+	// remove query unwanted parameters
+	if (Array.isArray(opts.removeQueryParameters)) {
+		for (var key in queryParameters) {
+			if (testParameter(key, opts.removeQueryParameters)) {
+				delete queryParameters[key];
 			}
 		}
 	}
 
-	// Sort query parameters
-	if (options.sortQueryParameters) {
-		urlObj.searchParams.sort();
+	// sort query parameters
+	urlObj.search = queryString.stringify(sortKeys(queryParameters));
+
+	// decode query parameters
+	urlObj.search = decodeURIComponent(urlObj.search);
+
+	// take advantage of many of the Node `url` normalizations
+	str = url.format(urlObj);
+
+	// remove ending `/`
+	if (opts.removeTrailingSlash || urlObj.pathname === '/') {
+		str = str.replace(/\/$/, '');
 	}
 
-	if (options.removeTrailingSlash) {
-		urlObj.pathname = urlObj.pathname.replace(/\/$/, '');
+	// restore relative protocol, if applicable
+	if (hasRelativeProtocol && !opts.normalizeProtocol) {
+		str = str.replace(/^http:\/\//, '//');
 	}
 
-	// Take advantage of many of the Node `url` normalizations
-	urlString = urlObj.toString();
-
-	// Remove ending `/`
-	if ((options.removeTrailingSlash || urlObj.pathname === '/') && urlObj.hash === '') {
-		urlString = urlString.replace(/\/$/, '');
-	}
-
-	// Restore relative protocol, if applicable
-	if (hasRelativeProtocol && !options.normalizeProtocol) {
-		urlString = urlString.replace(/^http:\/\//, '//');
-	}
-
-	// Remove http/https
-	if (options.stripProtocol) {
-		urlString = urlString.replace(/^(?:https?:)?\/\//, '');
-	}
-
-	return urlString;
+	return str;
 };
 
-module.exports = normalizeUrl;
-// TODO: Remove this for the next major release
-module.exports["default"] = normalizeUrl;
+
+/***/ }),
+
+/***/ 4376:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var isPlainObj = __nccwpck_require__(864);
+
+module.exports = function (obj, opts) {
+	if (!isPlainObj(obj)) {
+		throw new TypeError('Expected a plain object');
+	}
+
+	opts = opts || {};
+
+	// DEPRECATED
+	if (typeof opts === 'function') {
+		opts = {compare: opts};
+	}
+
+	var deep = opts.deep;
+	var seenInput = [];
+	var seenOutput = [];
+
+	var sortKeys = function (x) {
+		var seenIndex = seenInput.indexOf(x);
+
+		if (seenIndex !== -1) {
+			return seenOutput[seenIndex];
+		}
+
+		var ret = {};
+		var keys = Object.keys(x).sort(opts.compare);
+
+		seenInput.push(x);
+		seenOutput.push(ret);
+
+		for (var i = 0; i < keys.length; i++) {
+			var key = keys[i];
+			var val = x[key];
+
+			ret[key] = deep && isPlainObj(val) ? sortKeys(val) : val;
+		}
+
+		return ret;
+	};
+
+	return sortKeys(obj);
+};
 
 
 /***/ }),
@@ -20606,6 +20766,387 @@ exports.parse = parse;
 
 /***/ }),
 
+/***/ 7426:
+/***/ ((module) => {
+
+"use strict";
+/*
+object-assign
+(c) Sindre Sorhus
+@license MIT
+*/
+
+
+/* eslint-disable no-unused-vars */
+var getOwnPropertySymbols = Object.getOwnPropertySymbols;
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+var propIsEnumerable = Object.prototype.propertyIsEnumerable;
+
+function toObject(val) {
+	if (val === null || val === undefined) {
+		throw new TypeError('Object.assign cannot be called with null or undefined');
+	}
+
+	return Object(val);
+}
+
+function shouldUseNative() {
+	try {
+		if (!Object.assign) {
+			return false;
+		}
+
+		// Detect buggy property enumeration order in older V8 versions.
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=4118
+		var test1 = new String('abc');  // eslint-disable-line no-new-wrappers
+		test1[5] = 'de';
+		if (Object.getOwnPropertyNames(test1)[0] === '5') {
+			return false;
+		}
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
+		var test2 = {};
+		for (var i = 0; i < 10; i++) {
+			test2['_' + String.fromCharCode(i)] = i;
+		}
+		var order2 = Object.getOwnPropertyNames(test2).map(function (n) {
+			return test2[n];
+		});
+		if (order2.join('') !== '0123456789') {
+			return false;
+		}
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
+		var test3 = {};
+		'abcdefghijklmnopqrst'.split('').forEach(function (letter) {
+			test3[letter] = letter;
+		});
+		if (Object.keys(Object.assign({}, test3)).join('') !==
+				'abcdefghijklmnopqrst') {
+			return false;
+		}
+
+		return true;
+	} catch (err) {
+		// We don't expect any of the above to throw, but better to be safe.
+		return false;
+	}
+}
+
+module.exports = shouldUseNative() ? Object.assign : function (target, source) {
+	var from;
+	var to = toObject(target);
+	var symbols;
+
+	for (var s = 1; s < arguments.length; s++) {
+		from = Object(arguments[s]);
+
+		for (var key in from) {
+			if (hasOwnProperty.call(from, key)) {
+				to[key] = from[key];
+			}
+		}
+
+		if (getOwnPropertySymbols) {
+			symbols = getOwnPropertySymbols(from);
+			for (var i = 0; i < symbols.length; i++) {
+				if (propIsEnumerable.call(from, symbols[i])) {
+					to[symbols[i]] = from[symbols[i]];
+				}
+			}
+		}
+	}
+
+	return to;
+};
+
+
+/***/ }),
+
+/***/ 3627:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+/*!
+ * object.omit <https://github.com/jonschlinkert/object.omit>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+
+
+var isObject = __nccwpck_require__(429);
+var forOwn = __nccwpck_require__(7281);
+
+module.exports = function omit(obj, keys) {
+  if (!isObject(obj)) return {};
+
+  keys = [].concat.apply([], [].slice.call(arguments, 1));
+  var last = keys[keys.length - 1];
+  var res = {}, fn;
+
+  if (typeof last === 'function') {
+    fn = keys.pop();
+  }
+
+  var isFunction = typeof fn === 'function';
+  if (!keys.length && !isFunction) {
+    return obj;
+  }
+
+  forOwn(obj, function(value, key) {
+    if (keys.indexOf(key) === -1) {
+
+      if (!isFunction) {
+        res[key] = value;
+      } else if (fn(value, key, obj)) {
+        res[key] = value;
+      }
+    }
+  });
+  return res;
+};
+
+
+/***/ }),
+
+/***/ 6143:
+/***/ ((module) => {
+
+"use strict";
+
+module.exports = function (url) {
+	if (typeof url !== 'string') {
+		throw new TypeError('Expected a string, got ' + typeof url);
+	}
+
+	url = url.trim();
+
+	if (/^\.*\/|^(?!localhost)\w+:/.test(url)) {
+		return url;
+	}
+
+	return url.replace(/^(?!(?:\w+:)?\/\/)/, 'http://');
+};
+
+
+/***/ }),
+
+/***/ 293:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+var strictUriEncode = __nccwpck_require__(3605);
+var objectAssign = __nccwpck_require__(7426);
+
+function encoderForArrayFormat(opts) {
+	switch (opts.arrayFormat) {
+		case 'index':
+			return function (key, value, index) {
+				return value === null ? [
+					encode(key, opts),
+					'[',
+					index,
+					']'
+				].join('') : [
+					encode(key, opts),
+					'[',
+					encode(index, opts),
+					']=',
+					encode(value, opts)
+				].join('');
+			};
+
+		case 'bracket':
+			return function (key, value) {
+				return value === null ? encode(key, opts) : [
+					encode(key, opts),
+					'[]=',
+					encode(value, opts)
+				].join('');
+			};
+
+		default:
+			return function (key, value) {
+				return value === null ? encode(key, opts) : [
+					encode(key, opts),
+					'=',
+					encode(value, opts)
+				].join('');
+			};
+	}
+}
+
+function parserForArrayFormat(opts) {
+	var result;
+
+	switch (opts.arrayFormat) {
+		case 'index':
+			return function (key, value, accumulator) {
+				result = /\[(\d*)\]$/.exec(key);
+
+				key = key.replace(/\[\d*\]$/, '');
+
+				if (!result) {
+					accumulator[key] = value;
+					return;
+				}
+
+				if (accumulator[key] === undefined) {
+					accumulator[key] = {};
+				}
+
+				accumulator[key][result[1]] = value;
+			};
+
+		case 'bracket':
+			return function (key, value, accumulator) {
+				result = /(\[\])$/.exec(key);
+				key = key.replace(/\[\]$/, '');
+
+				if (!result) {
+					accumulator[key] = value;
+					return;
+				} else if (accumulator[key] === undefined) {
+					accumulator[key] = [value];
+					return;
+				}
+
+				accumulator[key] = [].concat(accumulator[key], value);
+			};
+
+		default:
+			return function (key, value, accumulator) {
+				if (accumulator[key] === undefined) {
+					accumulator[key] = value;
+					return;
+				}
+
+				accumulator[key] = [].concat(accumulator[key], value);
+			};
+	}
+}
+
+function encode(value, opts) {
+	if (opts.encode) {
+		return opts.strict ? strictUriEncode(value) : encodeURIComponent(value);
+	}
+
+	return value;
+}
+
+function keysSorter(input) {
+	if (Array.isArray(input)) {
+		return input.sort();
+	} else if (typeof input === 'object') {
+		return keysSorter(Object.keys(input)).sort(function (a, b) {
+			return Number(a) - Number(b);
+		}).map(function (key) {
+			return input[key];
+		});
+	}
+
+	return input;
+}
+
+exports.extract = function (str) {
+	return str.split('?')[1] || '';
+};
+
+exports.parse = function (str, opts) {
+	opts = objectAssign({arrayFormat: 'none'}, opts);
+
+	var formatter = parserForArrayFormat(opts);
+
+	// Create an object with no prototype
+	// https://github.com/sindresorhus/query-string/issues/47
+	var ret = Object.create(null);
+
+	if (typeof str !== 'string') {
+		return ret;
+	}
+
+	str = str.trim().replace(/^(\?|#|&)/, '');
+
+	if (!str) {
+		return ret;
+	}
+
+	str.split('&').forEach(function (param) {
+		var parts = param.replace(/\+/g, ' ').split('=');
+		// Firefox (pre 40) decodes `%3D` to `=`
+		// https://github.com/sindresorhus/query-string/pull/37
+		var key = parts.shift();
+		var val = parts.length > 0 ? parts.join('=') : undefined;
+
+		// missing `=` should be `null`:
+		// http://w3.org/TR/2012/WD-url-20120524/#collect-url-parameters
+		val = val === undefined ? null : decodeURIComponent(val);
+
+		formatter(decodeURIComponent(key), val, ret);
+	});
+
+	return Object.keys(ret).sort().reduce(function (result, key) {
+		var val = ret[key];
+		if (Boolean(val) && typeof val === 'object' && !Array.isArray(val)) {
+			// Sort object keys, not values
+			result[key] = keysSorter(val);
+		} else {
+			result[key] = val;
+		}
+
+		return result;
+	}, Object.create(null));
+};
+
+exports.stringify = function (obj, opts) {
+	var defaults = {
+		encode: true,
+		strict: true,
+		arrayFormat: 'none'
+	};
+
+	opts = objectAssign(defaults, opts);
+
+	var formatter = encoderForArrayFormat(opts);
+
+	return obj ? Object.keys(obj).sort().map(function (key) {
+		var val = obj[key];
+
+		if (val === undefined) {
+			return '';
+		}
+
+		if (val === null) {
+			return encode(key, opts);
+		}
+
+		if (Array.isArray(val)) {
+			var result = [];
+
+			val.slice().forEach(function (val2) {
+				if (val2 === undefined) {
+					return;
+				}
+
+				result.push(formatter(key, val2, result.length));
+			});
+
+			return result.join('&');
+		}
+
+		return encode(key, opts) + '=' + encode(val, opts);
+	}).filter(function (x) {
+		return x.length > 0;
+	}).join('&') : '';
+};
+
+
+/***/ }),
+
 /***/ 1532:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -20627,6 +21168,7 @@ class Comparator {
       }
     }
 
+    comp = comp.trim().split(/\s+/).join(' ')
     debug('comparator', comp, options)
     this.options = options
     this.loose = !!options.loose
@@ -20689,13 +21231,6 @@ class Comparator {
       throw new TypeError('a Comparator is required')
     }
 
-    if (!options || typeof options !== 'object') {
-      options = {
-        loose: !!options,
-        includePrerelease: false,
-      }
-    }
-
     if (this.operator === '') {
       if (this.value === '') {
         return true
@@ -20708,39 +21243,50 @@ class Comparator {
       return new Range(this.value, options).test(comp.semver)
     }
 
-    const sameDirectionIncreasing =
-      (this.operator === '>=' || this.operator === '>') &&
-      (comp.operator === '>=' || comp.operator === '>')
-    const sameDirectionDecreasing =
-      (this.operator === '<=' || this.operator === '<') &&
-      (comp.operator === '<=' || comp.operator === '<')
-    const sameSemVer = this.semver.version === comp.semver.version
-    const differentDirectionsInclusive =
-      (this.operator === '>=' || this.operator === '<=') &&
-      (comp.operator === '>=' || comp.operator === '<=')
-    const oppositeDirectionsLessThan =
-      cmp(this.semver, '<', comp.semver, options) &&
-      (this.operator === '>=' || this.operator === '>') &&
-        (comp.operator === '<=' || comp.operator === '<')
-    const oppositeDirectionsGreaterThan =
-      cmp(this.semver, '>', comp.semver, options) &&
-      (this.operator === '<=' || this.operator === '<') &&
-        (comp.operator === '>=' || comp.operator === '>')
+    options = parseOptions(options)
 
-    return (
-      sameDirectionIncreasing ||
-      sameDirectionDecreasing ||
-      (sameSemVer && differentDirectionsInclusive) ||
-      oppositeDirectionsLessThan ||
-      oppositeDirectionsGreaterThan
-    )
+    // Special cases where nothing can possibly be lower
+    if (options.includePrerelease &&
+      (this.value === '<0.0.0-0' || comp.value === '<0.0.0-0')) {
+      return false
+    }
+    if (!options.includePrerelease &&
+      (this.value.startsWith('<0.0.0') || comp.value.startsWith('<0.0.0'))) {
+      return false
+    }
+
+    // Same direction increasing (> or >=)
+    if (this.operator.startsWith('>') && comp.operator.startsWith('>')) {
+      return true
+    }
+    // Same direction decreasing (< or <=)
+    if (this.operator.startsWith('<') && comp.operator.startsWith('<')) {
+      return true
+    }
+    // same SemVer and both sides are inclusive (<= or >=)
+    if (
+      (this.semver.version === comp.semver.version) &&
+      this.operator.includes('=') && comp.operator.includes('=')) {
+      return true
+    }
+    // opposite directions less than
+    if (cmp(this.semver, '<', comp.semver, options) &&
+      this.operator.startsWith('>') && comp.operator.startsWith('<')) {
+      return true
+    }
+    // opposite directions greater than
+    if (cmp(this.semver, '>', comp.semver, options) &&
+      this.operator.startsWith('<') && comp.operator.startsWith('>')) {
+      return true
+    }
+    return false
   }
 }
 
 module.exports = Comparator
 
 const parseOptions = __nccwpck_require__(785)
-const { re, t } = __nccwpck_require__(9523)
+const { safeRe: re, t } = __nccwpck_require__(9523)
 const cmp = __nccwpck_require__(5098)
 const debug = __nccwpck_require__(427)
 const SemVer = __nccwpck_require__(8088)
@@ -20780,9 +21326,16 @@ class Range {
     this.loose = !!options.loose
     this.includePrerelease = !!options.includePrerelease
 
-    // First, split based on boolean or ||
+    // First reduce all whitespace as much as possible so we do not have to rely
+    // on potentially slow regexes like \s*. This is then stored and used for
+    // future error messages as well.
     this.raw = range
-    this.set = range
+      .trim()
+      .split(/\s+/)
+      .join(' ')
+
+    // First, split on ||
+    this.set = this.raw
       .split('||')
       // map the range to a 2d array of comparators
       .map(r => this.parseRange(r.trim()))
@@ -20792,7 +21345,7 @@ class Range {
       .filter(c => c.length)
 
     if (!this.set.length) {
-      throw new TypeError(`Invalid SemVer Range: ${range}`)
+      throw new TypeError(`Invalid SemVer Range: ${this.raw}`)
     }
 
     // if we have any that are not the null set, throw out null sets.
@@ -20818,9 +21371,7 @@ class Range {
 
   format () {
     this.range = this.set
-      .map((comps) => {
-        return comps.join(' ').trim()
-      })
+      .map((comps) => comps.join(' ').trim())
       .join('||')
       .trim()
     return this.range
@@ -20831,12 +21382,12 @@ class Range {
   }
 
   parseRange (range) {
-    range = range.trim()
-
     // memoize range parsing for performance.
     // this is a very hot path, and fully deterministic.
-    const memoOpts = Object.keys(this.options).join(',')
-    const memoKey = `parseRange:${memoOpts}:${range}`
+    const memoOpts =
+      (this.options.includePrerelease && FLAG_INCLUDE_PRERELEASE) |
+      (this.options.loose && FLAG_LOOSE)
+    const memoKey = memoOpts + ':' + range
     const cached = cache.get(memoKey)
     if (cached) {
       return cached
@@ -20847,18 +21398,18 @@ class Range {
     const hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE]
     range = range.replace(hr, hyphenReplace(this.options.includePrerelease))
     debug('hyphen replace', range)
+
     // `> 1.2.3 < 1.2.5` => `>1.2.3 <1.2.5`
     range = range.replace(re[t.COMPARATORTRIM], comparatorTrimReplace)
     debug('comparator trim', range)
 
     // `~ 1.2.3` => `~1.2.3`
     range = range.replace(re[t.TILDETRIM], tildeTrimReplace)
+    debug('tilde trim', range)
 
     // `^ 1.2.3` => `^1.2.3`
     range = range.replace(re[t.CARETTRIM], caretTrimReplace)
-
-    // normalize spaces
-    range = range.split(/\s+/).join(' ')
+    debug('caret trim', range)
 
     // At this point, the range is completely trimmed and
     // ready to be split into comparators.
@@ -20944,6 +21495,7 @@ class Range {
     return false
   }
 }
+
 module.exports = Range
 
 const LRU = __nccwpck_require__(1196)
@@ -20954,12 +21506,13 @@ const Comparator = __nccwpck_require__(1532)
 const debug = __nccwpck_require__(427)
 const SemVer = __nccwpck_require__(8088)
 const {
-  re,
+  safeRe: re,
   t,
   comparatorTrimReplace,
   tildeTrimReplace,
   caretTrimReplace,
 } = __nccwpck_require__(9523)
+const { FLAG_INCLUDE_PRERELEASE, FLAG_LOOSE } = __nccwpck_require__(2293)
 
 const isNullSet = c => c.value === '<0.0.0-0'
 const isAny = c => c.value === ''
@@ -21007,10 +21560,13 @@ const isX = id => !id || id.toLowerCase() === 'x' || id === '*'
 // ~1.2.3, ~>1.2.3 --> >=1.2.3 <1.3.0-0
 // ~1.2.0, ~>1.2.0 --> >=1.2.0 <1.3.0-0
 // ~0.0.1 --> >=0.0.1 <0.1.0-0
-const replaceTildes = (comp, options) =>
-  comp.trim().split(/\s+/).map((c) => {
-    return replaceTilde(c, options)
-  }).join(' ')
+const replaceTildes = (comp, options) => {
+  return comp
+    .trim()
+    .split(/\s+/)
+    .map((c) => replaceTilde(c, options))
+    .join(' ')
+}
 
 const replaceTilde = (comp, options) => {
   const r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE]
@@ -21048,10 +21604,13 @@ const replaceTilde = (comp, options) => {
 // ^1.2.0 --> >=1.2.0 <2.0.0-0
 // ^0.0.1 --> >=0.0.1 <0.0.2-0
 // ^0.1.0 --> >=0.1.0 <0.2.0-0
-const replaceCarets = (comp, options) =>
-  comp.trim().split(/\s+/).map((c) => {
-    return replaceCaret(c, options)
-  }).join(' ')
+const replaceCarets = (comp, options) => {
+  return comp
+    .trim()
+    .split(/\s+/)
+    .map((c) => replaceCaret(c, options))
+    .join(' ')
+}
 
 const replaceCaret = (comp, options) => {
   debug('caret', comp, options)
@@ -21108,9 +21667,10 @@ const replaceCaret = (comp, options) => {
 
 const replaceXRanges = (comp, options) => {
   debug('replaceXRanges', comp, options)
-  return comp.split(/\s+/).map((c) => {
-    return replaceXRange(c, options)
-  }).join(' ')
+  return comp
+    .split(/\s+/)
+    .map((c) => replaceXRange(c, options))
+    .join(' ')
 }
 
 const replaceXRange = (comp, options) => {
@@ -21193,12 +21753,15 @@ const replaceXRange = (comp, options) => {
 const replaceStars = (comp, options) => {
   debug('replaceStars', comp, options)
   // Looseness is ignored here.  star is always as loose as it gets!
-  return comp.trim().replace(re[t.STAR], '')
+  return comp
+    .trim()
+    .replace(re[t.STAR], '')
 }
 
 const replaceGTE0 = (comp, options) => {
   debug('replaceGTE0', comp, options)
-  return comp.trim()
+  return comp
+    .trim()
     .replace(re[options.includePrerelease ? t.GTE0PRE : t.GTE0], '')
 }
 
@@ -21236,7 +21799,7 @@ const hyphenReplace = incPr => ($0,
     to = `<=${to}`
   }
 
-  return (`${from} ${to}`).trim()
+  return `${from} ${to}`.trim()
 }
 
 const testSet = (set, version, options) => {
@@ -21283,7 +21846,7 @@ const testSet = (set, version, options) => {
 
 const debug = __nccwpck_require__(427)
 const { MAX_LENGTH, MAX_SAFE_INTEGER } = __nccwpck_require__(2293)
-const { re, t } = __nccwpck_require__(9523)
+const { safeRe: re, t } = __nccwpck_require__(9523)
 
 const parseOptions = __nccwpck_require__(785)
 const { compareIdentifiers } = __nccwpck_require__(2463)
@@ -21299,7 +21862,7 @@ class SemVer {
         version = version.version
       }
     } else if (typeof version !== 'string') {
-      throw new TypeError(`Invalid Version: ${version}`)
+      throw new TypeError(`Invalid version. Must be a string. Got type "${typeof version}".`)
     }
 
     if (version.length > MAX_LENGTH) {
@@ -21458,36 +22021,36 @@ class SemVer {
 
   // preminor will bump the version up to the next minor release, and immediately
   // down to pre-release. premajor and prepatch work the same way.
-  inc (release, identifier) {
+  inc (release, identifier, identifierBase) {
     switch (release) {
       case 'premajor':
         this.prerelease.length = 0
         this.patch = 0
         this.minor = 0
         this.major++
-        this.inc('pre', identifier)
+        this.inc('pre', identifier, identifierBase)
         break
       case 'preminor':
         this.prerelease.length = 0
         this.patch = 0
         this.minor++
-        this.inc('pre', identifier)
+        this.inc('pre', identifier, identifierBase)
         break
       case 'prepatch':
         // If this is already a prerelease, it will bump to the next version
         // drop any prereleases that might already exist, since they are not
         // relevant at this point.
         this.prerelease.length = 0
-        this.inc('patch', identifier)
-        this.inc('pre', identifier)
+        this.inc('patch', identifier, identifierBase)
+        this.inc('pre', identifier, identifierBase)
         break
       // If the input is a non-prerelease version, this acts the same as
       // prepatch.
       case 'prerelease':
         if (this.prerelease.length === 0) {
-          this.inc('patch', identifier)
+          this.inc('patch', identifier, identifierBase)
         }
-        this.inc('pre', identifier)
+        this.inc('pre', identifier, identifierBase)
         break
 
       case 'major':
@@ -21529,9 +22092,15 @@ class SemVer {
         break
       // This probably shouldn't be used publicly.
       // 1.0.0 'pre' would become 1.0.0-0 which is the wrong direction.
-      case 'pre':
+      case 'pre': {
+        const base = Number(identifierBase) ? 1 : 0
+
+        if (!identifier && identifierBase === false) {
+          throw new Error('invalid increment argument: identifier is empty')
+        }
+
         if (this.prerelease.length === 0) {
-          this.prerelease = [0]
+          this.prerelease = [base]
         } else {
           let i = this.prerelease.length
           while (--i >= 0) {
@@ -21542,27 +22111,36 @@ class SemVer {
           }
           if (i === -1) {
             // didn't increment anything
-            this.prerelease.push(0)
+            if (identifier === this.prerelease.join('.') && identifierBase === false) {
+              throw new Error('invalid increment argument: identifier already exists')
+            }
+            this.prerelease.push(base)
           }
         }
         if (identifier) {
           // 1.2.0-beta.1 bumps to 1.2.0-beta.2,
           // 1.2.0-beta.fooblz or 1.2.0-beta bumps to 1.2.0-beta.0
+          let prerelease = [identifier, base]
+          if (identifierBase === false) {
+            prerelease = [identifier]
+          }
           if (compareIdentifiers(this.prerelease[0], identifier) === 0) {
             if (isNaN(this.prerelease[1])) {
-              this.prerelease = [identifier, 0]
+              this.prerelease = prerelease
             }
           } else {
-            this.prerelease = [identifier, 0]
+            this.prerelease = prerelease
           }
         }
         break
-
+      }
       default:
         throw new Error(`invalid increment argument: ${release}`)
     }
-    this.format()
-    this.raw = this.version
+    this.raw = this.format()
+    if (this.build.length) {
+      this.raw += `+${this.build.join('.')}`
+    }
     return this
   }
 }
@@ -21649,7 +22227,7 @@ module.exports = cmp
 
 const SemVer = __nccwpck_require__(8088)
 const parse = __nccwpck_require__(5925)
-const { re, t } = __nccwpck_require__(9523)
+const { safeRe: re, t } = __nccwpck_require__(9523)
 
 const coerce = (version, options) => {
   if (version instanceof SemVer) {
@@ -21743,27 +22321,69 @@ module.exports = compare
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const parse = __nccwpck_require__(5925)
-const eq = __nccwpck_require__(1898)
 
 const diff = (version1, version2) => {
-  if (eq(version1, version2)) {
+  const v1 = parse(version1, null, true)
+  const v2 = parse(version2, null, true)
+  const comparison = v1.compare(v2)
+
+  if (comparison === 0) {
     return null
-  } else {
-    const v1 = parse(version1)
-    const v2 = parse(version2)
-    const hasPre = v1.prerelease.length || v2.prerelease.length
-    const prefix = hasPre ? 'pre' : ''
-    const defaultResult = hasPre ? 'prerelease' : ''
-    for (const key in v1) {
-      if (key === 'major' || key === 'minor' || key === 'patch') {
-        if (v1[key] !== v2[key]) {
-          return prefix + key
-        }
-      }
-    }
-    return defaultResult // may be undefined
   }
+
+  const v1Higher = comparison > 0
+  const highVersion = v1Higher ? v1 : v2
+  const lowVersion = v1Higher ? v2 : v1
+  const highHasPre = !!highVersion.prerelease.length
+  const lowHasPre = !!lowVersion.prerelease.length
+
+  if (lowHasPre && !highHasPre) {
+    // Going from prerelease -> no prerelease requires some special casing
+
+    // If the low version has only a major, then it will always be a major
+    // Some examples:
+    // 1.0.0-1 -> 1.0.0
+    // 1.0.0-1 -> 1.1.1
+    // 1.0.0-1 -> 2.0.0
+    if (!lowVersion.patch && !lowVersion.minor) {
+      return 'major'
+    }
+
+    // Otherwise it can be determined by checking the high version
+
+    if (highVersion.patch) {
+      // anything higher than a patch bump would result in the wrong version
+      return 'patch'
+    }
+
+    if (highVersion.minor) {
+      // anything higher than a minor bump would result in the wrong version
+      return 'minor'
+    }
+
+    // bumping major/minor/patch all have same result
+    return 'major'
+  }
+
+  // add the `pre` prefix if we are going to a prerelease version
+  const prefix = highHasPre ? 'pre' : ''
+
+  if (v1.major !== v2.major) {
+    return prefix + 'major'
+  }
+
+  if (v1.minor !== v2.minor) {
+    return prefix + 'minor'
+  }
+
+  if (v1.patch !== v2.patch) {
+    return prefix + 'patch'
+  }
+
+  // high and low are preleases
+  return 'prerelease'
 }
+
 module.exports = diff
 
 
@@ -21804,8 +22424,9 @@ module.exports = gte
 
 const SemVer = __nccwpck_require__(8088)
 
-const inc = (version, release, options, identifier) => {
+const inc = (version, release, options, identifier, identifierBase) => {
   if (typeof (options) === 'string') {
+    identifierBase = identifier
     identifier = options
     options = undefined
   }
@@ -21814,7 +22435,7 @@ const inc = (version, release, options, identifier) => {
     return new SemVer(
       version instanceof SemVer ? version.version : version,
       options
-    ).inc(release, identifier).version
+    ).inc(release, identifier, identifierBase).version
   } catch (er) {
     return null
   }
@@ -21877,35 +22498,18 @@ module.exports = neq
 /***/ 5925:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { MAX_LENGTH } = __nccwpck_require__(2293)
-const { re, t } = __nccwpck_require__(9523)
 const SemVer = __nccwpck_require__(8088)
-
-const parseOptions = __nccwpck_require__(785)
-const parse = (version, options) => {
-  options = parseOptions(options)
-
+const parse = (version, options, throwErrors = false) => {
   if (version instanceof SemVer) {
     return version
   }
-
-  if (typeof version !== 'string') {
-    return null
-  }
-
-  if (version.length > MAX_LENGTH) {
-    return null
-  }
-
-  const r = options.loose ? re[t.LOOSE] : re[t.FULL]
-  if (!r.test(version)) {
-    return null
-  }
-
   try {
     return new SemVer(version, options)
   } catch (er) {
-    return null
+    if (!throwErrors) {
+      return null
+    }
+    throw er
   }
 }
 
@@ -22085,6 +22689,7 @@ module.exports = {
   src: internalRe.src,
   tokens: internalRe.t,
   SEMVER_SPEC_VERSION: constants.SEMVER_SPEC_VERSION,
+  RELEASE_TYPES: constants.RELEASE_TYPES,
   compareIdentifiers: identifiers.compareIdentifiers,
   rcompareIdentifiers: identifiers.rcompareIdentifiers,
 }
@@ -22106,11 +22711,29 @@ const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER ||
 // Max safe segment length for coercion.
 const MAX_SAFE_COMPONENT_LENGTH = 16
 
+// Max safe length for a build identifier. The max length minus 6 characters for
+// the shortest version with a build 0.0.0+BUILD.
+const MAX_SAFE_BUILD_LENGTH = MAX_LENGTH - 6
+
+const RELEASE_TYPES = [
+  'major',
+  'premajor',
+  'minor',
+  'preminor',
+  'patch',
+  'prepatch',
+  'prerelease',
+]
+
 module.exports = {
-  SEMVER_SPEC_VERSION,
   MAX_LENGTH,
-  MAX_SAFE_INTEGER,
   MAX_SAFE_COMPONENT_LENGTH,
+  MAX_SAFE_BUILD_LENGTH,
+  MAX_SAFE_INTEGER,
+  RELEASE_TYPES,
+  SEMVER_SPEC_VERSION,
+  FLAG_INCLUDE_PRERELEASE: 0b001,
+  FLAG_LOOSE: 0b010,
 }
 
 
@@ -22165,16 +22788,20 @@ module.exports = {
 /***/ 785:
 /***/ ((module) => {
 
-// parse out just the options we care about so we always get a consistent
-// obj with keys in a consistent order.
-const opts = ['includePrerelease', 'loose', 'rtl']
-const parseOptions = options =>
-  !options ? {}
-  : typeof options !== 'object' ? { loose: true }
-  : opts.filter(k => options[k]).reduce((o, k) => {
-    o[k] = true
-    return o
-  }, {})
+// parse out just the options we care about
+const looseOption = Object.freeze({ loose: true })
+const emptyOpts = Object.freeze({ })
+const parseOptions = options => {
+  if (!options) {
+    return emptyOpts
+  }
+
+  if (typeof options !== 'object') {
+    return looseOption
+  }
+
+  return options
+}
 module.exports = parseOptions
 
 
@@ -22183,22 +22810,52 @@ module.exports = parseOptions
 /***/ 9523:
 /***/ ((module, exports, __nccwpck_require__) => {
 
-const { MAX_SAFE_COMPONENT_LENGTH } = __nccwpck_require__(2293)
+const {
+  MAX_SAFE_COMPONENT_LENGTH,
+  MAX_SAFE_BUILD_LENGTH,
+  MAX_LENGTH,
+} = __nccwpck_require__(2293)
 const debug = __nccwpck_require__(427)
 exports = module.exports = {}
 
 // The actual regexps go on exports.re
 const re = exports.re = []
+const safeRe = exports.safeRe = []
 const src = exports.src = []
 const t = exports.t = {}
 let R = 0
 
+const LETTERDASHNUMBER = '[a-zA-Z0-9-]'
+
+// Replace some greedy regex tokens to prevent regex dos issues. These regex are
+// used internally via the safeRe object since all inputs in this library get
+// normalized first to trim and collapse all extra whitespace. The original
+// regexes are exported for userland consumption and lower level usage. A
+// future breaking change could export the safer regex only with a note that
+// all input should have extra whitespace removed.
+const safeRegexReplacements = [
+  ['\\s', 1],
+  ['\\d', MAX_LENGTH],
+  [LETTERDASHNUMBER, MAX_SAFE_BUILD_LENGTH],
+]
+
+const makeSafeRegex = (value) => {
+  for (const [token, max] of safeRegexReplacements) {
+    value = value
+      .split(`${token}*`).join(`${token}{0,${max}}`)
+      .split(`${token}+`).join(`${token}{1,${max}}`)
+  }
+  return value
+}
+
 const createToken = (name, value, isGlobal) => {
+  const safe = makeSafeRegex(value)
   const index = R++
   debug(name, index, value)
   t[name] = index
   src[index] = value
   re[index] = new RegExp(value, isGlobal ? 'g' : undefined)
+  safeRe[index] = new RegExp(safe, isGlobal ? 'g' : undefined)
 }
 
 // The following Regular Expressions can be used for tokenizing,
@@ -22208,13 +22865,13 @@ const createToken = (name, value, isGlobal) => {
 // A single `0`, or a non-zero digit followed by zero or more digits.
 
 createToken('NUMERICIDENTIFIER', '0|[1-9]\\d*')
-createToken('NUMERICIDENTIFIERLOOSE', '[0-9]+')
+createToken('NUMERICIDENTIFIERLOOSE', '\\d+')
 
 // ## Non-numeric Identifier
 // Zero or more digits, followed by a letter or hyphen, and then zero or
 // more letters, digits, or hyphens.
 
-createToken('NONNUMERICIDENTIFIER', '\\d*[a-zA-Z-][a-zA-Z0-9-]*')
+createToken('NONNUMERICIDENTIFIER', `\\d*[a-zA-Z-]${LETTERDASHNUMBER}*`)
 
 // ## Main Version
 // Three dot-separated numeric identifiers.
@@ -22249,7 +22906,7 @@ createToken('PRERELEASELOOSE', `(?:-?(${src[t.PRERELEASEIDENTIFIERLOOSE]
 // ## Build Metadata Identifier
 // Any combination of digits, letters, or hyphens.
 
-createToken('BUILDIDENTIFIER', '[0-9A-Za-z-]+')
+createToken('BUILDIDENTIFIER', `${LETTERDASHNUMBER}+`)
 
 // ## Build Metadata
 // Plus sign, followed by one or more period-separated build metadata
@@ -22729,7 +23386,7 @@ const Range = __nccwpck_require__(9828)
 const intersects = (r1, r2, options) => {
   r1 = new Range(r1, options)
   r2 = new Range(r2, options)
-  return r1.intersects(r2)
+  return r1.intersects(r2, options)
 }
 module.exports = intersects
 
@@ -23092,6 +23749,9 @@ const subset = (sub, dom, options = {}) => {
   return true
 }
 
+const minimumVersionWithPreRelease = [new Comparator('>=0.0.0-0')]
+const minimumVersion = [new Comparator('>=0.0.0')]
+
 const simpleSubset = (sub, dom, options) => {
   if (sub === dom) {
     return true
@@ -23101,9 +23761,9 @@ const simpleSubset = (sub, dom, options) => {
     if (dom.length === 1 && dom[0].semver === ANY) {
       return true
     } else if (options.includePrerelease) {
-      sub = [new Comparator('>=0.0.0-0')]
+      sub = minimumVersionWithPreRelease
     } else {
-      sub = [new Comparator('>=0.0.0')]
+      sub = minimumVersion
     }
   }
 
@@ -23111,7 +23771,7 @@ const simpleSubset = (sub, dom, options) => {
     if (options.includePrerelease) {
       return true
     } else {
-      dom = [new Comparator('>=0.0.0')]
+      dom = minimumVersion
     }
   }
 
@@ -23299,6 +23959,20 @@ const validRange = (range, options) => {
   }
 }
 module.exports = validRange
+
+
+/***/ }),
+
+/***/ 3605:
+/***/ ((module) => {
+
+"use strict";
+
+module.exports = function (str) {
+	return encodeURIComponent(str).replace(/[!'()*]/g, function (c) {
+		return '%' + c.charCodeAt(0).toString(16).toUpperCase();
+	});
+};
 
 
 /***/ }),
@@ -27020,6 +27694,14 @@ module.exports = require("os");
 
 "use strict";
 module.exports = require("path");
+
+/***/ }),
+
+/***/ 5477:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("punycode");
 
 /***/ }),
 
