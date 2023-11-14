@@ -514,9 +514,6 @@ jobs:
             environment-file: etc/example-environment-no-name.yml
             miniforge-variant: Mambaforge
             miniforge-version: 4.9.2-4
-          - os: macos
-            environment-file: etc/example-empty-channels-environment.yml
-            miniforge-variant: Mambaforge-pypy3
           - os: windows
             environment-file: etc/example-explicit.Windows.conda.lock
             condarc-file: etc/example-condarc.yml
