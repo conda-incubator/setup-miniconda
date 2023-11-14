@@ -705,6 +705,8 @@ jobs:
 
 ## IMPORTANT
 
+
+- Conda activation does not correctly work on `sh`. Please use `bash`.
 - Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
   explicitely declared as `shell: bash -el {0}` on steps that need to be
   properly activated (or use a default shell). This is because bash shells are
@@ -735,7 +737,6 @@ jobs:
   the `channels` input in the action they must not conflict with what was
   defined in `environment.yaml`, otherwise the conda solver might find conflicts
   and result in very long install times.
-- Conda activation does not correctly work on `sh`. Please use `bash`.
 
 ## Project History and Contributing
 
