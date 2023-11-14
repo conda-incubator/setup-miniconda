@@ -130,12 +130,12 @@ export interface IInstallerProvider {
   /** Whether this set of actions and inputs entails using this provider */
   provides: (
     inputs: IActionInputs,
-    options: IDynamicOptions
+    options: IDynamicOptions,
   ) => Promise<boolean>;
   /** Provide the local file path (and any updated options) for the installer */
   installerPath: (
     inputs: IActionInputs,
-    options: IDynamicOptions
+    options: IDynamicOptions,
   ) => Promise<IInstallerResult>;
 }
 
@@ -149,14 +149,14 @@ export interface IEnvProvider {
    */
   provides: (
     inputs: IActionInputs,
-    options: IDynamicOptions
+    options: IDynamicOptions,
   ) => Promise<boolean>;
   /**
    * The args to conda/mamba, e.g. create, update
    */
   condaArgs: (
     inputs: IActionInputs,
-    options: IDynamicOptions
+    options: IDynamicOptions,
   ) => Promise<string[]>;
 }
 
@@ -176,21 +176,21 @@ export interface IToolProvider {
    */
   provides: (
     inputs: IActionInputs,
-    options: IDynamicOptions
+    options: IDynamicOptions,
   ) => Promise<boolean>;
   /**
    * Conda package specs and option updates for tools to install after updating
    */
   toolPackages: (
     inputs: IActionInputs,
-    options: IDynamicOptions
+    options: IDynamicOptions,
   ) => Promise<IToolUpdates>;
   /**
    * Steps to perform after the env is updated, and potentially reconfigured
    */
   postInstall?: (
     inputs: IActionInputs,
-    options: IDynamicOptions
+    options: IDynamicOptions,
   ) => Promise<void>;
 }
 
