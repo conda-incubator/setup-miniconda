@@ -20,7 +20,7 @@ import * as types from "../types";
  * - or has been renamed during a build process
  */
 export async function ensureLocalInstaller(
-  options: types.ILocalInstallerOpts,
+  options: types.ILocalInstallerOpts
 ): Promise<string> {
   core.info("Ensuring Installer...");
 
@@ -51,7 +51,7 @@ export async function ensureLocalInstaller(
     let cacheDirectoryPath = tc.find(
       installerName,
       version,
-      ...(options.arch ? [options.arch] : []),
+      ...(options.arch ? [options.arch] : [])
     );
     if (cacheDirectoryPath !== "") {
       core.info(`Found ${installerName} cache at ${cacheDirectoryPath}!`);
@@ -68,7 +68,7 @@ export async function ensureLocalInstaller(
   if (executablePath === "") {
     const rawDownloadPath = await tc.downloadTool(options.url);
     core.info(
-      `Downloaded ${installerName}, ensuring extension ${installerExtension}`,
+      `Downloaded ${installerName}, ensuring extension ${installerExtension}`
     );
     // Always ensure the installer ends with a known path
     executablePath = rawDownloadPath + installerExtension;
@@ -79,7 +79,7 @@ export async function ensureLocalInstaller(
       installerName,
       tool,
       version,
-      ...(options.arch ? [options.arch] : []),
+      ...(options.arch ? [options.arch] : [])
     );
     core.info(`Cached ${tool}@${version}: ${cacheResult}!`);
   }

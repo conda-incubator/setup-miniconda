@@ -33,7 +33,7 @@ const ENV_PROVIDERS: types.IEnvProvider[] = [
  */
 export async function ensureEnvironment(
   inputs: types.IActionInputs,
-  options: types.IDynamicOptions,
+  options: types.IDynamicOptions
 ): Promise<void> {
   for (const provider of ENV_PROVIDERS) {
     core.info(`Can we ${provider.label}?`);
@@ -42,13 +42,13 @@ export async function ensureEnvironment(
       const args = await provider.condaArgs(inputs, options);
       return await core.group(
         `Updating '${inputs.activateEnvironment}' env from ${provider.label}...`,
-        () => conda.condaCommand(args, options),
+        () => conda.condaCommand(args, options)
       );
     }
   }
 
   throw Error(
-    `'activate-environment: ${inputs.activateEnvironment}' could not be created`,
+    `'activate-environment: ${inputs.activateEnvironment}' could not be created`
   );
 }
 
@@ -64,7 +64,7 @@ export async function ensureEnvironment(
  * multiple files, alternate inputs, etc.
  */
 export async function getEnvSpec(
-  inputs: types.IActionInputs,
+  inputs: types.IActionInputs
 ): Promise<types.IEnvSpec> {
   if (!inputs.environmentFile) {
     return {};
@@ -72,7 +72,7 @@ export async function getEnvSpec(
 
   const sourceEnvironmentPath: string = path.join(
     process.env["GITHUB_WORKSPACE"] || "",
-    inputs.environmentFile,
+    inputs.environmentFile
   );
 
   const source = fs.readFileSync(sourceEnvironmentPath, "utf8");

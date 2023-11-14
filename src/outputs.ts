@@ -14,7 +14,7 @@ import * as utils from "./utils";
  * Add Conda executable to PATH environment variable
  */
 export async function setPathVariables(
-  options: types.IDynamicOptions,
+  options: types.IDynamicOptions
 ): Promise<void> {
   const condaBin: string = path.join(conda.condaBasePath(options), "condabin");
   const condaPath: string = conda.condaBasePath(options);
@@ -41,13 +41,13 @@ export async function setCacheVariable(options: types.IDynamicOptions) {
 export function setEnvironmentFileOutputs(
   envFile: string,
   envContent: string,
-  patched = false,
+  patched = false
 ): void {
   core.setOutput(constants.OUTPUT_ENV_FILE_PATH, path.resolve(envFile));
   core.setOutput(constants.OUTPUT_ENV_FILE_CONTENT, envContent);
   core.setOutput(
     constants.OUTPUT_ENV_FILE_WAS_PATCHED,
-    patched ? "true" : "false",
+    patched ? "true" : "false"
   );
   core.saveState(constants.OUTPUT_ENV_FILE_WAS_PATCHED, patched);
 }

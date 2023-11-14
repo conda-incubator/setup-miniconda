@@ -10,7 +10,7 @@ This action sets up a `base`
   - [Miniforge][miniforge-releases] (or Mambaforge)
   - any [constructor]-based installer by or URL or filesystem path
 
-A `conda-build-version` or `mamba-version` may be provided to install specific 
+A `conda-build-version` or `mamba-version` may be provided to install specific
 versions of `conda` or `mamba` into `base`
 
 The base `condabin/` folder is added to `$PATH` and shell integration is
@@ -21,9 +21,11 @@ of:
 
 - creating a mostly-empty `test` environment, containing only the latest
   `python-version` and its dependencies
-- creating a `test` environment described in a given `environment-file` including:
-  - an `environment.yml`-like file (which can be patched with `python-version`). Note: the patched environment will be cleaned up unless
-      `clean-patched-environment-file: false` is given
+- creating a `test` environment described in a given `environment-file`
+  including:
+  - an `environment.yml`-like file (which can be patched with `python-version`).
+    Note: the patched environment will be cleaned up unless
+    `clean-patched-environment-file: false` is given
   - a [lockfile](#example-7-lockfiles)
 
 This action correctly handles activation of environments and offers the
@@ -58,43 +60,43 @@ possibility of automatically activating the `test` environment on all shells.
 [ex1]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml
 [ex1-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml/badge.svg?branch=main
 [ex2]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-2.yml
 [ex2-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-2.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-2.yml/badge.svg?branch=main
 [ex3]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-3.yml
 [ex3-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-3.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-3.yml/badge.svg?branch=main
 [ex4]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-4.yml
 [ex4-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-4.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-4.yml/badge.svg?branch=main
 [ex5]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-5.yml
 [ex5-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-5.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-5.yml/badge.svg?branch=main
 [ex6]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-6.yml
 [ex6-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-6.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-6.yml/badge.svg?branch=main
 [caching]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-example.yml
 [caching-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-example.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-example.yml/badge.svg?branch=main
 [caching-env]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-envs-example.yml
 [caching-env-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-envs-example.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-envs-example.yml/badge.svg?branch=main
 [ex7]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-7.yml
 [ex7-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-7.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-7.yml/badge.svg?branch=main
 [ex10]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-10.yml
 [ex10-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-10.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-10.yml/badge.svg?branch=main
 
 ## Other Workflows
 
@@ -107,21 +109,22 @@ possibility of automatically activating the `test` environment on all shells.
 [linting]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/lint.yml
 [linting-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/lint.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/lint.yml/badge.svg?branch=main
 [ex8]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-8.yml
 [ex8-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-8.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-8.yml/badge.svg?branch=main
 [ex9]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-9.yml
 [ex9-badge]:
-  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-9.yml/badge.svg
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-9.yml/badge.svg?branch=main
 
 ## Environment activation
 
 This action will, by default, activate an environment called `test` and _not_
-activate the `base` environment. This encourages the recommended practice of not installing workflow packages into the
-`base` environment and leaving it with only `conda` (and/or `mamba`).
+activate the `base` environment. This encourages the recommended practice of not
+installing workflow packages into the `base` environment and leaving it with
+only `conda` (and/or `mamba`).
 
 ## Inputs and outputs
 
@@ -139,8 +142,8 @@ by setting the `activate-environment` input option.
     activate-environment: whatever
 ```
 
-This will create a _named_ env in `$CONDA/envs/whatever`, where `$CONDA` is
-the path to the infrequently-updated, but **very fast** to start, "bundled"
+This will create a _named_ env in `$CONDA/envs/whatever`, where `$CONDA` is the
+path to the infrequently-updated, but **very fast** to start, "bundled"
 Miniconda installation.
 
 > - If `activate-environment` contains either POSIX or Windows slashes, it will
@@ -200,9 +203,8 @@ jobs:
 ### Example 2: Other shells
 
 This example shows how to use all other available shells for specific operating
-systems. In this example we download the latest anaconda version
-then create and activate a default environment named `foo`.
-
+systems. In this example we download the latest anaconda version then create and
+activate a default environment named `foo`.
 
 ```yaml
 jobs:
@@ -347,11 +349,13 @@ jobs:
 
 ### Example 5: Custom installer
 
-Any installer created with the [constructor](https://github.com/conda/constructor) tool
-(which includes `conda`) can be used in place of Miniconda. For example,
+Any installer created with the
+[constructor](https://github.com/conda/constructor) tool (which includes
+`conda`) can be used in place of Miniconda. For example,
 [conda-forge](https://conda-forge.org/) maintains additional builds of
 [miniforge](https://github.com/conda-forge/miniforge/releases) for platforms not
-yet supported by Miniconda. For more details, see [Example 10](#example-10-miniforge).
+yet supported by Miniconda. For more details, see
+[Example 10](#example-10-miniforge).
 
 > Note:
 >
@@ -384,10 +388,9 @@ jobs:
 
 ### Example 6: Mamba
 
-Experimental! Use `mamba` to enable much faster conda installs.
-`mamba-version` accepts a version string `x.y` (including `"*"`). It requires
-you specify `conda-forge` as part of the channels, ideally with the highest
-priority.
+Experimental! Use `mamba` to enable much faster conda installs. `mamba-version`
+accepts a version string `x.y` (including `"*"`). It requires you specify
+`conda-forge` as part of the channels, ideally with the highest priority.
 
 > Notes:
 >
@@ -673,13 +676,15 @@ not exist.
 If you use the same shell for every step in your workflow you don't have to add
 a shell directive to every step (e.g., `shell: bash -el {0}` when using bash).
 
-You can add a `defaults` section and specify the desired directive (e.g., `bash -el {0}` or equivalent).
-All steps in the job will then default to using that value.
+You can add a `defaults` section and specify the desired directive (e.g.,
+`bash -el {0}` or equivalent). All steps in the job will then default to using
+that value.
 
 For other shells, make sure to use the correct `shell` parameter as the default
 value. Check the [section below](#important) for some examples.
 
-For more information see the [Github Actions help page](https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_iddefaultsrun).
+For more information see the
+[Github Actions help page](https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_iddefaultsrun).
 
 ```yaml
 jobs:
@@ -704,12 +709,12 @@ jobs:
 
 - Conda activation does not correctly work on `sh`. Please use `bash`.
 - Bash shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
-  explicitly declared as `shell: bash -el {0}` on steps that need to be
-  properly activated (or use a default shell). This is because bash shells are
-  executed with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated
-  on bash profile files made by `conda init bash`. See
-[Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell)
-  and this 
+  explicitly declared as `shell: bash -el {0}` on steps that need to be properly
+  activated (or use a default shell). This is because bash shells are executed
+  with `bash --noprofile --norc -eo pipefail {0}` thus ignoring updated on bash
+  profile files made by `conda init bash`. See
+  [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell)
+  and this
   [community thread](https://github.community/t5/GitHub-Actions/How-to-share-shell-profile-between-steps-or-how-to-use-nvm-rvm/td-p/33185).
 - Sh shells do not use `~/.profile` or `~/.bashrc` so these shells need to be
   explicitly declared as `shell: sh -l {0}` on steps that need to be properly
@@ -717,12 +722,12 @@ jobs:
   with `sh -e {0}` thus ignoring updates on bash profile files made by
   `conda init bash`. See
   [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
-- Cmd shells do not run `Autorun` commands so these shells need to be
-  explicitly declared as `shell: cmd /C call {0}` on steps that need to be
-  properly activated (or use a default shell). This is because cmd shells are
-  executed with `%ComSpec% /D /E:ON /V:OFF /S /C "CALL "{0}""` and the `/D` flag
-  disables execution of `Command Processor/Autorun` Windows registry keys, which
-  is what `conda init cmd.exe` sets. See
+- Cmd shells do not run `Autorun` commands so these shells need to be explicitly
+  declared as `shell: cmd /C call {0}` on steps that need to be properly
+  activated (or use a default shell). This is because cmd shells are executed
+  with `%ComSpec% /D /E:ON /V:OFF /S /C "CALL "{0}""` and the `/D` flag disables
+  execution of `Command Processor/Autorun` Windows registry keys, which is what
+  `conda init cmd.exe` sets. See
   [Github Actions Documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/workflow-syntax-for-github-actions#using-a-specific-shell).
 - For caching to work properly, you will need to set the `use-only-tar-bz2`
   option to `true`.
