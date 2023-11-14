@@ -185,7 +185,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.7", "2.7"]
+        python-version: ["3.7", "3.11"]
     steps:
       - uses: conda-incubator/setup-miniconda@v2
         with:
