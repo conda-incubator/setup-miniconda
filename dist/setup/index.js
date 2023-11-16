@@ -558,7 +558,7 @@ class OidcClient {
                 .catch(error => {
                 throw new Error(`Failed to get ID Token. \n 
         Error Code : ${error.statusCode}\n 
-        Error Message: ${error.result.message}`);
+        Error Message: ${error.message}`);
             });
             const id_token = (_a = res.result) === null || _a === void 0 ? void 0 : _a.value;
             if (!id_token) {
@@ -2532,11 +2532,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getCmdPath = exports.tryGetExecutablePath = exports.isRooted = exports.isDirectory = exports.exists = exports.IS_WINDOWS = exports.unlink = exports.symlink = exports.stat = exports.rmdir = exports.rename = exports.readlink = exports.readdir = exports.mkdir = exports.lstat = exports.copyFile = exports.chmod = void 0;
+exports.getCmdPath = exports.tryGetExecutablePath = exports.isRooted = exports.isDirectory = exports.exists = exports.READONLY = exports.UV_FS_O_EXLOCK = exports.IS_WINDOWS = exports.unlink = exports.symlink = exports.stat = exports.rmdir = exports.rm = exports.rename = exports.readlink = exports.readdir = exports.open = exports.mkdir = exports.lstat = exports.copyFile = exports.chmod = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
-_a = fs.promises, exports.chmod = _a.chmod, exports.copyFile = _a.copyFile, exports.lstat = _a.lstat, exports.mkdir = _a.mkdir, exports.readdir = _a.readdir, exports.readlink = _a.readlink, exports.rename = _a.rename, exports.rmdir = _a.rmdir, exports.stat = _a.stat, exports.symlink = _a.symlink, exports.unlink = _a.unlink;
+_a = fs.promises
+// export const {open} = 'fs'
+, exports.chmod = _a.chmod, exports.copyFile = _a.copyFile, exports.lstat = _a.lstat, exports.mkdir = _a.mkdir, exports.open = _a.open, exports.readdir = _a.readdir, exports.readlink = _a.readlink, exports.rename = _a.rename, exports.rm = _a.rm, exports.rmdir = _a.rmdir, exports.stat = _a.stat, exports.symlink = _a.symlink, exports.unlink = _a.unlink;
+// export const {open} = 'fs'
 exports.IS_WINDOWS = process.platform === 'win32';
+// See https://github.com/nodejs/node/blob/d0153aee367422d0858105abec186da4dff0a0c5/deps/uv/include/uv/win.h#L691
+exports.UV_FS_O_EXLOCK = 0x10000000;
+exports.READONLY = fs.constants.O_RDONLY;
 function exists(fsPath) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -2717,12 +2723,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findInPath = exports.which = exports.mkdirP = exports.rmRF = exports.mv = exports.cp = void 0;
 const assert_1 = __nccwpck_require__(9491);
-const childProcess = __importStar(__nccwpck_require__(2081));
 const path = __importStar(__nccwpck_require__(1017));
-const util_1 = __nccwpck_require__(3837);
 const ioUtil = __importStar(__nccwpck_require__(1962));
-const exec = util_1.promisify(childProcess.exec);
-const execFile = util_1.promisify(childProcess.execFile);
 /**
  * Copies a file or folder.
  * Based off of shelljs - https://github.com/shelljs/shelljs/blob/9237f66c52e5daa40458f94f9565e18e8132f5a6/src/cp.js
@@ -2803,61 +2805,23 @@ exports.mv = mv;
 function rmRF(inputPath) {
     return __awaiter(this, void 0, void 0, function* () {
         if (ioUtil.IS_WINDOWS) {
-            // Node doesn't provide a delete operation, only an unlink function. This means that if the file is being used by another
-            // program (e.g. antivirus), it won't be deleted. To address this, we shell out the work to rd/del.
             // Check for invalid characters
             // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
             if (/[*"<>|]/.test(inputPath)) {
                 throw new Error('File path must not contain `*`, `"`, `<`, `>` or `|` on Windows');
             }
-            try {
-                const cmdPath = ioUtil.getCmdPath();
-                if (yield ioUtil.isDirectory(inputPath, true)) {
-                    yield exec(`${cmdPath} /s /c "rd /s /q "%inputPath%""`, {
-                        env: { inputPath }
-                    });
-                }
-                else {
-                    yield exec(`${cmdPath} /s /c "del /f /a "%inputPath%""`, {
-                        env: { inputPath }
-                    });
-                }
-            }
-            catch (err) {
-                // if you try to delete a file that doesn't exist, desired result is achieved
-                // other errors are valid
-                if (err.code !== 'ENOENT')
-                    throw err;
-            }
-            // Shelling out fails to remove a symlink folder with missing source, this unlink catches that
-            try {
-                yield ioUtil.unlink(inputPath);
-            }
-            catch (err) {
-                // if you try to delete a file that doesn't exist, desired result is achieved
-                // other errors are valid
-                if (err.code !== 'ENOENT')
-                    throw err;
-            }
         }
-        else {
-            let isDir = false;
-            try {
-                isDir = yield ioUtil.isDirectory(inputPath);
-            }
-            catch (err) {
-                // if you try to delete a file that doesn't exist, desired result is achieved
-                // other errors are valid
-                if (err.code !== 'ENOENT')
-                    throw err;
-                return;
-            }
-            if (isDir) {
-                yield execFile(`rm`, [`-rf`, `${inputPath}`]);
-            }
-            else {
-                yield ioUtil.unlink(inputPath);
-            }
+        try {
+            // note if path does not exist, error is silent
+            yield ioUtil.rm(inputPath, {
+                force: true,
+                maxRetries: 3,
+                recursive: true,
+                retryDelay: 300
+            });
+        }
+        catch (err) {
+            throw new Error(`File was unable to be removed ${err}`);
         }
     });
 }
@@ -5656,76 +5620,6 @@ function v4(options, buf, offset) {
 }
 
 module.exports = v4;
-
-
-/***/ }),
-
-/***/ 1530:
-/***/ ((module) => {
-
-"use strict";
-
-
-// there's 3 implementations written in increasing order of efficiency
-
-// 1 - no Set type is defined
-function uniqNoSet(arr) {
-	var ret = [];
-
-	for (var i = 0; i < arr.length; i++) {
-		if (ret.indexOf(arr[i]) === -1) {
-			ret.push(arr[i]);
-		}
-	}
-
-	return ret;
-}
-
-// 2 - a simple Set type is defined
-function uniqSet(arr) {
-	var seen = new Set();
-	return arr.filter(function (el) {
-		if (!seen.has(el)) {
-			seen.add(el);
-			return true;
-		}
-
-		return false;
-	});
-}
-
-// 3 - a standard Set type is defined and it has a forEach method
-function uniqSetWithForEach(arr) {
-	var ret = [];
-
-	(new Set(arr)).forEach(function (el) {
-		ret.push(el);
-	});
-
-	return ret;
-}
-
-// V8 currently has a broken implementation
-// https://github.com/joyent/node/issues/8449
-function doesForEachActuallyWork() {
-	var ret = false;
-
-	(new Set([true])).forEach(function (el) {
-		ret = el;
-	});
-
-	return ret === true;
-}
-
-if ('Set' in global) {
-	if (typeof Set.prototype.forEach === 'function' && doesForEachActuallyWork()) {
-		module.exports = uniqSetWithForEach;
-	} else {
-		module.exports = uniqSet;
-	}
-} else {
-	module.exports = uniqNoSet;
-}
 
 
 /***/ }),
@@ -14467,108 +14361,93 @@ Object.defineProperty(exports, "decodeXMLStrict", ({ enumerable: true, get: func
 
 /***/ }),
 
-/***/ 7198:
-/***/ ((module) => {
-
-"use strict";
-/*!
- * for-in <https://github.com/jonschlinkert/for-in>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-module.exports = function forIn(obj, fn, thisArg) {
-  for (var key in obj) {
-    if (fn.call(thisArg, obj[key], key, obj) === false) {
-      break;
-    }
-  }
-};
-
-
-/***/ }),
-
-/***/ 7281:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-/*!
- * for-own <https://github.com/jonschlinkert/for-own>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-
-
-var forIn = __nccwpck_require__(7198);
-var hasOwn = Object.prototype.hasOwnProperty;
-
-module.exports = function forOwn(obj, fn, thisArg) {
-  forIn(obj, function(val, key) {
-    if (hasOwn.call(obj, key)) {
-      return fn.call(thisArg, obj[key], key, obj);
-    }
-  });
-};
-
-
-/***/ }),
-
 /***/ 5013:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
-const url = __nccwpck_require__(7310);
+const {URL} = __nccwpck_require__(7310);
 const cheerio = __nccwpck_require__(4612);
 const normalizeUrl = __nccwpck_require__(7952);
-const arrayUniq = __nccwpck_require__(1530);
-const omit = __nccwpck_require__(3627);
 
-module.exports = getHrefs;
+const FAKE_PROTOCOL = 'fake:';
+const FAKE_HOSTNAME = 'base.url';
 
-function getHrefs(html, opts) {
-	if (typeof html !== 'string') {
-		throw new TypeError('getHrefs expected a `string` but got: `' + typeof html + '`');
+const defaultNormalizeOpts = {
+	stripWWW: false,
+	defaultProtocol: ''
+};
+const defaultAllowedProtocols = {
+	http: true,
+	https: true
+};
+
+const unique = arr => [...new Set(arr)];
+
+const tryNormalize = (url, opts) => {
+	try {
+		return normalizeUrl(url, opts);
+	} catch (error) {
+		return url;
 	}
-	opts = opts || {};
+};
+
+const isFake = url =>
+	url.protocol === FAKE_PROTOCOL && url.hostname === FAKE_HOSTNAME;
+
+const stripFake = url =>
+	url.slice(FAKE_PROTOCOL.length + FAKE_HOSTNAME.length + 2);
+
+const getHrefs = (
+	html,
+	{
+		baseUrl = `${FAKE_PROTOCOL}//${FAKE_HOSTNAME}`,
+		allowedProtocols,
+		...normalizeOpts
+	} = {}
+) => {
+	if (typeof html !== 'string') {
+		throw new TypeError(
+			`getHrefs expected a \`string\` but got: \`${typeof html}\``
+		);
+	}
+
+	const opts = {...defaultNormalizeOpts, ...normalizeOpts};
+	const protocols = {...defaultAllowedProtocols, ...allowedProtocols};
 	const $ = cheerio.load(html);
-	let baseUrl = opts.baseUrl || '';
 	const base = $('base');
-	const normalizeOpts = omit(opts, ['baseUrl']);
 
 	if (base.length !== 0) {
-		baseUrl = url.resolve(baseUrl, base.first().attr('href') || '');
+		baseUrl = new URL(base.first().attr('href') || '', baseUrl).toString();
 	}
 
 	const hrefs = $('a')
-		.filter(function () {
-			/* eslint no-script-url: 0 */
-			const href = $(this).attr('href');
-			return href &&
-				href !== '#' &&
-				href.indexOf('javascript:') !== 0;
-		})
-		.map(function () {
-			let href = $(this).attr('href');
-			href = url.resolve(baseUrl, href);
-			if (hasProtocol(href)) {
-				return normalizeUrl(href, normalizeOpts);
-			}
-			return href;
-		})
+		.map((_, el) => $(el).attr('href'))
 		.get();
 
-	return arrayUniq(hrefs);
-}
+	const filteredHrefs = hrefs.reduce((hrefs, href) => {
+		if (!href || href === '#') {
+			return hrefs;
+		}
 
-function hasProtocol(href) {
-	return href.indexOf('://') !== -1 || href.indexOf('//') === 0;
-}
+		try {
+			const url = new URL(href, baseUrl);
+			if (isFake(url)) {
+				hrefs.push(stripFake(tryNormalize(url.toString(), opts)));
+			} else if (protocols[url.protocol.slice(0, -1)]) {
+				hrefs.push(tryNormalize(url.toString(), opts));
+			}
+		} catch (error) {
+			// Ignore errors (they are caused by invalid URLs and we don't care about them anyway)
+		}
+
+		return hrefs;
+	}, []);
+
+	return unique(filteredHrefs);
+};
+
+module.exports = getHrefs;
 
 
 /***/ }),
@@ -16109,42 +15988,6 @@ function parseFeed(feed, options) {
 exports.parseFeed = parseFeed;
 exports.DomUtils = __importStar(__nccwpck_require__(1754));
 //# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 429:
-/***/ ((module) => {
-
-"use strict";
-/*!
- * is-extendable <https://github.com/jonschlinkert/is-extendable>
- *
- * Copyright (c) 2015, Jon Schlinkert.
- * Licensed under the MIT License.
- */
-
-
-
-module.exports = function isExtendable(val) {
-  return typeof val !== 'undefined' && val !== null
-    && (typeof val === 'object' || typeof val === 'function');
-};
-
-
-/***/ }),
-
-/***/ 864:
-/***/ ((module) => {
-
-"use strict";
-
-var toString = Object.prototype.toString;
-
-module.exports = function (x) {
-	var prototype;
-	return toString.call(x) === '[object Object]' && (prototype = Object.getPrototypeOf(x), prototype === null || prototype === Object.getPrototypeOf({}));
-};
-
 
 /***/ }),
 
@@ -20256,223 +20099,573 @@ module.exports = new Type('tag:yaml.org,2002:timestamp', {
 
 /***/ }),
 
+/***/ 7129:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+// A linked list to keep track of recently-used-ness
+const Yallist = __nccwpck_require__(665)
+
+const MAX = Symbol('max')
+const LENGTH = Symbol('length')
+const LENGTH_CALCULATOR = Symbol('lengthCalculator')
+const ALLOW_STALE = Symbol('allowStale')
+const MAX_AGE = Symbol('maxAge')
+const DISPOSE = Symbol('dispose')
+const NO_DISPOSE_ON_SET = Symbol('noDisposeOnSet')
+const LRU_LIST = Symbol('lruList')
+const CACHE = Symbol('cache')
+const UPDATE_AGE_ON_GET = Symbol('updateAgeOnGet')
+
+const naiveLength = () => 1
+
+// lruList is a yallist where the head is the youngest
+// item, and the tail is the oldest.  the list contains the Hit
+// objects as the entries.
+// Each Hit object has a reference to its Yallist.Node.  This
+// never changes.
+//
+// cache is a Map (or PseudoMap) that matches the keys to
+// the Yallist.Node object.
+class LRUCache {
+  constructor (options) {
+    if (typeof options === 'number')
+      options = { max: options }
+
+    if (!options)
+      options = {}
+
+    if (options.max && (typeof options.max !== 'number' || options.max < 0))
+      throw new TypeError('max must be a non-negative number')
+    // Kind of weird to have a default max of Infinity, but oh well.
+    const max = this[MAX] = options.max || Infinity
+
+    const lc = options.length || naiveLength
+    this[LENGTH_CALCULATOR] = (typeof lc !== 'function') ? naiveLength : lc
+    this[ALLOW_STALE] = options.stale || false
+    if (options.maxAge && typeof options.maxAge !== 'number')
+      throw new TypeError('maxAge must be a number')
+    this[MAX_AGE] = options.maxAge || 0
+    this[DISPOSE] = options.dispose
+    this[NO_DISPOSE_ON_SET] = options.noDisposeOnSet || false
+    this[UPDATE_AGE_ON_GET] = options.updateAgeOnGet || false
+    this.reset()
+  }
+
+  // resize the cache when the max changes.
+  set max (mL) {
+    if (typeof mL !== 'number' || mL < 0)
+      throw new TypeError('max must be a non-negative number')
+
+    this[MAX] = mL || Infinity
+    trim(this)
+  }
+  get max () {
+    return this[MAX]
+  }
+
+  set allowStale (allowStale) {
+    this[ALLOW_STALE] = !!allowStale
+  }
+  get allowStale () {
+    return this[ALLOW_STALE]
+  }
+
+  set maxAge (mA) {
+    if (typeof mA !== 'number')
+      throw new TypeError('maxAge must be a non-negative number')
+
+    this[MAX_AGE] = mA
+    trim(this)
+  }
+  get maxAge () {
+    return this[MAX_AGE]
+  }
+
+  // resize the cache when the lengthCalculator changes.
+  set lengthCalculator (lC) {
+    if (typeof lC !== 'function')
+      lC = naiveLength
+
+    if (lC !== this[LENGTH_CALCULATOR]) {
+      this[LENGTH_CALCULATOR] = lC
+      this[LENGTH] = 0
+      this[LRU_LIST].forEach(hit => {
+        hit.length = this[LENGTH_CALCULATOR](hit.value, hit.key)
+        this[LENGTH] += hit.length
+      })
+    }
+    trim(this)
+  }
+  get lengthCalculator () { return this[LENGTH_CALCULATOR] }
+
+  get length () { return this[LENGTH] }
+  get itemCount () { return this[LRU_LIST].length }
+
+  rforEach (fn, thisp) {
+    thisp = thisp || this
+    for (let walker = this[LRU_LIST].tail; walker !== null;) {
+      const prev = walker.prev
+      forEachStep(this, fn, walker, thisp)
+      walker = prev
+    }
+  }
+
+  forEach (fn, thisp) {
+    thisp = thisp || this
+    for (let walker = this[LRU_LIST].head; walker !== null;) {
+      const next = walker.next
+      forEachStep(this, fn, walker, thisp)
+      walker = next
+    }
+  }
+
+  keys () {
+    return this[LRU_LIST].toArray().map(k => k.key)
+  }
+
+  values () {
+    return this[LRU_LIST].toArray().map(k => k.value)
+  }
+
+  reset () {
+    if (this[DISPOSE] &&
+        this[LRU_LIST] &&
+        this[LRU_LIST].length) {
+      this[LRU_LIST].forEach(hit => this[DISPOSE](hit.key, hit.value))
+    }
+
+    this[CACHE] = new Map() // hash of items by key
+    this[LRU_LIST] = new Yallist() // list of items in order of use recency
+    this[LENGTH] = 0 // length of items in the list
+  }
+
+  dump () {
+    return this[LRU_LIST].map(hit =>
+      isStale(this, hit) ? false : {
+        k: hit.key,
+        v: hit.value,
+        e: hit.now + (hit.maxAge || 0)
+      }).toArray().filter(h => h)
+  }
+
+  dumpLru () {
+    return this[LRU_LIST]
+  }
+
+  set (key, value, maxAge) {
+    maxAge = maxAge || this[MAX_AGE]
+
+    if (maxAge && typeof maxAge !== 'number')
+      throw new TypeError('maxAge must be a number')
+
+    const now = maxAge ? Date.now() : 0
+    const len = this[LENGTH_CALCULATOR](value, key)
+
+    if (this[CACHE].has(key)) {
+      if (len > this[MAX]) {
+        del(this, this[CACHE].get(key))
+        return false
+      }
+
+      const node = this[CACHE].get(key)
+      const item = node.value
+
+      // dispose of the old one before overwriting
+      // split out into 2 ifs for better coverage tracking
+      if (this[DISPOSE]) {
+        if (!this[NO_DISPOSE_ON_SET])
+          this[DISPOSE](key, item.value)
+      }
+
+      item.now = now
+      item.maxAge = maxAge
+      item.value = value
+      this[LENGTH] += len - item.length
+      item.length = len
+      this.get(key)
+      trim(this)
+      return true
+    }
+
+    const hit = new Entry(key, value, len, now, maxAge)
+
+    // oversized objects fall out of cache automatically.
+    if (hit.length > this[MAX]) {
+      if (this[DISPOSE])
+        this[DISPOSE](key, value)
+
+      return false
+    }
+
+    this[LENGTH] += hit.length
+    this[LRU_LIST].unshift(hit)
+    this[CACHE].set(key, this[LRU_LIST].head)
+    trim(this)
+    return true
+  }
+
+  has (key) {
+    if (!this[CACHE].has(key)) return false
+    const hit = this[CACHE].get(key).value
+    return !isStale(this, hit)
+  }
+
+  get (key) {
+    return get(this, key, true)
+  }
+
+  peek (key) {
+    return get(this, key, false)
+  }
+
+  pop () {
+    const node = this[LRU_LIST].tail
+    if (!node)
+      return null
+
+    del(this, node)
+    return node.value
+  }
+
+  del (key) {
+    del(this, this[CACHE].get(key))
+  }
+
+  load (arr) {
+    // reset the cache
+    this.reset()
+
+    const now = Date.now()
+    // A previous serialized cache has the most recent items first
+    for (let l = arr.length - 1; l >= 0; l--) {
+      const hit = arr[l]
+      const expiresAt = hit.e || 0
+      if (expiresAt === 0)
+        // the item was created without expiration in a non aged cache
+        this.set(hit.k, hit.v)
+      else {
+        const maxAge = expiresAt - now
+        // dont add already expired items
+        if (maxAge > 0) {
+          this.set(hit.k, hit.v, maxAge)
+        }
+      }
+    }
+  }
+
+  prune () {
+    this[CACHE].forEach((value, key) => get(this, key, false))
+  }
+}
+
+const get = (self, key, doUse) => {
+  const node = self[CACHE].get(key)
+  if (node) {
+    const hit = node.value
+    if (isStale(self, hit)) {
+      del(self, node)
+      if (!self[ALLOW_STALE])
+        return undefined
+    } else {
+      if (doUse) {
+        if (self[UPDATE_AGE_ON_GET])
+          node.value.now = Date.now()
+        self[LRU_LIST].unshiftNode(node)
+      }
+    }
+    return hit.value
+  }
+}
+
+const isStale = (self, hit) => {
+  if (!hit || (!hit.maxAge && !self[MAX_AGE]))
+    return false
+
+  const diff = Date.now() - hit.now
+  return hit.maxAge ? diff > hit.maxAge
+    : self[MAX_AGE] && (diff > self[MAX_AGE])
+}
+
+const trim = self => {
+  if (self[LENGTH] > self[MAX]) {
+    for (let walker = self[LRU_LIST].tail;
+      self[LENGTH] > self[MAX] && walker !== null;) {
+      // We know that we're about to delete this one, and also
+      // what the next least recently used key will be, so just
+      // go ahead and set it now.
+      const prev = walker.prev
+      del(self, walker)
+      walker = prev
+    }
+  }
+}
+
+const del = (self, node) => {
+  if (node) {
+    const hit = node.value
+    if (self[DISPOSE])
+      self[DISPOSE](hit.key, hit.value)
+
+    self[LENGTH] -= hit.length
+    self[CACHE].delete(hit.key)
+    self[LRU_LIST].removeNode(node)
+  }
+}
+
+class Entry {
+  constructor (key, value, length, now, maxAge) {
+    this.key = key
+    this.value = value
+    this.length = length
+    this.now = now
+    this.maxAge = maxAge || 0
+  }
+}
+
+const forEachStep = (self, fn, node, thisp) => {
+  let hit = node.value
+  if (isStale(self, hit)) {
+    del(self, node)
+    if (!self[ALLOW_STALE])
+      hit = undefined
+  }
+  if (hit)
+    fn.call(thisp, hit.value, hit.key, self)
+}
+
+module.exports = LRUCache
+
+
+/***/ }),
+
 /***/ 7952:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
-var url = __nccwpck_require__(7310);
-var punycode = __nccwpck_require__(5477);
-var queryString = __nccwpck_require__(293);
-var prependHttp = __nccwpck_require__(6143);
-var sortKeys = __nccwpck_require__(4376);
-var objectAssign = __nccwpck_require__(7426);
+// TODO: Use the `URL` global when targeting Node.js 10
+const URLParser = typeof URL === 'undefined' ? (__nccwpck_require__(7310).URL) : URL;
 
-var DEFAULT_PORTS = {
-	'http:': 80,
-	'https:': 443,
-	'ftp:': 21
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs
+const DATA_URL_DEFAULT_MIME_TYPE = 'text/plain';
+const DATA_URL_DEFAULT_CHARSET = 'us-ascii';
+
+const testParameter = (name, filters) => {
+	return filters.some(filter => filter instanceof RegExp ? filter.test(name) : filter === name);
 };
 
-// protocols that always contain a `//`` bit
-var slashedProtocol = {
-	'http': true,
-	'https': true,
-	'ftp': true,
-	'gopher': true,
-	'file': true,
-	'http:': true,
-	'https:': true,
-	'ftp:': true,
-	'gopher:': true,
-	'file:': true
+const normalizeDataURL = (urlString, {stripHash}) => {
+	const parts = urlString.match(/^data:([^,]*?),([^#]*?)(?:#(.*))?$/);
+
+	if (!parts) {
+		throw new Error(`Invalid URL: ${urlString}`);
+	}
+
+	const mediaType = parts[1].split(';');
+	const body = parts[2];
+	const hash = stripHash ? '' : parts[3];
+
+	let base64 = false;
+
+	if (mediaType[mediaType.length - 1] === 'base64') {
+		mediaType.pop();
+		base64 = true;
+	}
+
+	// Lowercase MIME type
+	const mimeType = (mediaType.shift() || '').toLowerCase();
+	const attributes = mediaType
+		.map(attribute => {
+			let [key, value = ''] = attribute.split('=').map(string => string.trim());
+
+			// Lowercase `charset`
+			if (key === 'charset') {
+				value = value.toLowerCase();
+
+				if (value === DATA_URL_DEFAULT_CHARSET) {
+					return '';
+				}
+			}
+
+			return `${key}${value ? `=${value}` : ''}`;
+		})
+		.filter(Boolean);
+
+	const normalizedMediaType = [
+		...attributes
+	];
+
+	if (base64) {
+		normalizedMediaType.push('base64');
+	}
+
+	if (normalizedMediaType.length !== 0 || (mimeType && mimeType !== DATA_URL_DEFAULT_MIME_TYPE)) {
+		normalizedMediaType.unshift(mimeType);
+	}
+
+	return `data:${normalizedMediaType.join(';')},${base64 ? body.trim() : body}${hash ? `#${hash}` : ''}`;
 };
 
-function testParameter(name, filters) {
-	return filters.some(function (filter) {
-		return filter instanceof RegExp ? filter.test(name) : filter === name;
-	});
-}
-
-module.exports = function (str, opts) {
-	opts = objectAssign({
+const normalizeUrl = (urlString, options) => {
+	options = {
+		defaultProtocol: 'http:',
 		normalizeProtocol: true,
-		normalizeHttps: false,
-		stripFragment: true,
+		forceHttp: false,
+		forceHttps: false,
+		stripAuthentication: true,
+		stripHash: false,
 		stripWWW: true,
 		removeQueryParameters: [/^utm_\w+/i],
 		removeTrailingSlash: true,
-		removeDirectoryIndex: false
-	}, opts);
+		removeDirectoryIndex: false,
+		sortQueryParameters: true,
+		...options
+	};
 
-	if (typeof str !== 'string') {
-		throw new TypeError('Expected a string');
+	// TODO: Remove this at some point in the future
+	if (Reflect.has(options, 'normalizeHttps')) {
+		throw new Error('options.normalizeHttps is renamed to options.forceHttp');
 	}
 
-	var hasRelativeProtocol = str.indexOf('//') === 0;
+	if (Reflect.has(options, 'normalizeHttp')) {
+		throw new Error('options.normalizeHttp is renamed to options.forceHttps');
+	}
 
-	// prepend protocol
-	str = prependHttp(str.trim()).replace(/^\/\//, 'http://');
+	if (Reflect.has(options, 'stripFragment')) {
+		throw new Error('options.stripFragment is renamed to options.stripHash');
+	}
 
-	var urlObj = url.parse(str);
+	urlString = urlString.trim();
 
-	if (opts.normalizeHttps && urlObj.protocol === 'https:') {
+	// Data URL
+	if (/^data:/i.test(urlString)) {
+		return normalizeDataURL(urlString, options);
+	}
+
+	const hasRelativeProtocol = urlString.startsWith('//');
+	const isRelativeUrl = !hasRelativeProtocol && /^\.*\//.test(urlString);
+
+	// Prepend protocol
+	if (!isRelativeUrl) {
+		urlString = urlString.replace(/^(?!(?:\w+:)?\/\/)|^\/\//, options.defaultProtocol);
+	}
+
+	const urlObj = new URLParser(urlString);
+
+	if (options.forceHttp && options.forceHttps) {
+		throw new Error('The `forceHttp` and `forceHttps` options cannot be used together');
+	}
+
+	if (options.forceHttp && urlObj.protocol === 'https:') {
 		urlObj.protocol = 'http:';
 	}
 
-	if (!urlObj.hostname && !urlObj.pathname) {
-		throw new Error('Invalid URL');
+	if (options.forceHttps && urlObj.protocol === 'http:') {
+		urlObj.protocol = 'https:';
 	}
 
-	// prevent these from being used by `url.format`
-	delete urlObj.host;
-	delete urlObj.query;
-
-	// remove fragment
-	if (opts.stripFragment) {
-		delete urlObj.hash;
+	// Remove auth
+	if (options.stripAuthentication) {
+		urlObj.username = '';
+		urlObj.password = '';
 	}
 
-	// remove default port
-	var port = DEFAULT_PORTS[urlObj.protocol];
-	if (Number(urlObj.port) === port) {
-		delete urlObj.port;
+	// Remove hash
+	if (options.stripHash) {
+		urlObj.hash = '';
 	}
 
-	// remove duplicate slashes
+	// Remove duplicate slashes if not preceded by a protocol
 	if (urlObj.pathname) {
-		urlObj.pathname = urlObj.pathname.replace(/\/{2,}/g, '/');
+		// TODO: Use the following instead when targeting Node.js 10
+		// `urlObj.pathname = urlObj.pathname.replace(/(?<!https?:)\/{2,}/g, '/');`
+		urlObj.pathname = urlObj.pathname.replace(/((?!:).|^)\/{2,}/g, (_, p1) => {
+			if (/^(?!\/)/g.test(p1)) {
+				return `${p1}/`;
+			}
+
+			return '/';
+		});
 	}
 
-	// decode URI octets
+	// Decode URI octets
 	if (urlObj.pathname) {
 		urlObj.pathname = decodeURI(urlObj.pathname);
 	}
 
-	// remove directory index
-	if (opts.removeDirectoryIndex === true) {
-		opts.removeDirectoryIndex = [/^index\.[a-z]+$/];
+	// Remove directory index
+	if (options.removeDirectoryIndex === true) {
+		options.removeDirectoryIndex = [/^index\.[a-z]+$/];
 	}
 
-	if (Array.isArray(opts.removeDirectoryIndex) && opts.removeDirectoryIndex.length) {
-		var pathComponents = urlObj.pathname.split('/');
-		var lastComponent = pathComponents[pathComponents.length - 1];
+	if (Array.isArray(options.removeDirectoryIndex) && options.removeDirectoryIndex.length > 0) {
+		let pathComponents = urlObj.pathname.split('/');
+		const lastComponent = pathComponents[pathComponents.length - 1];
 
-		if (testParameter(lastComponent, opts.removeDirectoryIndex)) {
+		if (testParameter(lastComponent, options.removeDirectoryIndex)) {
 			pathComponents = pathComponents.slice(0, pathComponents.length - 1);
 			urlObj.pathname = pathComponents.slice(1).join('/') + '/';
 		}
 	}
 
-	// resolve relative paths, but only for slashed protocols
-	if (slashedProtocol[urlObj.protocol]) {
-		var domain = urlObj.protocol + '//' + urlObj.hostname;
-		var relative = url.resolve(domain, urlObj.pathname);
-		urlObj.pathname = relative.replace(domain, '');
-	}
-
 	if (urlObj.hostname) {
-		// IDN to Unicode
-		urlObj.hostname = punycode.toUnicode(urlObj.hostname).toLowerCase();
-
-		// remove trailing dot
+		// Remove trailing dot
 		urlObj.hostname = urlObj.hostname.replace(/\.$/, '');
 
-		// remove `www.`
-		if (opts.stripWWW) {
+		// Remove `www.`
+		if (options.stripWWW && /^www\.([a-z\-\d]{2,63})\.([a-z.]{2,5})$/.test(urlObj.hostname)) {
+			// Each label should be max 63 at length (min: 2).
+			// The extension should be max 5 at length (min: 2).
+			// Source: https://en.wikipedia.org/wiki/Hostname#Restrictions_on_valid_host_names
 			urlObj.hostname = urlObj.hostname.replace(/^www\./, '');
 		}
 	}
 
-	// remove URL with empty query string
-	if (urlObj.search === '?') {
-		delete urlObj.search;
-	}
-
-	var queryParameters = queryString.parse(urlObj.search);
-
-	// remove query unwanted parameters
-	if (Array.isArray(opts.removeQueryParameters)) {
-		for (var key in queryParameters) {
-			if (testParameter(key, opts.removeQueryParameters)) {
-				delete queryParameters[key];
+	// Remove query unwanted parameters
+	if (Array.isArray(options.removeQueryParameters)) {
+		for (const key of [...urlObj.searchParams.keys()]) {
+			if (testParameter(key, options.removeQueryParameters)) {
+				urlObj.searchParams.delete(key);
 			}
 		}
 	}
 
-	// sort query parameters
-	urlObj.search = queryString.stringify(sortKeys(queryParameters));
-
-	// decode query parameters
-	urlObj.search = decodeURIComponent(urlObj.search);
-
-	// take advantage of many of the Node `url` normalizations
-	str = url.format(urlObj);
-
-	// remove ending `/`
-	if (opts.removeTrailingSlash || urlObj.pathname === '/') {
-		str = str.replace(/\/$/, '');
+	// Sort query parameters
+	if (options.sortQueryParameters) {
+		urlObj.searchParams.sort();
 	}
 
-	// restore relative protocol, if applicable
-	if (hasRelativeProtocol && !opts.normalizeProtocol) {
-		str = str.replace(/^http:\/\//, '//');
+	if (options.removeTrailingSlash) {
+		urlObj.pathname = urlObj.pathname.replace(/\/$/, '');
 	}
 
-	return str;
+	// Take advantage of many of the Node `url` normalizations
+	urlString = urlObj.toString();
+
+	// Remove ending `/`
+	if ((options.removeTrailingSlash || urlObj.pathname === '/') && urlObj.hash === '') {
+		urlString = urlString.replace(/\/$/, '');
+	}
+
+	// Restore relative protocol, if applicable
+	if (hasRelativeProtocol && !options.normalizeProtocol) {
+		urlString = urlString.replace(/^http:\/\//, '//');
+	}
+
+	// Remove http/https
+	if (options.stripProtocol) {
+		urlString = urlString.replace(/^(?:https?:)?\/\//, '');
+	}
+
+	return urlString;
 };
 
-
-/***/ }),
-
-/***/ 4376:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var isPlainObj = __nccwpck_require__(864);
-
-module.exports = function (obj, opts) {
-	if (!isPlainObj(obj)) {
-		throw new TypeError('Expected a plain object');
-	}
-
-	opts = opts || {};
-
-	// DEPRECATED
-	if (typeof opts === 'function') {
-		opts = {compare: opts};
-	}
-
-	var deep = opts.deep;
-	var seenInput = [];
-	var seenOutput = [];
-
-	var sortKeys = function (x) {
-		var seenIndex = seenInput.indexOf(x);
-
-		if (seenIndex !== -1) {
-			return seenOutput[seenIndex];
-		}
-
-		var ret = {};
-		var keys = Object.keys(x).sort(opts.compare);
-
-		seenInput.push(x);
-		seenOutput.push(ret);
-
-		for (var i = 0; i < keys.length; i++) {
-			var key = keys[i];
-			var val = x[key];
-
-			ret[key] = deep && isPlainObj(val) ? sortKeys(val) : val;
-		}
-
-		return ret;
-	};
-
-	return sortKeys(obj);
-};
+module.exports = normalizeUrl;
+// TODO: Remove this for the next major release
+module.exports["default"] = normalizeUrl;
 
 
 /***/ }),
@@ -20763,387 +20956,6 @@ function parse(formula) {
 }
 exports.parse = parse;
 //# sourceMappingURL=parse.js.map
-
-/***/ }),
-
-/***/ 7426:
-/***/ ((module) => {
-
-"use strict";
-/*
-object-assign
-(c) Sindre Sorhus
-@license MIT
-*/
-
-
-/* eslint-disable no-unused-vars */
-var getOwnPropertySymbols = Object.getOwnPropertySymbols;
-var hasOwnProperty = Object.prototype.hasOwnProperty;
-var propIsEnumerable = Object.prototype.propertyIsEnumerable;
-
-function toObject(val) {
-	if (val === null || val === undefined) {
-		throw new TypeError('Object.assign cannot be called with null or undefined');
-	}
-
-	return Object(val);
-}
-
-function shouldUseNative() {
-	try {
-		if (!Object.assign) {
-			return false;
-		}
-
-		// Detect buggy property enumeration order in older V8 versions.
-
-		// https://bugs.chromium.org/p/v8/issues/detail?id=4118
-		var test1 = new String('abc');  // eslint-disable-line no-new-wrappers
-		test1[5] = 'de';
-		if (Object.getOwnPropertyNames(test1)[0] === '5') {
-			return false;
-		}
-
-		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
-		var test2 = {};
-		for (var i = 0; i < 10; i++) {
-			test2['_' + String.fromCharCode(i)] = i;
-		}
-		var order2 = Object.getOwnPropertyNames(test2).map(function (n) {
-			return test2[n];
-		});
-		if (order2.join('') !== '0123456789') {
-			return false;
-		}
-
-		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
-		var test3 = {};
-		'abcdefghijklmnopqrst'.split('').forEach(function (letter) {
-			test3[letter] = letter;
-		});
-		if (Object.keys(Object.assign({}, test3)).join('') !==
-				'abcdefghijklmnopqrst') {
-			return false;
-		}
-
-		return true;
-	} catch (err) {
-		// We don't expect any of the above to throw, but better to be safe.
-		return false;
-	}
-}
-
-module.exports = shouldUseNative() ? Object.assign : function (target, source) {
-	var from;
-	var to = toObject(target);
-	var symbols;
-
-	for (var s = 1; s < arguments.length; s++) {
-		from = Object(arguments[s]);
-
-		for (var key in from) {
-			if (hasOwnProperty.call(from, key)) {
-				to[key] = from[key];
-			}
-		}
-
-		if (getOwnPropertySymbols) {
-			symbols = getOwnPropertySymbols(from);
-			for (var i = 0; i < symbols.length; i++) {
-				if (propIsEnumerable.call(from, symbols[i])) {
-					to[symbols[i]] = from[symbols[i]];
-				}
-			}
-		}
-	}
-
-	return to;
-};
-
-
-/***/ }),
-
-/***/ 3627:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-/*!
- * object.omit <https://github.com/jonschlinkert/object.omit>
- *
- * Copyright (c) 2014-2015, Jon Schlinkert.
- * Licensed under the MIT License.
- */
-
-
-
-var isObject = __nccwpck_require__(429);
-var forOwn = __nccwpck_require__(7281);
-
-module.exports = function omit(obj, keys) {
-  if (!isObject(obj)) return {};
-
-  keys = [].concat.apply([], [].slice.call(arguments, 1));
-  var last = keys[keys.length - 1];
-  var res = {}, fn;
-
-  if (typeof last === 'function') {
-    fn = keys.pop();
-  }
-
-  var isFunction = typeof fn === 'function';
-  if (!keys.length && !isFunction) {
-    return obj;
-  }
-
-  forOwn(obj, function(value, key) {
-    if (keys.indexOf(key) === -1) {
-
-      if (!isFunction) {
-        res[key] = value;
-      } else if (fn(value, key, obj)) {
-        res[key] = value;
-      }
-    }
-  });
-  return res;
-};
-
-
-/***/ }),
-
-/***/ 6143:
-/***/ ((module) => {
-
-"use strict";
-
-module.exports = function (url) {
-	if (typeof url !== 'string') {
-		throw new TypeError('Expected a string, got ' + typeof url);
-	}
-
-	url = url.trim();
-
-	if (/^\.*\/|^(?!localhost)\w+:/.test(url)) {
-		return url;
-	}
-
-	return url.replace(/^(?!(?:\w+:)?\/\/)/, 'http://');
-};
-
-
-/***/ }),
-
-/***/ 293:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-var strictUriEncode = __nccwpck_require__(3605);
-var objectAssign = __nccwpck_require__(7426);
-
-function encoderForArrayFormat(opts) {
-	switch (opts.arrayFormat) {
-		case 'index':
-			return function (key, value, index) {
-				return value === null ? [
-					encode(key, opts),
-					'[',
-					index,
-					']'
-				].join('') : [
-					encode(key, opts),
-					'[',
-					encode(index, opts),
-					']=',
-					encode(value, opts)
-				].join('');
-			};
-
-		case 'bracket':
-			return function (key, value) {
-				return value === null ? encode(key, opts) : [
-					encode(key, opts),
-					'[]=',
-					encode(value, opts)
-				].join('');
-			};
-
-		default:
-			return function (key, value) {
-				return value === null ? encode(key, opts) : [
-					encode(key, opts),
-					'=',
-					encode(value, opts)
-				].join('');
-			};
-	}
-}
-
-function parserForArrayFormat(opts) {
-	var result;
-
-	switch (opts.arrayFormat) {
-		case 'index':
-			return function (key, value, accumulator) {
-				result = /\[(\d*)\]$/.exec(key);
-
-				key = key.replace(/\[\d*\]$/, '');
-
-				if (!result) {
-					accumulator[key] = value;
-					return;
-				}
-
-				if (accumulator[key] === undefined) {
-					accumulator[key] = {};
-				}
-
-				accumulator[key][result[1]] = value;
-			};
-
-		case 'bracket':
-			return function (key, value, accumulator) {
-				result = /(\[\])$/.exec(key);
-				key = key.replace(/\[\]$/, '');
-
-				if (!result) {
-					accumulator[key] = value;
-					return;
-				} else if (accumulator[key] === undefined) {
-					accumulator[key] = [value];
-					return;
-				}
-
-				accumulator[key] = [].concat(accumulator[key], value);
-			};
-
-		default:
-			return function (key, value, accumulator) {
-				if (accumulator[key] === undefined) {
-					accumulator[key] = value;
-					return;
-				}
-
-				accumulator[key] = [].concat(accumulator[key], value);
-			};
-	}
-}
-
-function encode(value, opts) {
-	if (opts.encode) {
-		return opts.strict ? strictUriEncode(value) : encodeURIComponent(value);
-	}
-
-	return value;
-}
-
-function keysSorter(input) {
-	if (Array.isArray(input)) {
-		return input.sort();
-	} else if (typeof input === 'object') {
-		return keysSorter(Object.keys(input)).sort(function (a, b) {
-			return Number(a) - Number(b);
-		}).map(function (key) {
-			return input[key];
-		});
-	}
-
-	return input;
-}
-
-exports.extract = function (str) {
-	return str.split('?')[1] || '';
-};
-
-exports.parse = function (str, opts) {
-	opts = objectAssign({arrayFormat: 'none'}, opts);
-
-	var formatter = parserForArrayFormat(opts);
-
-	// Create an object with no prototype
-	// https://github.com/sindresorhus/query-string/issues/47
-	var ret = Object.create(null);
-
-	if (typeof str !== 'string') {
-		return ret;
-	}
-
-	str = str.trim().replace(/^(\?|#|&)/, '');
-
-	if (!str) {
-		return ret;
-	}
-
-	str.split('&').forEach(function (param) {
-		var parts = param.replace(/\+/g, ' ').split('=');
-		// Firefox (pre 40) decodes `%3D` to `=`
-		// https://github.com/sindresorhus/query-string/pull/37
-		var key = parts.shift();
-		var val = parts.length > 0 ? parts.join('=') : undefined;
-
-		// missing `=` should be `null`:
-		// http://w3.org/TR/2012/WD-url-20120524/#collect-url-parameters
-		val = val === undefined ? null : decodeURIComponent(val);
-
-		formatter(decodeURIComponent(key), val, ret);
-	});
-
-	return Object.keys(ret).sort().reduce(function (result, key) {
-		var val = ret[key];
-		if (Boolean(val) && typeof val === 'object' && !Array.isArray(val)) {
-			// Sort object keys, not values
-			result[key] = keysSorter(val);
-		} else {
-			result[key] = val;
-		}
-
-		return result;
-	}, Object.create(null));
-};
-
-exports.stringify = function (obj, opts) {
-	var defaults = {
-		encode: true,
-		strict: true,
-		arrayFormat: 'none'
-	};
-
-	opts = objectAssign(defaults, opts);
-
-	var formatter = encoderForArrayFormat(opts);
-
-	return obj ? Object.keys(obj).sort().map(function (key) {
-		var val = obj[key];
-
-		if (val === undefined) {
-			return '';
-		}
-
-		if (val === null) {
-			return encode(key, opts);
-		}
-
-		if (Array.isArray(val)) {
-			var result = [];
-
-			val.slice().forEach(function (val2) {
-				if (val2 === undefined) {
-					return;
-				}
-
-				result.push(formatter(key, val2, result.length));
-			});
-
-			return result.join('&');
-		}
-
-		return encode(key, opts) + '=' + encode(val, opts);
-	}).filter(function (x) {
-		return x.length > 0;
-	}).join('&') : '';
-};
-
 
 /***/ }),
 
@@ -21498,7 +21310,7 @@ class Range {
 
 module.exports = Range
 
-const LRU = __nccwpck_require__(1196)
+const LRU = __nccwpck_require__(7129)
 const cache = new LRU({ max: 1000 })
 
 const parseOptions = __nccwpck_require__(785)
@@ -23026,348 +22838,6 @@ createToken('GTE0PRE', '^\\s*>=\\s*0\\.0\\.0-0\\s*$')
 
 /***/ }),
 
-/***/ 1196:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-// A linked list to keep track of recently-used-ness
-const Yallist = __nccwpck_require__(665)
-
-const MAX = Symbol('max')
-const LENGTH = Symbol('length')
-const LENGTH_CALCULATOR = Symbol('lengthCalculator')
-const ALLOW_STALE = Symbol('allowStale')
-const MAX_AGE = Symbol('maxAge')
-const DISPOSE = Symbol('dispose')
-const NO_DISPOSE_ON_SET = Symbol('noDisposeOnSet')
-const LRU_LIST = Symbol('lruList')
-const CACHE = Symbol('cache')
-const UPDATE_AGE_ON_GET = Symbol('updateAgeOnGet')
-
-const naiveLength = () => 1
-
-// lruList is a yallist where the head is the youngest
-// item, and the tail is the oldest.  the list contains the Hit
-// objects as the entries.
-// Each Hit object has a reference to its Yallist.Node.  This
-// never changes.
-//
-// cache is a Map (or PseudoMap) that matches the keys to
-// the Yallist.Node object.
-class LRUCache {
-  constructor (options) {
-    if (typeof options === 'number')
-      options = { max: options }
-
-    if (!options)
-      options = {}
-
-    if (options.max && (typeof options.max !== 'number' || options.max < 0))
-      throw new TypeError('max must be a non-negative number')
-    // Kind of weird to have a default max of Infinity, but oh well.
-    const max = this[MAX] = options.max || Infinity
-
-    const lc = options.length || naiveLength
-    this[LENGTH_CALCULATOR] = (typeof lc !== 'function') ? naiveLength : lc
-    this[ALLOW_STALE] = options.stale || false
-    if (options.maxAge && typeof options.maxAge !== 'number')
-      throw new TypeError('maxAge must be a number')
-    this[MAX_AGE] = options.maxAge || 0
-    this[DISPOSE] = options.dispose
-    this[NO_DISPOSE_ON_SET] = options.noDisposeOnSet || false
-    this[UPDATE_AGE_ON_GET] = options.updateAgeOnGet || false
-    this.reset()
-  }
-
-  // resize the cache when the max changes.
-  set max (mL) {
-    if (typeof mL !== 'number' || mL < 0)
-      throw new TypeError('max must be a non-negative number')
-
-    this[MAX] = mL || Infinity
-    trim(this)
-  }
-  get max () {
-    return this[MAX]
-  }
-
-  set allowStale (allowStale) {
-    this[ALLOW_STALE] = !!allowStale
-  }
-  get allowStale () {
-    return this[ALLOW_STALE]
-  }
-
-  set maxAge (mA) {
-    if (typeof mA !== 'number')
-      throw new TypeError('maxAge must be a non-negative number')
-
-    this[MAX_AGE] = mA
-    trim(this)
-  }
-  get maxAge () {
-    return this[MAX_AGE]
-  }
-
-  // resize the cache when the lengthCalculator changes.
-  set lengthCalculator (lC) {
-    if (typeof lC !== 'function')
-      lC = naiveLength
-
-    if (lC !== this[LENGTH_CALCULATOR]) {
-      this[LENGTH_CALCULATOR] = lC
-      this[LENGTH] = 0
-      this[LRU_LIST].forEach(hit => {
-        hit.length = this[LENGTH_CALCULATOR](hit.value, hit.key)
-        this[LENGTH] += hit.length
-      })
-    }
-    trim(this)
-  }
-  get lengthCalculator () { return this[LENGTH_CALCULATOR] }
-
-  get length () { return this[LENGTH] }
-  get itemCount () { return this[LRU_LIST].length }
-
-  rforEach (fn, thisp) {
-    thisp = thisp || this
-    for (let walker = this[LRU_LIST].tail; walker !== null;) {
-      const prev = walker.prev
-      forEachStep(this, fn, walker, thisp)
-      walker = prev
-    }
-  }
-
-  forEach (fn, thisp) {
-    thisp = thisp || this
-    for (let walker = this[LRU_LIST].head; walker !== null;) {
-      const next = walker.next
-      forEachStep(this, fn, walker, thisp)
-      walker = next
-    }
-  }
-
-  keys () {
-    return this[LRU_LIST].toArray().map(k => k.key)
-  }
-
-  values () {
-    return this[LRU_LIST].toArray().map(k => k.value)
-  }
-
-  reset () {
-    if (this[DISPOSE] &&
-        this[LRU_LIST] &&
-        this[LRU_LIST].length) {
-      this[LRU_LIST].forEach(hit => this[DISPOSE](hit.key, hit.value))
-    }
-
-    this[CACHE] = new Map() // hash of items by key
-    this[LRU_LIST] = new Yallist() // list of items in order of use recency
-    this[LENGTH] = 0 // length of items in the list
-  }
-
-  dump () {
-    return this[LRU_LIST].map(hit =>
-      isStale(this, hit) ? false : {
-        k: hit.key,
-        v: hit.value,
-        e: hit.now + (hit.maxAge || 0)
-      }).toArray().filter(h => h)
-  }
-
-  dumpLru () {
-    return this[LRU_LIST]
-  }
-
-  set (key, value, maxAge) {
-    maxAge = maxAge || this[MAX_AGE]
-
-    if (maxAge && typeof maxAge !== 'number')
-      throw new TypeError('maxAge must be a number')
-
-    const now = maxAge ? Date.now() : 0
-    const len = this[LENGTH_CALCULATOR](value, key)
-
-    if (this[CACHE].has(key)) {
-      if (len > this[MAX]) {
-        del(this, this[CACHE].get(key))
-        return false
-      }
-
-      const node = this[CACHE].get(key)
-      const item = node.value
-
-      // dispose of the old one before overwriting
-      // split out into 2 ifs for better coverage tracking
-      if (this[DISPOSE]) {
-        if (!this[NO_DISPOSE_ON_SET])
-          this[DISPOSE](key, item.value)
-      }
-
-      item.now = now
-      item.maxAge = maxAge
-      item.value = value
-      this[LENGTH] += len - item.length
-      item.length = len
-      this.get(key)
-      trim(this)
-      return true
-    }
-
-    const hit = new Entry(key, value, len, now, maxAge)
-
-    // oversized objects fall out of cache automatically.
-    if (hit.length > this[MAX]) {
-      if (this[DISPOSE])
-        this[DISPOSE](key, value)
-
-      return false
-    }
-
-    this[LENGTH] += hit.length
-    this[LRU_LIST].unshift(hit)
-    this[CACHE].set(key, this[LRU_LIST].head)
-    trim(this)
-    return true
-  }
-
-  has (key) {
-    if (!this[CACHE].has(key)) return false
-    const hit = this[CACHE].get(key).value
-    return !isStale(this, hit)
-  }
-
-  get (key) {
-    return get(this, key, true)
-  }
-
-  peek (key) {
-    return get(this, key, false)
-  }
-
-  pop () {
-    const node = this[LRU_LIST].tail
-    if (!node)
-      return null
-
-    del(this, node)
-    return node.value
-  }
-
-  del (key) {
-    del(this, this[CACHE].get(key))
-  }
-
-  load (arr) {
-    // reset the cache
-    this.reset()
-
-    const now = Date.now()
-    // A previous serialized cache has the most recent items first
-    for (let l = arr.length - 1; l >= 0; l--) {
-      const hit = arr[l]
-      const expiresAt = hit.e || 0
-      if (expiresAt === 0)
-        // the item was created without expiration in a non aged cache
-        this.set(hit.k, hit.v)
-      else {
-        const maxAge = expiresAt - now
-        // dont add already expired items
-        if (maxAge > 0) {
-          this.set(hit.k, hit.v, maxAge)
-        }
-      }
-    }
-  }
-
-  prune () {
-    this[CACHE].forEach((value, key) => get(this, key, false))
-  }
-}
-
-const get = (self, key, doUse) => {
-  const node = self[CACHE].get(key)
-  if (node) {
-    const hit = node.value
-    if (isStale(self, hit)) {
-      del(self, node)
-      if (!self[ALLOW_STALE])
-        return undefined
-    } else {
-      if (doUse) {
-        if (self[UPDATE_AGE_ON_GET])
-          node.value.now = Date.now()
-        self[LRU_LIST].unshiftNode(node)
-      }
-    }
-    return hit.value
-  }
-}
-
-const isStale = (self, hit) => {
-  if (!hit || (!hit.maxAge && !self[MAX_AGE]))
-    return false
-
-  const diff = Date.now() - hit.now
-  return hit.maxAge ? diff > hit.maxAge
-    : self[MAX_AGE] && (diff > self[MAX_AGE])
-}
-
-const trim = self => {
-  if (self[LENGTH] > self[MAX]) {
-    for (let walker = self[LRU_LIST].tail;
-      self[LENGTH] > self[MAX] && walker !== null;) {
-      // We know that we're about to delete this one, and also
-      // what the next least recently used key will be, so just
-      // go ahead and set it now.
-      const prev = walker.prev
-      del(self, walker)
-      walker = prev
-    }
-  }
-}
-
-const del = (self, node) => {
-  if (node) {
-    const hit = node.value
-    if (self[DISPOSE])
-      self[DISPOSE](hit.key, hit.value)
-
-    self[LENGTH] -= hit.length
-    self[CACHE].delete(hit.key)
-    self[LRU_LIST].removeNode(node)
-  }
-}
-
-class Entry {
-  constructor (key, value, length, now, maxAge) {
-    this.key = key
-    this.value = value
-    this.length = length
-    this.now = now
-    this.maxAge = maxAge || 0
-  }
-}
-
-const forEachStep = (self, fn, node, thisp) => {
-  let hit = node.value
-  if (isStale(self, hit)) {
-    del(self, node)
-    if (!self[ALLOW_STALE])
-      hit = undefined
-  }
-  if (hit)
-    fn.call(thisp, hit.value, hit.key, self)
-}
-
-module.exports = LRUCache
-
-
-/***/ }),
-
 /***/ 9380:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -23959,20 +23429,6 @@ const validRange = (range, options) => {
   }
 }
 module.exports = validRange
-
-
-/***/ }),
-
-/***/ 3605:
-/***/ ((module) => {
-
-"use strict";
-
-module.exports = function (str) {
-	return encodeURIComponent(str).replace(/[!'()*]/g, function (c) {
-		return '%' + c.charCodeAt(0).toString(16).toUpperCase();
-	});
-};
 
 
 /***/ }),
@@ -26671,11 +26127,9 @@ const RULES = [
         `'installer-url' extension '${urlExt(i.installerUrl)}' must be one of: ${constants.KNOWN_EXTENSIONS}`,
     (i) => !!(!i.minicondaVersion && i.architecture !== "x64") &&
         `'architecture: ${i.architecture}' requires "miniconda-version"`,
-    (i // Miniconda x86 is only published for Windows lately (last Linux was 2019, last MacOS 2015)
-    ) => !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
+    (i) => !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
         `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
-    (i // We only support miniconda 4.6 or later (`conda init` and /condabin were added here, which we need)
-    ) => !!(!["latest", ""].includes(i.minicondaVersion) &&
+    (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
         semver.lt(i.minicondaVersion, "4.6.0")) &&
         `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
 ];
@@ -27702,14 +27156,6 @@ module.exports = require("os");
 
 "use strict";
 module.exports = require("path");
-
-/***/ }),
-
-/***/ 5477:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("punycode");
 
 /***/ }),
 
