@@ -5,7 +5,8 @@
 ### Documentation
 
 - [#263] Update links to GitHub shell docs
-- [#289] Consider leading with conda activation does not work on sh, please use bash
+- [#289] Consider leading with conda activation does not work on sh, please use
+  bash
 
 ### Features
 
@@ -14,7 +15,7 @@
 ### Tasks and Maintenance
 
 - [#273] Bump json5 from 1.0.1 to 1.0.2
-- [#293] Remove Python 2.7 from test matrix (EOL since  April 2020, >4 years)
+- [#293] Remove Python 2.7 from test matrix (EOL since April 2020, >4 years)
 - [#294] Update dependencies
 - [#295] Add dependabot config to update action versions in workflows by
 - [#300] Fix CI (lint + examples)
