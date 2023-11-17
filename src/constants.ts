@@ -17,10 +17,14 @@ export const MINICONDA_BASE_URL: string =
 
 /** Processor architectures supported by Miniconda */
 export const MINICONDA_ARCHITECTURES: types.IArchitectures = {
+  aarch64: "aarch64",
+  arm64: "arm64",
+  ppc64le: "ppc64le",
+  s390x: "s390x",
   x64: "x86_64",
+  x86_64: "x86_64",
   x86: "x86",
-  ARM64: "aarch64", // To be supported by github runners
-  ARM32: "armv7l", // To be supported by github runners
+  arm32: "armv7l", // To be supported by github runners
 };
 
 /** Processor architectures supported by Miniforge */
