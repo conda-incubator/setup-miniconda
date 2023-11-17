@@ -37,9 +37,6 @@ jobs:
       - name: Conda info
         shell: bash -el {0}
         run: conda info
-      - name: Conda list
-        shell: pwsh
-        run: conda list
-      - name: Environment
+      - name: Conda info
         shell: bash -el {0}
-        run: printenv | sort
+        run: conda list
