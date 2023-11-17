@@ -40,7 +40,7 @@ jobs:
       - uses: ./
         with:
           python-version: "3.11"
-          mamba-version: "*"
+          mamba-version: ">=1.5.3"
           channels: conda-forge,nodefaults
           channel-priority: true
           activate-environment: ${{ matrix.activate-environment }}
