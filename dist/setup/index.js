@@ -47248,14 +47248,12 @@ const utils = __importStar(__nccwpck_require__(1314));
  * Provide current location of miniconda or location where it will be installed
  */
 function condaBasePath(options) {
-    let condaPath = constants.MINICONDA_DIR_PATH;
-    if (!options.useBundled) {
-        if (constants.IS_MAC) {
-            condaPath = "/Users/runner/miniconda3";
-        }
-        else {
-            condaPath += "3";
-        }
+    let condaPath;
+    if (options.useBundled) {
+        condaPath = constants.MINICONDA_DIR_PATH;
+    }
+    else {
+        condaPath = path.join(os.homedir(), "miniconda3");
     }
     return condaPath;
 }
