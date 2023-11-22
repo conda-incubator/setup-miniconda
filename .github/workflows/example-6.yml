@@ -39,7 +39,8 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./
         with:
-          python-version: "3.7"
+          miniforge-variant: Miniforge3
+          python-version: "3.11"
           mamba-version: "*"
           channels: conda-forge,nodefaults
           channel-priority: true

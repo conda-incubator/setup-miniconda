@@ -54,3 +54,7 @@ git push origin main
 ```
 
 Replace `X.Y.Z` by the appropriate version number.
+
+- Update the old repository just in case with the main/master branch
+
+https://github.com/goanpeca/setup-miniconda
