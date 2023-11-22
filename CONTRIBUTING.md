@@ -11,11 +11,11 @@ convention, are also checked in.
 
 - Create Conda env with `nodejs`:
 
-We use NodeJS version 16 for now.
+We use NodeJS version 20 for now.
 
 ```bash
-conda create -n github-action nodejs=16 -c conda-forge
-conda activate
+conda create -n github-action nodejs=20 -c conda-forge
+conda activate github-action
 ```
 
 - Install NodeJS dependencies:
