@@ -28,7 +28,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Setup Mambaforge
         uses: conda-incubator/setup-miniconda@v2
