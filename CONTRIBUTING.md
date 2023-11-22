@@ -2,7 +2,7 @@
 
 ## Pull requests
 
-Make sure to make your pull requests against the `develop` branch.
+Make sure to make your pull requests against the `main` branch.
 
 ## Build
 

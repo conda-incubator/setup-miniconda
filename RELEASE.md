@@ -1,6 +1,7 @@
 # Release
 
-- Update dependencies and fix any outdated dependencies.
+- Update dependencies and fix any outdated dependencies. (can be skipped as
+  Dependabot keeps everything updated)
 
 ```bash
 npm install -g npm-check-updates
@@ -16,22 +17,14 @@ npm-check-updates
 
 - Run the [build](./CONTRIBUTING.md#build).
 
-- All contributions currently go to the `develop` branch. To make a new
-  releasecheckout to the `main` branch and merge with `develop` and then proceed
-  with the release process. We also keep the `master` branch until `v3` is
-  released with a wrtning so we also merge this with develop.
+- We keep the `master` branch until `v3` is released with a warning so we also
+  merge this with main.
 
 ```bash
-git checkout develop
-git pull origin develop
-git checkout master
-git pull origin master
-git merge develop
+git remote update
+git checkout origin/master -b master
+git merge origin/main
 git push origin master
-git checkout main
-git pull origin main
-git merge develop
-git push origin main
 ```
 
 - Create a new named tag:
