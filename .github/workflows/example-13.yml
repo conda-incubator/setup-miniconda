@@ -1,9 +1,9 @@
 name: "Example 13: Self-hosted"
 
 on:
-  pull_request:  # temporary, remove after pipeline is setup to save resources
+  pull_request: # temporary, remove after pipeline is setup to save resources
     branches:
-      - "main"  
+      - "main"
       - "develop"
   push:
     branches:
@@ -11,7 +11,8 @@ on:
       - "main"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  group:
+    ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -21,7 +22,13 @@ jobs:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
     name: Ex1 (${{ matrix.python-version }}, ${{ matrix.os }})
-    runs-on: ['cirun-openstack-cpu-small--${{ github.run_id }}', 'linux', 'x64', 'self-hosted']
+    runs-on:
+      [
+        "cirun-openstack-cpu-small--${{ github.run_id }}",
+        "linux",
+        "x64",
+        "self-hosted",
+      ]
     timeout-minutes: 30
     strategy:
       fail-fast: false
