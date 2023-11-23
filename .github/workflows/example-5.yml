@@ -27,7 +27,7 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - run: |
           curl -L ${MINIFORGE_URL} > /tmp/some-built-installer-${{ github.run_number }}.sh
       - uses: ./
@@ -51,7 +51,7 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ./
         with:
           installer-url: https://github.com/conda-forge/miniforge/releases/download/4.11.0-0/Miniforge-pypy3-4.11.0-0-MacOSX-x86_64.sh?foo=bar&baz
@@ -69,7 +69,7 @@ jobs:
     name: Ex5 Windows
     runs-on: "windows-latest"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ./
         with:
           installer-url:
