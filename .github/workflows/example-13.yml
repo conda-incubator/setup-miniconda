@@ -16,12 +16,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  example-1:
+  example-13:
     # prevent cronjobs from running on forks
     if:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
-    name: Ex1 (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Ex13 (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on:
       [
         "cirun-openstack-cpu-small--${{ github.run_id }}",
