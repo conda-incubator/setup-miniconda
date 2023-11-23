@@ -30,7 +30,7 @@ jobs:
         architecture: ["x86"]
         miniconda-version: ["latest"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ./
         id: setup-miniconda
         continue-on-error: true

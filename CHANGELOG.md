@@ -1,5 +1,37 @@
 # CHANGELOG
 
+## [v2.3.0] (2023-11-22)
+
+### Documentation
+
+- [#263] Update links to GitHub shell docs
+- [#289] Consider leading with conda activation does not work on sh, please use
+  bash
+
+### Features
+
+- [#296] Update Miniconda architectures (enables M1 = osx-arm64 runners)
+
+### Tasks and Maintenance
+
+- [#273] Bump json5 from 1.0.1 to 1.0.2
+- [#293] Remove Python 2.7 from test matrix (EOL since April 2020, >4 years)
+- [#294] Update dependencies
+- [#295] Add dependabot config to update action versions in workflows by
+- [#300] Fix CI (lint + examples)
+- [#304] Fix CI: Remove not working example-13, use Miniforge in example-6
+
+[v2.3.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v2.3.0
+[#263]: https://github.com/conda-incubator/setup-miniconda/pull/263
+[#289]: https://github.com/conda-incubator/setup-miniconda/pull/289
+[#296]: https://github.com/conda-incubator/setup-miniconda/pull/296
+[#273]: https://github.com/conda-incubator/setup-miniconda/pull/273
+[#293]: https://github.com/conda-incubator/setup-miniconda/pull/293
+[#294]: https://github.com/conda-incubator/setup-miniconda/pull/294
+[#295]: https://github.com/conda-incubator/setup-miniconda/pull/295
+[#300]: https://github.com/conda-incubator/setup-miniconda/pull/300
+[#304]: https://github.com/conda-incubator/setup-miniconda/pull/300
+
 ## [v2.2.0] (2021-11-11)
 
 ### Documentation

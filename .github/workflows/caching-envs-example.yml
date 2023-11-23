@@ -28,7 +28,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Setup Mambaforge
         uses: conda-incubator/setup-miniconda@v2
@@ -44,7 +44,7 @@ jobs:
         shell: bash
 
       - name: Cache Conda env
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ env.CONDA }}/envs
           key:

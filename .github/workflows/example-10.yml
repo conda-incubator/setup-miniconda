@@ -29,7 +29,7 @@ jobs:
       matrix:
         os: ["ubuntu", "macos", "windows"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ./
         id: setup-miniconda
         with:
@@ -68,18 +68,16 @@ jobs:
             environment-file: etc/example-environment-no-name.yml
             miniforge-variant: Mambaforge
             mamba-version: ">=0.20"
-          # should use mamabforge-pypy `latest`
-          - os: macos
-            environment-file: etc/example-empty-channels-environment.yml
-            miniforge-variant: Mambaforge-pypy3
-            miniforge-version: latest
           # should use mamabforge `latest`
           - os: windows
             environment-file: etc/example-explicit.Windows.conda.lock
             condarc-file: etc/example-condarc.yml
             miniforge-variant: Mambaforge
+          - os: macos
+            miniforge-variant: Mambaforge
+            miniforge-version: "23.3.1-1"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ./
         id: setup-miniconda
         with:
