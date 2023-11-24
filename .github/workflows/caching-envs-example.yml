@@ -13,6 +13,11 @@ on:
     # Note that cronjobs run on master/main by default
     - cron: "0 0 * * *"
 
+concurrency:
+  group:
+    ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   caching-example:
     name: Caching-Env
@@ -27,6 +32,7 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
 
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
