@@ -9,27 +9,44 @@ on:
       - "develop"
       - "main"
       - "master"
-  schedule:
-    # Note that cronjobs run on master/main by default
-    - cron: "0 0 * * *"
 
 jobs:
   lint:
-    # prevent cronjobs from running on forks
-    if:
-      (github.event_name == 'schedule' && github.repository ==
-      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
     name: Lint
     runs-on: "ubuntu-latest"
-    defaults:
-      run:
-        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: |
-          npm install
+          # ci: install exact versions from package-lock.json
+          #     fast, secure, predictable compared to npm install
+          npm ci
           npm run check
+  build:
+    name: Build
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build
+        run: |
+          # ci: install exact versions from package-lock.json
+          #     fast, secure, predictable compared to npm install
+          npm ci
           npm run build
+
+      - name: Check that all built are committed
+        run: |
+          # Check if any changes are to be committed
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "There are uncommitted changes, please run:"
+            echo "  npm run format"
+            echo "  npm run build"
+            echo "and commit the resulting changes before pushing."
+            echo "See also CONTRIBUTING.md"
+            exit 1
+          fi
