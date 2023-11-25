@@ -110,6 +110,7 @@ export async function parseInputs(): Promise<types.IActionInputs> {
       channels: core.getInput("channels"),
       show_channel_urls: core.getInput("show-channel-urls"),
       use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
+      solver: core.getInput("conda-solver"),
       // These are always set to avoid terminal issues
       always_yes: "true",
       changeps1: "false",

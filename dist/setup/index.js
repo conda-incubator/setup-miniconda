@@ -47111,7 +47111,6 @@ exports.updateMamba = {
     label: "update mamba",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () { return inputs.mambaVersion !== "" || options.mambaInInstaller; }),
     toolPackages: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
-        core.warning(`Mamba support is still experimental and can result in differently solved environments!`);
         return {
             tools: inputs.mambaVersion !== ""
                 ? [utils.makeSpec("mamba", inputs.mambaVersion)]
@@ -48190,6 +48189,7 @@ function parseInputs() {
                 channels: core.getInput("channels"),
                 show_channel_urls: core.getInput("show-channel-urls"),
                 use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
+                solver: core.getInput("conda-solver"),
                 // These are always set to avoid terminal issues
                 always_yes: "true",
                 changeps1: "false",

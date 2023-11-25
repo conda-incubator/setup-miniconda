@@ -222,17 +222,24 @@ inputs:
     default: "true"
   mamba-version:
     description:
-      'Experimental. Use mamba (https://github.com/QuantStack/mamba) as a faster
-      drop-in replacement for conda installs. Disabled by default. To enable,
-      use "*" or a "x.y" version string.'
+      'Use mamba (https://github.com/QuantStack/mamba) as a faster drop-in
+      replacement for conda installs. Disabled by default. To enable, use "*" or
+      a "x.y" version string.'
     required: false
     default: ""
   use-mamba:
     description:
-      "Experimental. Use mamba as soon as available (either as provided by
+      "Use mamba as soon as available (either as provided by
       `mamba-in-installer` or installation by `mamba-version`)"
     required: false
     default: ""
+  conda-solver:
+    description:
+      "Which conda solver plugin to use. Only applies to the `conda` client, not
+      `mamba`. Starting with Miniconda 23.5.2 and Miniforge 23.3.1, you can
+      choose between `classic` and `libmamba`."
+    required: false
+    default: "libmamba"
   architecture:
     description:
       'Architecture of Miniconda that should be installed. Default is "x64". The
