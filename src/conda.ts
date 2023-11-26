@@ -17,13 +17,11 @@ import * as utils from "./utils";
  * Provide current location of miniconda or location where it will be installed
  */
 export function condaBasePath(options: types.IDynamicOptions): string {
-  let condaPath: string = constants.MINICONDA_DIR_PATH;
-  if (!options.useBundled) {
-    if (constants.IS_MAC) {
-      condaPath = "/Users/runner/miniconda3";
-    } else {
-      condaPath += "3";
-    }
+  let condaPath: string;
+  if (options.useBundled) {
+    condaPath = constants.MINICONDA_DIR_PATH;
+  } else {
+    condaPath = path.join(os.homedir(), "miniconda3");
   }
   return condaPath;
 }
