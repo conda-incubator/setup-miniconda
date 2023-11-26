@@ -44,18 +44,20 @@ possibility of automatically activating the `test` environment on all shells.
 
 > Each of the examples below is discussed in a dedicated section below.
 
-| Documentation                                   | Workflow Status                                                 |
-| ----------------------------------------------- | --------------------------------------------------------------- |
-| [Basic usage](#example-1-basic-usage)           | [![Basic Usage Status][ex1-badge]][ex1]                         |
-| [Other shells](#example-2-other-shells)         | [![Other Shells Status][ex2-badge]][ex2]                        |
-| [Other options](#example-3-other-options)       | [![Other Options Status][ex3-badge]][ex3]                       |
-| [Channels](#example-4-conda-options)            | [![Channels Status][ex4-badge]][ex4]                            |
-| [Custom installer](#example-5-custom-installer) | [![Custom Installer Status][ex5-badge]][ex5]                    |
-| [Mamba](#example-6-mamba)                       | [![Mamba Status][ex6-badge]][ex6]                               |
-| [Lockfiles](#example-7-lockfiles)               | [![Lockfiles Status][ex7-badge]][ex7]                           |
-| [Miniforge](#example-10-miniforge)              | [![Miniforge Status][ex10-badge]][ex10]                         |
-| [Caching packages](#caching-packages)           | [![Caching Example Status][caching-badge]][caching]             |
-| [Caching environments](#caching-environments)   | [![Caching Env Example Status][caching-env-badge]][caching-env] |
+| Documentation                                                      | Workflow Status                                                 |
+| ------------------------------------------------------------------ | --------------------------------------------------------------- |
+| [Basic usage](#example-1-basic-usage)                              | [![Basic Usage Status][ex1-badge]][ex1]                         |
+| [Other shells](#example-2-other-shells)                            | [![Other Shells Status][ex2-badge]][ex2]                        |
+| [Other options](#example-3-other-options)                          | [![Other Options Status][ex3-badge]][ex3]                       |
+| [Channels](#example-4-conda-options)                               | [![Channels Status][ex4-badge]][ex4]                            |
+| [Custom installer](#example-5-custom-installer)                    | [![Custom Installer Status][ex5-badge]][ex5]                    |
+| [Mamba](#example-6-mamba)                                          | [![Mamba Status][ex6-badge]][ex6]                               |
+| [Lockfiles](#example-7-lockfiles)                                  | [![Lockfiles Status][ex7-badge]][ex7]                           |
+| [Miniforge](#example-10-miniforge)                                 | [![Miniforge Status][ex10-badge]][ex10]                         |
+| [Alternative Architectures](#example-11-alternative-architectures) | [![Alternative Architectures][ex11-badge]][ex11]                |
+| [Configure conda solver](#example-12-configure-conda-solver)       | [![Configure conda solver][ex12-badge]][ex12]                   |
+| [Caching packages](#caching-packages)                              | [![Caching Example Status][caching-badge]][caching]             |
+| [Caching environments](#caching-environments)                      | [![Caching Env Example Status][caching-env-badge]][caching-env] |
 
 [ex1]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml
@@ -97,6 +99,14 @@ possibility of automatically activating the `test` environment on all shells.
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-10.yml
 [ex10-badge]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-10.yml/badge.svg?branch=main
+[ex11]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-11.yml
+[ex11-badge]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-11.yml/badge.svg?branch=main
+[ex12]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-12.yml
+[ex12-badge]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-12.yml/badge.svg?branch=main
 
 ## Other Workflows
 
@@ -298,7 +308,7 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: anaconda-client-env
@@ -330,7 +340,7 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: foo
@@ -372,7 +382,7 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v2
         with:
           installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-Linux-x86_64.sh
@@ -404,7 +414,7 @@ jobs:
     name: Ex6 Mamba
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: 3.6
@@ -443,7 +453,7 @@ This means explicitly-defined environments which:
 This approach can be useful as part of a larger system e.g., a separate workflow
 that runs `conda-lock` for all the platforms needed in a separate job.
 
-[conda-lock]: https://github.com/conda-incubator/conda-lock
+[conda-lock]: https://github.com/conda/conda-lock
 [explicit-spec]:
   https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#building-identical-conda-environments
 
@@ -456,7 +466,7 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: false
@@ -487,7 +497,7 @@ jobs:
       matrix:
         os: ["ubuntu", "macos", "windows"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v2
         with:
           environment-file: etc/example-environment.yml
@@ -519,7 +529,7 @@ jobs:
             condarc-file: etc/example-condarc.yml
             miniforge-variant: Mambaforge
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v2
         with:
           condarc-file: ${{ matrix.condarc-file }}
@@ -549,13 +559,41 @@ jobs:
         architecture: ["x86"]
         miniconda-version: ["latest"]
     steps:
-      - uses: actions/checkout@v2
-      - uses: ./
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           architecture: ${{ matrix.architecture }}
           miniconda-version: $${{ matrix.miniconda-version }}
           auto-update-conda: true
           python-version: "3.8"
+```
+
+### Example 12: Configure conda solver
+
+Set the conda solver plugin to use. Only applies to the `conda` client, not
+`mamba`. Starting with Miniconda 23.5.2 and Miniforge 23.3.1, you can choose
+between `classic` and `libmamba`. Best when combined with
+`auto-update-conda: true`.
+
+```yaml
+jobs:
+  example-12:
+    name: Ex12 (os=${{ matrix.os }} solver=${{ matrix.solver }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        solver: ["classic", "libmamba"]
+        os: ["ubuntu-latest", "windows-latest"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v2
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          auto-update-conda: true
+          conda-solver: ${{ matrix.solver }}
+          python-version: "3.9"
 ```
 
 ## Caching
@@ -580,9 +618,9 @@ jobs:
     name: Caching
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Cache conda
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if etc/example-environment.yml has not changed
           CACHE_NUMBER: 0
@@ -632,7 +670,7 @@ the "Get Date" step below if you use a resolved environment file product of
   shell: bash
 
 - name: Cache Conda env
-  uses: actions/cache@v2
+  uses: actions/cache@v3
   with:
     path: ${{ env.CONDA }}/envs
     key:
@@ -692,7 +730,7 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: anaconda-client-env
@@ -737,6 +775,24 @@ jobs:
   defined in `environment.yaml`, otherwise the conda solver might find conflicts
   which cause very long install times or install failures.
 
+## Security / Reproducibility
+
+Security and reproducibility is important especially when workflows deal with
+secrets. No matter how much individual Github action repositories are secured,
+git branches and tags are always mutable. It is thus good practice to:
+
+1. pin the action to a specific sha1 with tag as comment, instead of e.g. using
+   v2 or v2.2.1 (which are mutable tags):
+   `uses: conda-incubator/setup-miniconda@9f54435e0e72c53962ee863144e47a4b094bfd35 # v2.3.0`
+   see
+   [example](https://github.com/conda-incubator/setup-miniconda/actions/workflows/caching-example.yml)
+2. keep the non-human-readable pinning updated to not run behind recent updates
+   and fixes via automation like
+   [renovate](https://docs.renovatebot.com/modules/manager/github-actions/) or
+   [dependabot](https://github.blog/changelog/2022-10-31-dependabot-now-updates-comments-in-github-actions-workflows-referencing-action-versions/)
+3. use conda-lock files, see
+   [conda-lock](https://github.com/conda/conda-lock#why)
+
 ## Project History and Contributing
 
 See the
@@ -744,6 +800,11 @@ See the
 for project history, or
 [CONTRIBUTING](https://github.com/conda-incubator/setup-miniconda/blob/main/CONTRIBUTING.md)
 to get started adding features you need.
+
+## Similar Actions to work with conda packages
+
+- https://github.com/mamba-org/setup-micromamba
+- https://github.com/prefix-dev/setup-pixi
 
 ## Contributors
 
