@@ -13,6 +13,11 @@ on:
     # Note that cronjobs run on master/main by default
     - cron: "0 0 * * *"
 
+concurrency:
+  group:
+    ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   issue-114:
     # prevent cronjobs from running on forks
@@ -29,6 +34,7 @@ jobs:
       matrix:
         os: ["ubuntu", "macos", "windows"]
         python-version: ["3.9"]
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: ./
