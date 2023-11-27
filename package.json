@@ -1,6 +1,5 @@
 {
   "name": "setup-miniconda",
-  "version": "2.3.0",
   "description": "GitHub action for setting up conda from default or custom installers",
   "main": "lib/main.js",
   "scripts": {
