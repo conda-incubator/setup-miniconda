@@ -10,40 +10,34 @@ npm-check-updates
 
 - Ensure the [CHANGELOG](./CHANGELOG.md) is up-to-date.
 
-- Update the `version` in [package.json](./package.json).
+- If this release is a major version, update all the example YAML in the
+  [README](./README.md), e.g. `4.0.0` would need `@v3` -> `@v4`.
 
-  - If this release is a major version, update all the example YAML in the
-    [README](./README.md), e.g. `3.0.0` would need `@v2` -> `@v3`.
+- Ensure that all
+  [workflow runs](https://github.com/conda-incubator/setup-miniconda/actions?query=branch%3Amain)
+  for the latest commit on main are green.
 
-- Run the [build](./CONTRIBUTING.md#build).
+- Create a new release via "Draft a new release" button at the
+  [Release page](https://github.com/conda-incubator/setup-miniconda/releases):
 
-- We keep the `master` branch until `v3` is released with a warning so we also
-  merge this with main.
-
-```bash
-git remote update
-git checkout origin/master -b master
-git merge origin/main
-git push origin master
-```
-
-- Create a new named tag:
-
-```bash
-git tag -a vX.Y.Z -m 'Release version vX.Y.Z'
-```
+  - Choose a new tag like `vX.Y.Z` that targets the current main branch and that
+    is created on publish of the release
+  - Choose the title `Version X.Y.Z`
+  - Paste the relevant [CHANGELOG](./CHANGELOG.md) section into the description
+    field
+  - Publish the release
 
 Replace `X.Y.Z` by the appropriate version number.
 
 - Point the old `vX` tag to latest `vX.Y.Z` tag:
 
 ```bash
-git checkout main
+git remote update
 git tag -d vX
 git push origin :refs/tags/vX
+git checkout vX.Y.Z
 git tag -a vX -m 'Release version vX.Y.Z'
 git push origin --tags
-git push origin main
 ```
 
 Replace `X.Y.Z` by the appropriate version number.
