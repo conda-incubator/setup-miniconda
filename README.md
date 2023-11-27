@@ -450,8 +450,10 @@ This means explicitly-defined environments which:
   platform/architecture information
 - can become broken if any file becomes unavailable
 
-This approach can be useful as part of a larger system e.g., a separate workflow
-that runs `conda-lock` for all the platforms needed in a separate job.
+This approach can be useful as part of a larger system e.g., a
+[separate workflow](https://github.com/conda-incubator/setup-miniconda/actions/workflows/update-example-lockfiles.yml)
+that runs `conda-lock` for all the platforms needed in a separate job and
+creates update Pull-Requests.
 
 [conda-lock]: https://github.com/conda/conda-lock
 [explicit-spec]:

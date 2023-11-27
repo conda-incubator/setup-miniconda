@@ -1,0 +1,57 @@
+name: Update example lockfiles
+on:
+  schedule:
+    # Once per week on Sunday
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: ./
+        with:
+          environment-file: ./etc/example-environment-explicit.yml
+          python-version: "3.9"
+      - name: Update lockfile
+        run: |
+          conda-lock \
+            --file ./etc/example-environment-explicit.yml \
+            --platform linux-64 \
+            --kind explicit \
+            --filename-template './etc/example-explicit.Linux.conda.lock'
+          conda-lock \
+            --file ./etc/example-environment-explicit.yml \
+            --platform osx-64 \
+            --kind explicit \
+            --filename-template './etc/example-explicit.macOS.conda.lock'
+          conda-lock \
+            --file ./etc/example-environment-explicit.yml \
+            --platform win-64 \
+            --kind explicit \
+            --filename-template './etc/example-explicit.Windows.conda.lock'
+      - name: Show changes
+        run: |
+          git diff
+          git status
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "chore(deps): Update example lockfiles"
+          body: |
+            This PR updates the example lockfiles to the latest versions of the dependencies.
+
+            Please close and re-open the PR to trigger the CI checks / example workflows.
+          branch-suffix: random
+          draft: false
+          add-paths: etc/example-explicit.*.conda.lock
