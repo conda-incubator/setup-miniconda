@@ -51,7 +51,12 @@ jobs:
           python -c "import sys; assert f'{sys.version_info.major}.{sys.version_info.minor}' == '${{ matrix.python-version }}'"
 
   issue-324:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
     runs-on: windows-latest
+    name: Issue 324
     steps:
       - uses: actions/checkout@v4
       - uses: ./
