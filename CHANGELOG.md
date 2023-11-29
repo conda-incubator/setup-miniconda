@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [v3.0.1] (2023-11-29)
+
+### Fixes
+
+- [#325] Fix environment activation on windows (a v3 regression) due to
+  hard-coded install PATH
+
+[v3.0.1]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v3.0.1
+[#325]: https://github.com/conda-incubator/setup-miniconda/pull/325
+
 ## [v3.0.0] (2023-11-27)
 
 ### Features
@@ -30,7 +40,7 @@
 - [#316] Faster workflow response / saving resources via timeout/concurrency
   policy
 
-[v3.0.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v2.3.0
+[v3.0.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v3.0.0
 [#308]: https://github.com/conda-incubator/setup-miniconda/pull/308
 [#291]: https://github.com/conda-incubator/setup-miniconda/pull/291
 [#299]: https://github.com/conda-incubator/setup-miniconda/pull/299
