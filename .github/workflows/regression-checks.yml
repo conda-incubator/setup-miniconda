@@ -49,3 +49,33 @@ jobs:
       - run: |
           set -x
           python -c "import sys; assert f'{sys.version_info.major}.{sys.version_info.minor}' == '${{ matrix.python-version }}'"
+
+  issue-324:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    runs-on: windows-latest
+    name: Issue 324
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          activate-environment: test-env
+          miniforge-version: latest
+          auto-update-conda: true
+          conda-solver: libmamba
+      - name: windows debug
+        shell: cmd /C CALL {0}
+        run: >-
+          conda info && conda list && set
+
+      - name: test for correct environment being activated
+        shell: cmd /C CALL {0}
+        run: >-
+          if "%CONDA_DEFAULT_ENV%" == "test-env" (
+            echo "test-env activated"
+          ) else (
+            echo "test-env not activated"
+            exit 1
+          )

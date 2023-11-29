@@ -285,9 +285,9 @@ export async function condaInit(
     };
   } else {
     extraShells = {
-      "C:/Miniconda3/etc/profile.d/conda.sh": bashExtraText,
-      "C:/Miniconda3/etc/fish/conf.d/conda.fish": bashExtraText,
-      "C:/Miniconda3/condabin/conda_hook.bat": batchExtraText,
+      "~/miniconda3/etc/profile.d/conda.sh": bashExtraText,
+      "~/miniconda3/etc/fish/conf.d/conda.fish": bashExtraText,
+      "~/miniconda3/condabin/conda_hook.bat": batchExtraText,
     };
   }
   const allShells: types.IShells = { ...shells, ...extraShells };
