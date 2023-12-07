@@ -637,6 +637,45 @@ jobs:
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
 ```
 
+You may also set conda's packages directories (`CONDA_PKGS_DIRS`) config value,
+if you want to change setup-miniconda's default of `~/conda_pkgs_dir` with the
+`pkgs_dirs` config option. This is a comma-separated string like the channels
+config option:
+
+```yaml
+jobs:
+  caching-example:
+    name: Caching
+    runs-on: "windows-latest"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache conda
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if etc/example-environment.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          # Use faster GNU tar
+          enableCrossOsArchive: true
+          path: D:\conda_pkgs_dir
+          key:
+            ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('etc/example-environment.yml') }}
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: anaconda-client-env
+          channel-priority: strict
+          environment-file: etc/example-environment.yml
+          pkgs_dirs: D:\conda_pkgs_dir
+```
+
+> Note:
+>
+> - GitHub hosted Windows runners are currently faster during cache
+>   decompression when configuring the packages directoies on the `D:` drive as
+>   shown above. Make sure to use the `enableCrossOsArchive` cache config option
+>   as well.
+
 If you are using pip to resolve any dependencies in your conda environment then
 you may want to
 [cache those dependencies separately](https://docs.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#caching-dependencies),

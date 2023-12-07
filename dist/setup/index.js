@@ -47346,9 +47346,19 @@ function applyCondaConfiguration(inputs, options) {
             core.info(`Adding channel '${channel}'`);
             yield condaCommand(["config", "--add", "channels", channel], options);
         }
+        // Packages directories are also comma-separated, like channels
+        let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+        for (const pkgsDir of pkgsDirs) {
+            core.info(`Adding pkgs_dir '${pkgsDir}'`);
+            yield condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], options);
+        }
+        // We're also setting the appropriate conda config environment variable, to be safe
+        core.exportVariable("CONDA_PKGS_DIRS", pkgsDirs.join());
         // All other options are just passed as their string representations
         for (const [key, value] of configEntries) {
-            if (value.trim().length === 0 || key === "channels") {
+            if (value.trim().length === 0 ||
+                key === "channels" ||
+                key === "pkgs_dirs") {
                 continue;
             }
             core.info(`${key}: ${value}`);
@@ -47545,7 +47555,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OUTPUT_ENV_FILE_WAS_PATCHED = exports.OUTPUT_ENV_FILE_CONTENT = exports.OUTPUT_ENV_FILE_PATH = exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.ENV_VAR_CONDA_PKGS = exports.CONDA_CACHE_FOLDER = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_DEFAULT_VERSION = exports.MINIFORGE_DEFAULT_VARIANT = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
+exports.OUTPUT_ENV_FILE_WAS_PATCHED = exports.OUTPUT_ENV_FILE_CONTENT = exports.OUTPUT_ENV_FILE_PATH = exports.PYTHON_SPEC = exports.WIN_PERMS_FOLDERS = exports.PROFILES = exports.DEFAULT_PKGS_DIR = exports.CONDARC_PATH = exports.BOOTSTRAP_CONDARC = exports.FORCED_ERRORS = exports.IGNORED_WARNINGS = exports.MAMBA_SUBCOMMANDS = exports.KNOWN_EXTENSIONS = exports.BASE_ENV_NAMES = exports.MINIFORGE_DEFAULT_VERSION = exports.MINIFORGE_DEFAULT_VARIANT = exports.MINIFORGE_URL_PREFIX = exports.OS_NAMES = exports.MINIFORGE_ARCHITECTURES = exports.MINICONDA_ARCHITECTURES = exports.MINICONDA_BASE_URL = exports.IS_UNIX = exports.IS_LINUX = exports.IS_MAC = exports.IS_WINDOWS = exports.MINICONDA_DIR_PATH = void 0;
 const os = __importStar(__nccwpck_require__(2037));
 const path = __importStar(__nccwpck_require__(1017));
 //-----------------------------------------------------------------------
@@ -47634,10 +47644,8 @@ exports.BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
  * The conda config file
  */
 exports.CONDARC_PATH = path.join(os.homedir(), ".condarc");
-/** Where to put files. Should eventually be configurable */
-exports.CONDA_CACHE_FOLDER = "conda_pkgs_dir";
-/** The environment variable exported */
-exports.ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+/** Where to put files */
+exports.DEFAULT_PKGS_DIR = "conda_pkgs_dir";
 /** Shell profiles names to update so `conda` works for *login shells* */
 exports.PROFILES = [
     ".bashrc",
@@ -48188,6 +48196,7 @@ function parseInputs() {
                 show_channel_urls: core.getInput("show-channel-urls"),
                 use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
                 solver: core.getInput("conda-solver"),
+                pkgs_dirs: core.getInput("pkgs-dir"),
                 // These are always set to avoid terminal issues
                 always_yes: "true",
                 changeps1: "false",
@@ -48819,7 +48828,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.setEnvironmentFileOutputs = exports.setCacheVariable = exports.setPathVariables = void 0;
+exports.setEnvironmentFileOutputs = exports.setPathVariables = void 0;
 /**
  * Modify environment variables and action outputs.
  */
@@ -48827,7 +48836,6 @@ const path = __importStar(__nccwpck_require__(1017));
 const core = __importStar(__nccwpck_require__(2186));
 const constants = __importStar(__nccwpck_require__(9042));
 const conda = __importStar(__nccwpck_require__(6030));
-const utils = __importStar(__nccwpck_require__(1314));
 /**
  * Add Conda executable to PATH environment variable
  */
@@ -48844,17 +48852,6 @@ function setPathVariables(options) {
     });
 }
 exports.setPathVariables = setPathVariables;
-/**
- * Ensure the conda cache path is available as an environment variable
- */
-function setCacheVariable(options) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const folder = utils.cacheFolder();
-        yield conda.condaCommand(["config", "--add", "pkgs_dirs", folder], options);
-        core.exportVariable(constants.ENV_VAR_CONDA_PKGS, folder);
-    });
-}
-exports.setCacheVariable = setCacheVariable;
 /**
  * Export the effective environment-file path
  */
@@ -48949,7 +48946,6 @@ function setupMiniconda(inputs) {
         }
         // For potential 'channels' that may alter configuration
         options.envSpec = yield core.group("Parsing environment...", () => env.getEnvSpec(inputs));
-        yield core.group("Configuring conda package cache...", () => outputs.setCacheVariable(options));
         yield core.group("Applying initial configuration...", () => conda.applyCondaConfiguration(inputs, options));
         yield core.group("Initializing conda shell integration...", () => conda.condaInit(inputs, options));
         // New base tools may change options
@@ -49030,7 +49026,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.makeSpec = exports.execute = exports.isBaseEnv = exports.cacheFolder = void 0;
+exports.makeSpec = exports.execute = exports.isBaseEnv = exports.parsePkgsDirs = void 0;
 const os = __importStar(__nccwpck_require__(2037));
 const path = __importStar(__nccwpck_require__(1017));
 const stream = __importStar(__nccwpck_require__(2781));
@@ -49038,10 +49034,23 @@ const exec = __importStar(__nccwpck_require__(1514));
 const core = __importStar(__nccwpck_require__(2186));
 const constants = __importStar(__nccwpck_require__(9042));
 /** The folder to use as the conda package cache */
-function cacheFolder() {
-    return path.join(os.homedir(), constants.CONDA_CACHE_FOLDER);
+function parsePkgsDirs(configuredPkgsDirs) {
+    // Packages directories are also comma-separated, like channels
+    // We're also setting the appropriate conda config env var, to be safe
+    let pkgsDirs = configuredPkgsDirs
+        .trim()
+        .split(/,/)
+        .map((p) => p.trim())
+        .filter((p) => p.length);
+    // Falling back to our default packages directories value
+    if (pkgsDirs.length) {
+        return pkgsDirs;
+    }
+    else {
+        return [path.join(os.homedir(), constants.DEFAULT_PKGS_DIR)];
+    }
 }
-exports.cacheFolder = cacheFolder;
+exports.parsePkgsDirs = parsePkgsDirs;
 /**
  * Whether the given env is a conda `base` env
  */

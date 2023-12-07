@@ -66,6 +66,7 @@ export interface ICondaConfig {
   always_yes: string;
   changeps1: string;
   solver: string;
+  pkgs_dirs: string;
 }
 
 /**
