@@ -130,7 +130,7 @@ export async function applyCondaConfiguration(
     await condaCommand(["config", "--add", "channels", channel], options);
   }
 
-  // Packages directories are also comma-separated, like channels
+  // Package directories are also comma-separated, like channels
   let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
   for (const pkgsDir of pkgsDirs) {
     core.info(`Adding pkgs_dir '${pkgsDir}'`);

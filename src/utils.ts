@@ -8,7 +8,7 @@ import * as constants from "./constants";
 
 /** The folder to use as the conda package cache */
 export function parsePkgsDirs(configuredPkgsDirs: string) {
-  // Packages directories are also comma-separated, like channels
+  // Package directories are also comma-separated, like channels
   // We're also setting the appropriate conda config env var, to be safe
   let pkgsDirs = configuredPkgsDirs
     .trim()
@@ -16,7 +16,7 @@ export function parsePkgsDirs(configuredPkgsDirs: string) {
     .map((p) => p.trim())
     .filter((p) => p.length);
 
-  // Falling back to our default packages directories value
+  // Falling back to our default package directories value
   if (pkgsDirs.length) {
     return pkgsDirs;
   } else {

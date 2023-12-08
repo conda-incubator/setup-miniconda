@@ -47346,7 +47346,7 @@ function applyCondaConfiguration(inputs, options) {
             core.info(`Adding channel '${channel}'`);
             yield condaCommand(["config", "--add", "channels", channel], options);
         }
-        // Packages directories are also comma-separated, like channels
+        // Package directories are also comma-separated, like channels
         let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
         for (const pkgsDir of pkgsDirs) {
             core.info(`Adding pkgs_dir '${pkgsDir}'`);
@@ -49035,14 +49035,14 @@ const core = __importStar(__nccwpck_require__(2186));
 const constants = __importStar(__nccwpck_require__(9042));
 /** The folder to use as the conda package cache */
 function parsePkgsDirs(configuredPkgsDirs) {
-    // Packages directories are also comma-separated, like channels
+    // Package directories are also comma-separated, like channels
     // We're also setting the appropriate conda config env var, to be safe
     let pkgsDirs = configuredPkgsDirs
         .trim()
         .split(/,/)
         .map((p) => p.trim())
         .filter((p) => p.length);
-    // Falling back to our default packages directories value
+    // Falling back to our default package directories value
     if (pkgsDirs.length) {
         return pkgsDirs;
     }

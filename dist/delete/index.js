@@ -29196,14 +29196,14 @@ const core = __importStar(__nccwpck_require__(2186));
 const constants = __importStar(__nccwpck_require__(9042));
 /** The folder to use as the conda package cache */
 function parsePkgsDirs(configuredPkgsDirs) {
-    // Packages directories are also comma-separated, like channels
+    // Package directories are also comma-separated, like channels
     // We're also setting the appropriate conda config env var, to be safe
     let pkgsDirs = configuredPkgsDirs
         .trim()
         .split(/,/)
         .map((p) => p.trim())
         .filter((p) => p.length);
-    // Falling back to our default packages directories value
+    // Falling back to our default package directories value
     if (pkgsDirs.length) {
         return pkgsDirs;
     }
