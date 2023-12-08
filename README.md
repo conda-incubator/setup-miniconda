@@ -639,7 +639,7 @@ jobs:
 
 You may also set conda's packages directories (`CONDA_PKGS_DIRS`) config value,
 if you want to change setup-miniconda's default of `~/conda_pkgs_dir` with the
-`pkgs_dirs` config option. This is a comma-separated string like the channels
+`pkgs-dirs` config option. This is a comma-separated string like the channels
 config option:
 
 ```yaml
@@ -666,13 +666,13 @@ jobs:
           activate-environment: anaconda-client-env
           channel-priority: strict
           environment-file: etc/example-environment.yml
-          pkgs_dirs: D:\conda_pkgs_dir
+          pkgs-dirs: D:\conda_pkgs_dir
 ```
 
 > Note:
 >
 > - GitHub hosted Windows runners are currently faster during cache
->   decompression when configuring the packages directoies on the `D:` drive as
+>   decompression when configuring the packages directories on the `D:` drive as
 >   shown above. Make sure to use the `enableCrossOsArchive` cache config option
 >   as well.
 
