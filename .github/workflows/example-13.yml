@@ -1,0 +1,55 @@
+name: "Example 13: ARM64 for Miniforge and Mambaforge"
+
+on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - "develop"
+      - "main"
+      - "master"
+  schedule:
+    # Note that cronjobs run on master/main by default
+    - cron: "0 0 * * *"
+
+jobs:
+  example-13:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Ex13 (os=${{ matrix.os }} variant=${{ matrix.variant }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["macos-14"]
+        variant: ["Miniforge3", "Mambaforge"]
+        version: ["latest"]
+        architecture: ["arm64", "ARM64"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          auto-update-conda: true
+          architecture: ${{ matrix.architecture }}
+          miniforge-variant: ${{ matrix.variant }}
+          miniforge-version: ${{ matrix.version }}
+      - name: Conda info
+        shell: bash -el {0}
+        run: conda info
+      - name: Conda list
+        shell: bash -el {0}
+        run: conda list
+      - name: Environment
+        shell: bash -el {0}
+        run: printenv | sort
+      - name: Create an environment
+        shell: bash -el {0}
+        run: conda create -n unused --dry-run zlib
+      - name: Run mamba
+        shell: bash -el {0}
+        run: mamba --version
