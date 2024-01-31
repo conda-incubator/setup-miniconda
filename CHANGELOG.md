@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [v3.0.2] (UNRELEASED)
+
+### Fixes
+
+- [#312] Enable ARM64 on macOS for Miniforge and Mambaforge.
+
 ## [v3.0.1] (2023-11-29)
 
 ### Fixes

@@ -48148,8 +48148,6 @@ const RULES = [
     (i) => !!(i.installerUrl &&
         !constants.KNOWN_EXTENSIONS.includes(urlExt(i.installerUrl))) &&
         `'installer-url' extension '${urlExt(i.installerUrl)}' must be one of: ${constants.KNOWN_EXTENSIONS}`,
-    (i) => !!(!i.minicondaVersion && i.architecture !== "x64") &&
-        `'architecture: ${i.architecture}' requires "miniconda-version"`,
     (i) => !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
         `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
     (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
