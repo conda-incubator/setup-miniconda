@@ -15,7 +15,7 @@ async function run(): Promise<void> {
   try {
     const inputs = await core.group("Gathering Inputs...", input.parseInputs);
     let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
-    if (pkgsDirs.length) {
+    if (!pkgsDirs.length) return;
       core.startGroup(
         "Removing uncompressed packages to trim down packages directory...",
       );
