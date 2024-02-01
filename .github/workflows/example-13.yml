@@ -55,6 +55,9 @@ jobs:
       - name: Run mamba
         shell: bash -el {0}
         run: mamba --version
+      - name: Check arm64
+        shell: bash -el {0}
+        run: python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
   example-13-2:
     # prevent cronjobs from running on forks
     if:
@@ -89,3 +92,6 @@ jobs:
       - name: Run mamba
         shell: bash -el {0}
         run: mamba --version
+      - name: Check arm64
+        shell: bash -el {0}
+        run: python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
