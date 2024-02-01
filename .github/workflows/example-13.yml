@@ -1,4 +1,4 @@
-name: "Example 13: ARM64 for Miniforge and Mambaforge"
+name: "Example 13: Apple Silicon"
 
 on:
   pull_request:
