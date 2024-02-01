@@ -14,7 +14,7 @@ on:
     - cron: "0 0 * * *"
 
 jobs:
-  example-13:
+  example-13-1:
     # prevent cronjobs from running on forks
     if:
       (github.event_name == 'schedule' && github.repository ==
@@ -40,6 +40,40 @@ jobs:
           architecture: ${{ matrix.architecture }}
           miniforge-variant: ${{ matrix.variant }}
           miniforge-version: ${{ matrix.version }}
+      - name: Conda info
+        shell: bash -el {0}
+        run: conda info
+      - name: Conda list
+        shell: bash -el {0}
+        run: conda list
+      - name: Environment
+        shell: bash -el {0}
+        run: printenv | sort
+      - name: Create an environment
+        shell: bash -el {0}
+        run: conda create -n unused --dry-run zlib
+      - name: Run mamba
+        shell: bash -el {0}
+        run: mamba --version
+  example-13-2:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Ex13 (os=${{ matrix.os }} version=${{matrix.version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["macos-14"]
+        version: ["latest"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          miniforge-version: ${{matrix.version }}
       - name: Conda info
         shell: bash -el {0}
         run: conda info
