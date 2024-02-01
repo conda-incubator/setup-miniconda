@@ -20,26 +20,24 @@ jobs:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
     name:
-      Ex13 (os=${{ matrix.os }} variant=${{ matrix.variant }} version=${{
-      matrix.version }} architecture=${{ matrix.architecture }})
+      Ex13 (os=${{ matrix.os }} variant=${{ matrix.variant }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["macos-14"]
-        variant: ["Miniforge3", "Mambaforge"]
-        version: ["latest"]
-        architecture: ["arm64", "ARM64"]
+        variant: ["Miniforge3", "Mambaforge", "Miniconda"]
     steps:
       - uses: actions/checkout@v4
       - uses: ./
-        id: setup-miniconda
+        if: matrix.variant != 'Miniconda'
+        id: setup-miniforge
         continue-on-error: true
         with:
           auto-update-conda: true
-          architecture: ${{ matrix.architecture }}
+          architecture: arm64
           miniforge-variant: ${{ matrix.variant }}
-          miniforge-version: ${{ matrix.version }}
+          miniforge-version: latest
       - name: Conda info
         shell: bash -el {0}
         run: conda info
@@ -57,26 +55,54 @@ jobs:
         run: mamba --version
       - name: Check arm64
         shell: bash -el {0}
-        run: python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
+        run:
+          python -c "import platform; assert platform.machine() == 'arm64',
+          platform.machine()"
+      - uses: ./
+        if: matrix.variant == 'Miniconda'
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          auto-update-conda: true
+          miniconda-version: latest
+      - name: Conda info
+        shell: bash -el {0}
+        run: conda info
+      - name: Conda list
+        shell: bash -el {0}
+        run: conda list
+      - name: Environment
+        shell: bash -el {0}
+        run: printenv | sort
+      - name: Create an environment
+        shell: bash -el {0}
+        run: conda create -n unused --dry-run zlib
+      - name: Run mamba
+        shell: bash -el {0}
+        run: mamba --version
+      - name: Check arm64
+        shell: bash -el {0}
+        run:
+          python -c "import platform; assert platform.machine() == 'arm64',
+          platform.machine()"
   example-13-2:
     # prevent cronjobs from running on forks
     if:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
-    name: Ex13 (os=${{ matrix.os }} version=${{matrix.version }})
+    name: Ex13 (os=${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["macos-14"]
-        version: ["latest"]
     steps:
       - uses: actions/checkout@v4
       - uses: ./
         id: setup-miniconda
         continue-on-error: true
         with:
-          miniforge-version: ${{matrix.version }}
+          miniforge-version: latest
       - name: Conda info
         shell: bash -el {0}
         run: conda info
@@ -94,4 +120,6 @@ jobs:
         run: mamba --version
       - name: Check arm64
         shell: bash -el {0}
-        run: python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
+        run:
+          python -c "import platform; assert platform.machine() == 'arm64',
+          platform.machine()"
