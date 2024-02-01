@@ -137,7 +137,7 @@ export async function applyCondaConfiguration(
     await condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], options);
   }
   // We're also setting the appropriate conda config environment variable, to be safe
-  core.exportVariable("CONDA_PKGS_DIRS", pkgsDirs.join());
+  core.exportVariable("CONDA_PKGS_DIRS", pkgsDirs.join(","));
 
   // All other options are just passed as their string representations
   for (const [key, value] of configEntries) {

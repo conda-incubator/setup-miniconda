@@ -669,7 +669,7 @@ jobs:
           pkgs-dirs: D:\conda_pkgs_dir
 ```
 
-> Note:
+> [!NOTE]
 >
 > - GitHub hosted Windows runners are currently faster during cache
 >   decompression when configuring the package directories on the `D:` drive as
