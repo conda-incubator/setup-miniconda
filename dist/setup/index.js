@@ -48618,7 +48618,7 @@ function parseInputs() {
     return __awaiter(this, void 0, void 0, function* () {
         const inputs = Object.freeze({
             activateEnvironment: core.getInput("activate-environment"),
-            architecture: core.getInput("architecture"),
+            architecture: core.getInput("architecture") || process.arch,
             condaBuildVersion: core.getInput("conda-build-version"),
             condaConfigFile: core.getInput("condarc-file"),
             condaVersion: core.getInput("conda-version"),
@@ -48662,6 +48662,9 @@ function parseInputs() {
         }, []);
         if (errors.length) {
             throw Error(`${errors.length} errors found in action inputs`);
+        }
+        if (core.isDebug()) {
+            core.info(JSON.stringify(inputs));
         }
         return inputs;
     });

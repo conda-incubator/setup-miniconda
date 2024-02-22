@@ -81,7 +81,7 @@ const RULES: IRule[] = [
 export async function parseInputs(): Promise<types.IActionInputs> {
   const inputs: types.IActionInputs = Object.freeze({
     activateEnvironment: core.getInput("activate-environment"),
-    architecture: core.getInput("architecture"),
+    architecture: core.getInput("architecture") || process.arch,
     condaBuildVersion: core.getInput("conda-build-version"),
     condaConfigFile: core.getInput("condarc-file"),
     condaVersion: core.getInput("conda-version"),
@@ -131,6 +131,10 @@ export async function parseInputs(): Promise<types.IActionInputs> {
 
   if (errors.length) {
     throw Error(`${errors.length} errors found in action inputs`);
+  }
+
+  if (core.isDebug()) {
+    core.info(JSON.stringify(inputs));
   }
 
   return inputs;
