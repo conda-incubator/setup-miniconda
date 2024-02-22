@@ -48605,8 +48605,6 @@ const RULES = [
     (i) => !!(i.installerUrl &&
         !constants.KNOWN_EXTENSIONS.includes(urlExt(i.installerUrl))) &&
         `'installer-url' extension '${urlExt(i.installerUrl)}' must be one of: ${constants.KNOWN_EXTENSIONS}`,
-    (i) => !!(!i.minicondaVersion && i.architecture !== "x64") &&
-        `'architecture: ${i.architecture}' requires "miniconda-version"`,
     (i) => !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
         `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
     (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
@@ -48620,7 +48618,7 @@ function parseInputs() {
     return __awaiter(this, void 0, void 0, function* () {
         const inputs = Object.freeze({
             activateEnvironment: core.getInput("activate-environment"),
-            architecture: core.getInput("architecture"),
+            architecture: core.getInput("architecture") || process.arch,
             condaBuildVersion: core.getInput("conda-build-version"),
             condaConfigFile: core.getInput("condarc-file"),
             condaVersion: core.getInput("conda-version"),
@@ -48664,6 +48662,9 @@ function parseInputs() {
         }, []);
         if (errors.length) {
             throw Error(`${errors.length} errors found in action inputs`);
+        }
+        if (core.isDebug()) {
+            core.info(JSON.stringify(inputs));
         }
         return inputs;
     });
@@ -49009,7 +49010,7 @@ function downloadMiniforge(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const tool = inputs.miniforgeVariant.trim() || constants.MINIFORGE_DEFAULT_VARIANT;
         const version = inputs.miniforgeVersion.trim() || constants.MINIFORGE_DEFAULT_VERSION;
-        const arch = constants.MINIFORGE_ARCHITECTURES[inputs.architecture];
+        const arch = constants.MINIFORGE_ARCHITECTURES[inputs.architecture.toLowerCase()];
         // Check valid arch
         if (!arch) {
             throw new Error(`Invalid 'architecture: ${inputs.architecture}'`);

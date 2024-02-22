@@ -58,6 +58,7 @@ possibility of automatically activating the `test` environment on all shells.
 | [Configure conda solver](#example-12-configure-conda-solver)       | [![Configure conda solver][ex12-badge]][ex12]                   |
 | [Caching packages](#caching-packages)                              | [![Caching Example Status][caching-badge]][caching]             |
 | [Caching environments](#caching-environments)                      | [![Caching Env Example Status][caching-env-badge]][caching-env] |
+| [Apple Silicon](#example-13-apple-silicon)                         | [![Apple Silicon][ex13-badge]][ex13]                            |
 
 [ex1]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml
@@ -107,6 +108,10 @@ possibility of automatically activating the `test` environment on all shells.
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-12.yml
 [ex12-badge]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-12.yml/badge.svg?branch=main
+[ex13]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-13.yml
+[ex13-badge]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-13.yml/badge.svg?branch=main
 
 ## Other Workflows
 
@@ -594,6 +599,31 @@ jobs:
           auto-update-conda: true
           conda-solver: ${{ matrix.solver }}
           python-version: "3.9"
+```
+
+### Example 13: Apple Silicon
+
+```yaml
+jobs:
+  example-13:
+    name: Ex13 (os=${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["macos-14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          miniconda-version: latest
+      - name: Check arm64
+        shell: bash -el {0}
+        run: |
+          conda install -y python
+          python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
 ```
 
 ## Caching

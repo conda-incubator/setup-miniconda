@@ -242,10 +242,11 @@ inputs:
     default: "libmamba"
   architecture:
     description:
-      'Architecture of Miniconda that should be installed. Default is "x64". The
-      CPU architecture of the runner is not detected by the workflow.'
+      'Architecture of Miniconda that should be installed. This is automatically
+      detected by the runner. If you want to override it, you can use "x64",
+      "x86", "arm64", "aarch64", "s390x".'
     required: false
-    default: "x64"
+    default: ""
   clean-patched-environment-file:
     description:
       "Whether a patched environment-file (if created) should be cleaned"

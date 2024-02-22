@@ -1,0 +1,75 @@
+name: "Example 13: Apple Silicon"
+
+on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - "develop"
+      - "main"
+      - "master"
+  schedule:
+    # Note that cronjobs run on master/main by default
+    - cron: "0 0 * * *"
+
+jobs:
+  example-13:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Ex13 (os=${{ matrix.os }} variant=${{ matrix.variant }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["macos-14"]
+        variant: ["Miniforge3", "Mambaforge", "Miniconda", "no-variant"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        if: matrix.variant == 'Miniforge3' || matrix.variant == 'Mambaforge'
+        id: setup-miniforge
+        continue-on-error: true
+        with:
+          auto-update-conda: true
+          architecture: arm64
+          miniforge-variant: ${{ matrix.variant }}
+          miniforge-version: latest
+      - uses: ./
+        if: matrix.variant == 'Miniconda'
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          auto-update-conda: true
+          miniconda-version: latest
+      - uses: ./
+        if: matrix.variant == 'no-variant'
+        id: setup-miniconda2
+        continue-on-error: true
+        with:
+          miniforge-version: latest
+      - name: Conda info
+        shell: bash -el {0}
+        run: conda info
+      - name: Conda list
+        shell: bash -el {0}
+        run: conda list
+      - name: Environment
+        shell: bash -el {0}
+        run: printenv | sort
+      - name: Create an environment
+        shell: bash -el {0}
+        run: conda create -n unused --dry-run zlib
+      - name: Run mamba
+        if: matrix.variant != 'Miniconda'
+        shell: bash -el {0}
+        run: mamba --version
+      - name: Install Python
+        shell: bash -el {0}
+        run: conda install -y python
+      - name: Check arm64
+        shell: bash -el {0}
+        run: |
+          python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
