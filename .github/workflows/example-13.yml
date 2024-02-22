@@ -37,26 +37,6 @@ jobs:
           architecture: arm64
           miniforge-variant: ${{ matrix.variant }}
           miniforge-version: latest
-      - name: Conda info
-        shell: bash -el {0}
-        run: conda info
-      - name: Conda list
-        shell: bash -el {0}
-        run: conda list
-      - name: Environment
-        shell: bash -el {0}
-        run: printenv | sort
-      - name: Create an environment
-        shell: bash -el {0}
-        run: conda create -n unused --dry-run zlib
-      - name: Run mamba
-        shell: bash -el {0}
-        run: mamba --version
-      - name: Check arm64
-        shell: bash -el {0}
-        run:
-          python -c "import platform; assert platform.machine() == 'arm64',
-          platform.machine()"
       - uses: ./
         if: matrix.variant == 'Miniconda'
         id: setup-miniconda
@@ -77,6 +57,7 @@ jobs:
         shell: bash -el {0}
         run: conda create -n unused --dry-run zlib
       - name: Run mamba
+        if: matrix.variant != 'Miniconda'
         shell: bash -el {0}
         run: mamba --version
       - name: Check arm64
