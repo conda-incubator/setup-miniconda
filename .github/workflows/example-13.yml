@@ -60,6 +60,9 @@ jobs:
         if: matrix.variant != 'Miniconda'
         shell: bash -el {0}
         run: mamba --version
+      - name: Install Python
+        shell: bash -el {0}
+        run: conda install -y python
       - name: Check arm64
         shell: bash -el {0}
         run:
