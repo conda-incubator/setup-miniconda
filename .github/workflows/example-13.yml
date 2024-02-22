@@ -71,6 +71,5 @@ jobs:
         run: conda install -y python
       - name: Check arm64
         shell: bash -el {0}
-        run:
-          python -c "import platform; assert platform.machine() == 'arm64',
-          platform.machine()"
+        run: |
+          python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
