@@ -622,6 +622,7 @@ jobs:
       - name: Check arm64
         shell: bash -el {0}
         run:
+          conda install -y python
           python -c "import platform; assert platform.machine() == 'arm64',
           platform.machine()"
 ```
