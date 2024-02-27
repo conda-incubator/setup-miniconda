@@ -59,7 +59,8 @@ export async function downloadMiniconda(
 
   let extension: string = constants.IS_UNIX ? "sh" : "exe";
   let osName: string = constants.OS_NAMES[process.platform];
-  const minicondaInstallerName: string = `Miniconda${pythonMajorVersion}-${inputs.minicondaVersion}-${osName}-${arch}.${extension}`;
+  let minicondaVersion = inputs.minicondaVersion || "latest";
+  const minicondaInstallerName: string = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
   core.info(minicondaInstallerName);
 
   // Check version name
@@ -75,7 +76,7 @@ export async function downloadMiniconda(
   return await base.ensureLocalInstaller({
     url: constants.MINICONDA_BASE_URL + minicondaInstallerName,
     tool: `Miniconda${pythonMajorVersion}`,
-    version: inputs.minicondaVersion,
+    version: minicondaVersion,
     arch: arch,
   });
 }
@@ -90,7 +91,7 @@ export async function downloadMiniconda(
 export const minicondaDownloader: types.IInstallerProvider = {
   label: "download Miniconda",
   provides: async (inputs, options) => {
-    return inputs.minicondaVersion !== "" && inputs.installerUrl === "";
+    return inputs.installerUrl === "";
   },
   installerPath: async (inputs, options) => {
     return {
