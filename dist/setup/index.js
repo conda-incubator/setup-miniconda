@@ -49176,7 +49176,7 @@ const bundled_miniconda_1 = __nccwpck_require__(3390);
  * - add any new RULEs in ../input.ts, for example if the installer is not
  *   compatible with some architectures
  * - add a test!
- * - The order is impprtant:
+ * - The order is important:
  *   - the first provider that provides according to the inputs/options is used.
  *   - the last provider has a fallback in case of no inputs given.
  */
