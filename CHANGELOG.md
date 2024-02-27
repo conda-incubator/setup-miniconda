@@ -12,7 +12,7 @@
 - [#335] Bump conda-incubator/setup-miniconda from 3.0.1 to 3.0.2
 
 [v3.0.3]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v3.0.3
-[#335]: https://github.com/conda-incubator/setup-miniconda/pull/336
+[#335]: https://github.com/conda-incubator/setup-miniconda/pull/335
 [#336]: https://github.com/conda-incubator/setup-miniconda/pull/336
 
 ## [v3.0.2] (2024-02-22)
