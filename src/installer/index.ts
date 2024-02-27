@@ -22,12 +22,15 @@ import { bundledMinicondaUser } from "./bundled-miniconda";
  * - add any new RULEs in ../input.ts, for example if the installer is not
  *   compatible with some architectures
  * - add a test!
+ * - The order is impprtant:
+ *   - the first provider that provides according to the inputs/options is used.
+ *   - the last provider has a fallback in case of no inputs given.
  */
 const INSTALLER_PROVIDERS: types.IInstallerProvider[] = [
   bundledMinicondaUser,
   urlDownloader,
-  minicondaDownloader,
   miniforgeDownloader,
+  minicondaDownloader,
 ];
 
 /** See if any provider works with the given inputs and options */

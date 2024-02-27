@@ -25,7 +25,8 @@ jobs:
       fail-fast: false
       matrix:
         os: ["macos-14"]
-        variant: ["Miniforge3", "Mambaforge", "Miniconda", "no-variant"]
+        variant:
+          ["Miniforge3", "Mambaforge", "Miniconda", "no-variant", "empty-with"]
     steps:
       - uses: actions/checkout@v4
       - uses: ./
@@ -46,10 +47,14 @@ jobs:
           miniconda-version: latest
       - uses: ./
         if: matrix.variant == 'no-variant'
-        id: setup-miniconda2
+        id: setup-miniconda-no-variant
         continue-on-error: true
         with:
           miniforge-version: latest
+      - uses: ./
+        if: matrix.variant == 'empty-with'
+        id: setup-miniconda-empty-with
+        continue-on-error: true
       - name: Conda info
         shell: bash -el {0}
         run: conda info

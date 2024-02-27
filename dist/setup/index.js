@@ -48920,7 +48920,8 @@ function downloadMiniconda(pythonMajorVersion, inputs) {
         }
         let extension = constants.IS_UNIX ? "sh" : "exe";
         let osName = constants.OS_NAMES[process.platform];
-        const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${inputs.minicondaVersion}-${osName}-${arch}.${extension}`;
+        let minicondaVersion = inputs.minicondaVersion || "latest";
+        const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
         core.info(minicondaInstallerName);
         // Check version name
         let versions = yield minicondaVersions(arch);
@@ -48948,7 +48949,7 @@ exports.downloadMiniconda = downloadMiniconda;
 exports.minicondaDownloader = {
     label: "download Miniconda",
     provides: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
-        return inputs.minicondaVersion !== "" && inputs.installerUrl === "";
+        return inputs.installerUrl === "";
     }),
     installerPath: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         return {
@@ -49175,12 +49176,15 @@ const bundled_miniconda_1 = __nccwpck_require__(3390);
  * - add any new RULEs in ../input.ts, for example if the installer is not
  *   compatible with some architectures
  * - add a test!
+ * - The order is impprtant:
+ *   - the first provider that provides according to the inputs/options is used.
+ *   - the last provider has a fallback in case of no inputs given.
  */
 const INSTALLER_PROVIDERS = [
     bundled_miniconda_1.bundledMinicondaUser,
     download_url_1.urlDownloader,
-    download_miniconda_1.minicondaDownloader,
     download_miniforge_1.miniforgeDownloader,
+    download_miniconda_1.minicondaDownloader,
 ];
 /** See if any provider works with the given inputs and options */
 function getLocalInstallerPath(inputs, options) {
