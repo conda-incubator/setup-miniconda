@@ -48933,7 +48933,7 @@ function downloadMiniconda(pythonMajorVersion, inputs) {
         return yield base.ensureLocalInstaller({
             url: constants.MINICONDA_BASE_URL + minicondaInstallerName,
             tool: `Miniconda${pythonMajorVersion}`,
-            version: inputs.minicondaVersion,
+            version: minicondaVersion,
             arch: arch,
         });
     });
