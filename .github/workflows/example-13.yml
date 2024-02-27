@@ -68,7 +68,7 @@ jobs:
         shell: bash -el {0}
         run: conda create -n unused --dry-run zlib
       - name: Run mamba
-        if: matrix.variant != 'Miniconda'
+        if: matrix.variant == 'Miniforge3' || matrix.variant == 'Mambaforge'
         shell: bash -el {0}
         run: mamba --version
       - name: Install Python
