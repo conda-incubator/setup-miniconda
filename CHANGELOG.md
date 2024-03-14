@@ -1,5 +1,39 @@
 # CHANGELOG
 
+## [v3.0.3] (2024-02-27)
+
+### Fixes
+
+- [#336] Fall back to miniconda3 latest when no bundled version + empty with
+  params
+
+### Tasks and Maintenance
+
+- [#335] Bump conda-incubator/setup-miniconda from 3.0.1 to 3.0.2
+
+[v3.0.3]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v3.0.3
+[#335]: https://github.com/conda-incubator/setup-miniconda/pull/335
+[#336]: https://github.com/conda-incubator/setup-miniconda/pull/336
+
+## [v3.0.2] (2024-02-22)
+
+### Fixes
+
+- [#312] Enable ARM64 on macOS for Miniforge and Mambaforge including automatic
+  architecture detection.
+
+### Tasks and Maintenance
+
+- [#327] Bump conda-incubator/setup-miniconda from 3.0.0 to 3.0.1
+- [#330] Bump actions/cache from 3 to 4
+- [#334] Bump undici from 5.27.2 to 5.28.3
+
+[v3.0.2]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v3.0.2
+[#312]: https://github.com/conda-incubator/setup-miniconda/pull/312
+[#327]: https://github.com/conda-incubator/setup-miniconda/pull/327
+[#330]: https://github.com/conda-incubator/setup-miniconda/pull/330
+[#334]: https://github.com/conda-incubator/setup-miniconda/pull/334
+
 ## [v3.0.1] (2023-11-29)
 
 ### Fixes

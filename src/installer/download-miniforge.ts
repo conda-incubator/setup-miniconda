@@ -16,7 +16,8 @@ export async function downloadMiniforge(
     inputs.miniforgeVariant.trim() || constants.MINIFORGE_DEFAULT_VARIANT;
   const version =
     inputs.miniforgeVersion.trim() || constants.MINIFORGE_DEFAULT_VERSION;
-  const arch = constants.MINIFORGE_ARCHITECTURES[inputs.architecture];
+  const arch =
+    constants.MINIFORGE_ARCHITECTURES[inputs.architecture.toLowerCase()];
 
   // Check valid arch
   if (!arch) {
