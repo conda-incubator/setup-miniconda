@@ -16,10 +16,15 @@ import * as utils from "./utils";
 /**
  * Provide current location of miniconda or location where it will be installed
  */
-export function condaBasePath(options: types.IDynamicOptions): string {
+export function condaBasePath(
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions,
+): string {
   let condaPath: string;
   if (options.useBundled) {
     condaPath = constants.MINICONDA_DIR_PATH;
+  } else if (inputs.installDir) {
+    condaPath = inputs.installDir;
   } else {
     condaPath = path.join(os.homedir(), "miniconda3");
   }
@@ -43,10 +48,11 @@ export function envCommandFlag(inputs: types.IActionInputs): string[] {
  * Provide cross platform location of conda/mamba executable
  */
 export function condaExecutable(
+  inputs: types.IActionInputs,
   options: types.IDynamicOptions,
   subcommand?: string,
 ): string {
-  const dir: string = condaBasePath(options);
+  const dir: string = condaBasePath(inputs, options);
   let condaExe: string;
   let commandName = "conda";
   if (
@@ -61,8 +67,11 @@ export function condaExecutable(
 }
 
 /** Detect the presence of mamba */
-export function isMambaInstalled(options: types.IDynamicOptions) {
-  const mamba = condaExecutable({ ...options, useMamba: true });
+export function isMambaInstalled(
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions,
+) {
+  const mamba = condaExecutable(inputs, { ...options, useMamba: true });
   return fs.existsSync(mamba);
 }
 
@@ -71,9 +80,10 @@ export function isMambaInstalled(options: types.IDynamicOptions) {
  */
 export async function condaCommand(
   cmd: string[],
+  inputs: types.IActionInputs,
   options: types.IDynamicOptions,
 ): Promise<void> {
-  const command = [condaExecutable(options, cmd[0]), ...cmd];
+  const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
   return await utils.execute(command);
 }
 
@@ -127,7 +137,11 @@ export async function applyCondaConfiguration(
   // .slice ensures working against a copy
   for (const channel of channels.slice().reverse()) {
     core.info(`Adding channel '${channel}'`);
-    await condaCommand(["config", "--add", "channels", channel], options);
+    await condaCommand(
+      ["config", "--add", "channels", channel],
+      inputs,
+      options,
+    );
   }
 
   // All other options are just passed as their string representations
@@ -137,15 +151,15 @@ export async function applyCondaConfiguration(
     }
     core.info(`${key}: ${value}`);
     try {
-      await condaCommand(["config", "--set", key, value], options);
+      await condaCommand(["config", "--set", key, value], inputs, options);
     } catch (err) {
       core.warning(err as Error);
     }
   }
 
   // Log all configuration information
-  await condaCommand(["config", "--show-sources"], options);
-  await condaCommand(["config", "--show"], options);
+  await condaCommand(["config", "--show-sources"], inputs, options);
+  await condaCommand(["config", "--show"], inputs, options);
 }
 
 /**
@@ -170,11 +184,11 @@ export async function condaInit(
         "chown",
         "-R",
         `${userName}:staff`,
-        condaBasePath(options),
+        condaBasePath(inputs, options),
       ]);
     } else if (constants.IS_WINDOWS) {
       for (let folder of constants.WIN_PERMS_FOLDERS) {
-        ownPath = path.join(condaBasePath(options), folder);
+        ownPath = path.join(condaBasePath(inputs, options), folder);
         if (fs.existsSync(ownPath)) {
           core.info(`Fixing ${folder} ownership`);
           await utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
@@ -200,7 +214,7 @@ export async function condaInit(
 
   // Run conda init
   for (let cmd of ["--all"]) {
-    await condaCommand(["init", cmd], options);
+    await condaCommand(["init", cmd], inputs, options);
   }
 
   if (inputs.removeProfiles == "true") {

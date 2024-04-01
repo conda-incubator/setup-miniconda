@@ -47592,7 +47592,7 @@ function installBaseTools(inputs, options) {
             }
         }
         if (tools.length) {
-            yield conda.condaCommand(["install", "--name", "base", ...tools], options);
+            yield conda.condaCommand(["install", "--name", "base", ...tools], inputs, options);
             // *Now* use the new options, as we may have a new conda/mamba with more supported
             // options that previously failed
             yield conda.applyCondaConfiguration(inputs, postInstallOptions);
@@ -47797,7 +47797,7 @@ exports.updateMamba = {
         }
         core.info("Creating bash wrapper for `mamba`...");
         // Add bat-less forwarder for bash users on Windows
-        const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
+        const mambaBat = conda.condaExecutable(inputs, options).replace(/\\/g, "/");
         const contents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
         fs.writeFileSync(mambaBat.slice(0, -4), contents);
         core.info(`... wrote ${mambaBat}:\n${contents}`);
@@ -47919,10 +47919,13 @@ const utils = __importStar(__nccwpck_require__(1314));
 /**
  * Provide current location of miniconda or location where it will be installed
  */
-function condaBasePath(options) {
+function condaBasePath(inputs, options) {
     let condaPath;
     if (options.useBundled) {
         condaPath = constants.MINICONDA_DIR_PATH;
+    }
+    else if (inputs.installDir) {
+        condaPath = inputs.installDir;
     }
     else {
         condaPath = path.join(os.homedir(), "miniconda3");
@@ -47946,8 +47949,8 @@ exports.envCommandFlag = envCommandFlag;
 /**
  * Provide cross platform location of conda/mamba executable
  */
-function condaExecutable(options, subcommand) {
-    const dir = condaBasePath(options);
+function condaExecutable(inputs, options, subcommand) {
+    const dir = condaBasePath(inputs, options);
     let condaExe;
     let commandName = "conda";
     if (options.useMamba &&
@@ -47960,17 +47963,17 @@ function condaExecutable(options, subcommand) {
 }
 exports.condaExecutable = condaExecutable;
 /** Detect the presence of mamba */
-function isMambaInstalled(options) {
-    const mamba = condaExecutable(Object.assign(Object.assign({}, options), { useMamba: true }));
+function isMambaInstalled(inputs, options) {
+    const mamba = condaExecutable(inputs, Object.assign(Object.assign({}, options), { useMamba: true }));
     return fs.existsSync(mamba);
 }
 exports.isMambaInstalled = isMambaInstalled;
 /**
  * Run Conda command
  */
-function condaCommand(cmd, options) {
+function condaCommand(cmd, inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        const command = [condaExecutable(options, cmd[0]), ...cmd];
+        const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
         return yield utils.execute(command);
     });
 }
@@ -48016,7 +48019,7 @@ function applyCondaConfiguration(inputs, options) {
         // .slice ensures working against a copy
         for (const channel of channels.slice().reverse()) {
             core.info(`Adding channel '${channel}'`);
-            yield condaCommand(["config", "--add", "channels", channel], options);
+            yield condaCommand(["config", "--add", "channels", channel], inputs, options);
         }
         // All other options are just passed as their string representations
         for (const [key, value] of configEntries) {
@@ -48025,15 +48028,15 @@ function applyCondaConfiguration(inputs, options) {
             }
             core.info(`${key}: ${value}`);
             try {
-                yield condaCommand(["config", "--set", key, value], options);
+                yield condaCommand(["config", "--set", key, value], inputs, options);
             }
             catch (err) {
                 core.warning(err);
             }
         }
         // Log all configuration information
-        yield condaCommand(["config", "--show-sources"], options);
-        yield condaCommand(["config", "--show"], options);
+        yield condaCommand(["config", "--show-sources"], inputs, options);
+        yield condaCommand(["config", "--show"], inputs, options);
     });
 }
 exports.applyCondaConfiguration = applyCondaConfiguration;
@@ -48055,12 +48058,12 @@ function condaInit(inputs, options) {
                     "chown",
                     "-R",
                     `${userName}:staff`,
-                    condaBasePath(options),
+                    condaBasePath(inputs, options),
                 ]);
             }
             else if (constants.IS_WINDOWS) {
                 for (let folder of constants.WIN_PERMS_FOLDERS) {
-                    ownPath = path.join(condaBasePath(options), folder);
+                    ownPath = path.join(condaBasePath(inputs, options), folder);
                     if (fs.existsSync(ownPath)) {
                         core.info(`Fixing ${folder} ownership`);
                         yield utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
@@ -48085,7 +48088,7 @@ function condaInit(inputs, options) {
         }
         // Run conda init
         for (let cmd of ["--all"]) {
-            yield condaCommand(["init", cmd], options);
+            yield condaCommand(["init", cmd], inputs, options);
         }
         if (inputs.removeProfiles == "true") {
             // Rename files
@@ -48504,7 +48507,7 @@ function ensureEnvironment(inputs, options) {
             if (yield provider.provides(inputs, options)) {
                 core.info(`... will ${provider.label}.`);
                 const args = yield provider.condaArgs(inputs, options);
-                return yield core.group(`Updating '${inputs.activateEnvironment}' env from ${provider.label}...`, () => conda.condaCommand(args, options));
+                return yield core.group(`Updating '${inputs.activateEnvironment}' env from ${provider.label}...`, () => conda.condaCommand(args, inputs, options));
             }
         }
         throw Error(`'activate-environment: ${inputs.activateEnvironment}' could not be created`);
@@ -48839,6 +48842,7 @@ function parseInputs() {
             condaVersion: core.getInput("conda-version"),
             environmentFile: core.getInput("environment-file"),
             installerUrl: core.getInput("installer-url"),
+            installDir: core.getInput("install-dir"),
             mambaVersion: core.getInput("mamba-version"),
             useMamba: core.getInput("use-mamba"),
             minicondaVersion: core.getInput("miniconda-version"),
@@ -49445,7 +49449,7 @@ function runInstaller(installerPath, outputPath, inputs, options) {
         }
         yield utils.execute(command);
         // The installer may have provisioned `mamba` in `base`: use now if requested
-        const mambaInInstaller = conda.isMambaInstalled(options);
+        const mambaInInstaller = conda.isMambaInstalled(inputs, options);
         if (mambaInInstaller) {
             core.info("Mamba was found in the `base` env");
             options = Object.assign(Object.assign({}, options), { mambaInInstaller, useMamba: mambaInInstaller && inputs.useMamba === "true" });
@@ -49508,10 +49512,10 @@ const utils = __importStar(__nccwpck_require__(1314));
 /**
  * Add Conda executable to PATH environment variable
  */
-function setPathVariables(options) {
+function setPathVariables(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        const condaBin = path.join(conda.condaBasePath(options), "condabin");
-        const condaPath = conda.condaBasePath(options);
+        const condaBin = path.join(conda.condaBasePath(inputs, options), "condabin");
+        const condaPath = conda.condaBasePath(inputs, options);
         core.info(`Add "${condaBin}" to PATH`);
         core.addPath(condaBin);
         if (!options.useBundled) {
@@ -49524,10 +49528,10 @@ exports.setPathVariables = setPathVariables;
 /**
  * Ensure the conda cache path is available as an environment variable
  */
-function setCacheVariable(options) {
+function setCacheVariable(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const folder = utils.cacheFolder();
-        yield conda.condaCommand(["config", "--add", "pkgs_dirs", folder], options);
+        yield conda.condaCommand(["config", "--add", "pkgs_dirs", folder], inputs, options);
         core.exportVariable(constants.ENV_VAR_CONDA_PKGS, folder);
     });
 }
@@ -49608,7 +49612,7 @@ function setupMiniconda(inputs) {
         const installerInfo = yield core.group("Ensuring installer...", () => installer.getLocalInstallerPath(inputs, options));
         // The desired installer may change the options
         options = Object.assign(Object.assign({}, options), installerInfo.options);
-        const basePath = conda.condaBasePath(options);
+        const basePath = conda.condaBasePath(inputs, options);
         if (installerInfo.localInstallerPath && !options.useBundled) {
             options = yield core.group("Running installer...", () => installer.runInstaller(installerInfo.localInstallerPath, basePath, inputs, options));
         }
@@ -49620,13 +49624,13 @@ function setupMiniconda(inputs) {
                 'Miniforge for you, add `miniconda-version: "latest"` or `miniforge-version: "latest"`, ' +
                 "respectively, to the parameters for this action.");
         }
-        yield core.group("Setup environment variables...", () => outputs.setPathVariables(options));
+        yield core.group("Setup environment variables...", () => outputs.setPathVariables(inputs, options));
         if (inputs.condaConfigFile) {
             yield core.group("Copying condarc file...", () => conda.copyConfig(inputs));
         }
         // For potential 'channels' that may alter configuration
         options.envSpec = yield core.group("Parsing environment...", () => env.getEnvSpec(inputs));
-        yield core.group("Configuring conda package cache...", () => outputs.setCacheVariable(options));
+        yield core.group("Configuring conda package cache...", () => outputs.setCacheVariable(inputs, options));
         yield core.group("Applying initial configuration...", () => conda.applyCondaConfiguration(inputs, options));
         yield core.group("Initializing conda shell integration...", () => conda.condaInit(inputs, options));
         // New base tools may change options

@@ -29,6 +29,11 @@ inputs:
       installers"
     required: false
     default: ""
+  install-dir:
+    description:
+      "If provided, the installer will be installed in the given directory."
+    required: false
+    default: ""
   miniconda-version:
     description:
       "If provided, this version of Miniconda3 will be downloaded and installed.
