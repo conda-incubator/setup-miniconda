@@ -44,7 +44,7 @@ export function envCommandFlag(inputs: types.IActionInputs): string[] {
  */
 export function condaExecutable(
   options: types.IDynamicOptions,
-  subcommand?: string,
+  subcommand?: string
 ): string {
   const dir: string = condaBasePath(options);
   let condaExe: string;
@@ -71,7 +71,7 @@ export function isMambaInstalled(options: types.IDynamicOptions) {
  */
 export async function condaCommand(
   cmd: string[],
-  options: types.IDynamicOptions,
+  options: types.IDynamicOptions
 ): Promise<void> {
   const command = [condaExecutable(options, cmd[0]), ...cmd];
   return await utils.execute(command);
@@ -83,7 +83,7 @@ export async function condaCommand(
 export async function bootstrapConfig(): Promise<void> {
   await fs.promises.writeFile(
     constants.CONDARC_PATH,
-    constants.BOOTSTRAP_CONDARC,
+    constants.BOOTSTRAP_CONDARC
   );
 }
 
@@ -93,7 +93,7 @@ export async function bootstrapConfig(): Promise<void> {
 export async function copyConfig(inputs: types.IActionInputs) {
   const sourcePath: string = path.join(
     process.env["GITHUB_WORKSPACE"] || "",
-    inputs.condaConfigFile,
+    inputs.condaConfigFile
   );
   core.info(`Copying "${sourcePath}" to "${constants.CONDARC_PATH}..."`);
   await io.cp(sourcePath, constants.CONDARC_PATH);
@@ -104,11 +104,11 @@ export async function copyConfig(inputs: types.IActionInputs) {
  */
 export async function applyCondaConfiguration(
   inputs: types.IActionInputs,
-  options: types.IDynamicOptions,
+  options: types.IDynamicOptions
 ): Promise<void> {
   const configEntries = Object.entries(inputs.condaConfig) as [
     keyof types.ICondaConfig,
-    string,
+    string
   ][];
 
   // Channels are special: if specified as an action input, these take priority
@@ -153,7 +153,7 @@ export async function applyCondaConfiguration(
  */
 export async function condaInit(
   inputs: types.IActionInputs,
-  options: types.IDynamicOptions,
+  options: types.IDynamicOptions
 ): Promise<void> {
   let ownPath: string;
   const isValidActivate = !utils.isBaseEnv(inputs.activateEnvironment);

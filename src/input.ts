@@ -15,10 +15,9 @@ import * as types from "./types";
  * network calls or subprocesses).
  */
 interface IRule {
-  (
-    inputs: types.IActionInputs,
-    condaConfig: types.ICondaConfig,
-  ): string | false;
+  (inputs: types.IActionInputs, condaConfig: types.ICondaConfig):
+    | string
+    | false;
 }
 
 const urlExt = (url: string) => path.posix.extname(new URL(url).pathname);
@@ -61,12 +60,12 @@ const RULES: IRule[] = [
       constants.KNOWN_EXTENSIONS
     }`,
   (
-    i, // Miniconda x86 is only published for Windows lately (last Linux was 2019, last MacOS 2015)
+    i // Miniconda x86 is only published for Windows lately (last Linux was 2019, last MacOS 2015)
   ) =>
     !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
     `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
   (
-    i, // We only support miniconda 4.6 or later (`conda init` and /condabin were added here, which we need)
+    i // We only support miniconda 4.6 or later (`conda init` and /condabin were added here, which we need)
   ) =>
     !!(
       !["latest", ""].includes(i.minicondaVersion) &&
@@ -97,7 +96,7 @@ export async function parseInputs(): Promise<types.IActionInputs> {
     condaConfig: Object.freeze({
       add_anaconda_token: core.getInput("add-anaconda-token"),
       add_pip_as_python_dependency: core.getInput(
-        "add-pip-as-python-dependency",
+        "add-pip-as-python-dependency"
       ),
       allow_softlinks: core.getInput("allow-softlinks"),
       auto_activate_base: core.getInput("auto-activate-base"),
@@ -113,7 +112,7 @@ export async function parseInputs(): Promise<types.IActionInputs> {
       changeps1: "false",
     }),
     cleanPatchedEnvironmentFile: core.getInput(
-      "clean-patched-environment-file",
+      "clean-patched-environment-file"
     ),
     runPost: core.getInput("run-post"),
   });

@@ -33,7 +33,7 @@ const TOOL_PROVIDERS: types.IToolProvider[] = [
  */
 export async function installBaseTools(
   inputs: types.IActionInputs,
-  options: types.IDynamicOptions,
+  options: types.IDynamicOptions
 ) {
   let tools = [];
   let postInstallOptions = { ...options };
@@ -47,7 +47,7 @@ export async function installBaseTools(
       postInstallOptions = { ...postInstallOptions, ...toolUpdates.options };
       if (provider.postInstall) {
         core.info(
-          `... we will perform post-install steps after we ${provider.label}.`,
+          `... we will perform post-install steps after we ${provider.label}.`
         );
         postInstallActions.push(provider.postInstall);
       }

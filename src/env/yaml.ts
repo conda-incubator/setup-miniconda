@@ -23,7 +23,7 @@ interface IYAMLEnvPatchProvider {
   /** Whether this patch should be applied for the given `inputs` and `options` */
   provides: (
     inputs: types.IActionInputs,
-    options: types.IDynamicOptions,
+    options: types.IDynamicOptions
   ) => boolean;
   /** A regular expression for detecting whether a spec will need to be replaced */
   specMatch: RegExp;
@@ -66,7 +66,7 @@ export const ensureYaml: types.IEnvProvider = {
     const yamlData = options.envSpec?.yaml;
     if (yamlData == null) {
       throw Error(
-        `'environment-file: ${inputs.environmentFile}' appears to be malformed`,
+        `'environment-file: ${inputs.environmentFile}' appears to be malformed`
       );
     }
 
@@ -112,10 +112,10 @@ export const ensureYaml: types.IEnvProvider = {
       const origParent = path.dirname(origPath);
       envFile = path.join(
         origParent,
-        `setup-miniconda-patched-${path.basename(origPath)}`,
+        `setup-miniconda-patched-${path.basename(origPath)}`
       );
       core.info(
-        `Making patched copy of 'environment-file: ${inputs.environmentFile}'`,
+        `Making patched copy of 'environment-file: ${inputs.environmentFile}'`
       );
       core.info(`Using: ${envFile}\n${patchedYaml}`);
       fs.writeFileSync(envFile, patchedYaml, "utf8");
@@ -124,7 +124,7 @@ export const ensureYaml: types.IEnvProvider = {
       core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
       outputs.setEnvironmentFileOutputs(
         envFile,
-        fs.readFileSync(inputs.environmentFile, "utf-8"),
+        fs.readFileSync(inputs.environmentFile, "utf-8")
       );
     }
 
