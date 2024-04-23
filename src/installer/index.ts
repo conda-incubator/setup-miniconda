@@ -36,7 +36,7 @@ const INSTALLER_PROVIDERS: types.IInstallerProvider[] = [
 /** See if any provider works with the given inputs and options */
 export async function getLocalInstallerPath(
   inputs: types.IActionInputs,
-  options: types.IDynamicOptions
+  options: types.IDynamicOptions,
 ) {
   for (const provider of INSTALLER_PROVIDERS) {
     core.info(`Can we ${provider.label}?`);
@@ -57,7 +57,7 @@ export async function runInstaller(
   installerPath: string,
   outputPath: string,
   inputs: types.IActionInputs,
-  options: types.IDynamicOptions
+  options: types.IDynamicOptions,
 ): Promise<types.IDynamicOptions> {
   const installerExtension = path.extname(installerPath);
   let command: string[];

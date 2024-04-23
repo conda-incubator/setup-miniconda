@@ -10,7 +10,7 @@ import * as base from "./base";
  */
 export async function downloadMiniforge(
   inputs: types.IActionInputs,
-  options: types.IDynamicOptions
+  options: types.IDynamicOptions,
 ): Promise<string> {
   const tool =
     inputs.miniforgeVariant.trim() || constants.MINIFORGE_DEFAULT_VARIANT;
@@ -33,13 +33,13 @@ export async function downloadMiniforge(
     // e.g. https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
     fileName = [tool, osName, `${arch}.${extension}`].join("-");
     url = [constants.MINIFORGE_URL_PREFIX, version, "download", fileName].join(
-      "/"
+      "/",
     );
   } else {
     // e.g. https://github.com/conda-forge/miniforge/releases/download/4.9.2-5/Miniforge3-4.9.2-5-Linux-x86_64.sh
     fileName = [tool, version, osName, `${arch}.${extension}`].join("-");
     url = [constants.MINIFORGE_URL_PREFIX, "download", version, fileName].join(
-      "/"
+      "/",
     );
   }
 
