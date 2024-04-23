@@ -26,7 +26,18 @@ jobs:
       matrix:
         os: ["macos-14"]
         variant:
-          ["Miniforge3", "Mambaforge", "Miniconda", "no-variant", "empty-with", "no-installer-selected"]
+          [
+            "Miniforge3",
+            "Mambaforge",
+            "Miniconda",
+            "no-variant",
+            "empty-with",
+            "no-installer-selected",
+          ]
+        include:
+          # This is Intel, not Apple Silicon, but doesn't bundle Miniconda
+          - os: macos-13
+            variant: no-installer-selected
     steps:
       - uses: actions/checkout@v4
       - uses: ./
