@@ -26,7 +26,7 @@ jobs:
       matrix:
         os: ["macos-14"]
         variant:
-          ["Miniforge3", "Mambaforge", "Miniconda", "no-variant", "empty-with"]
+          ["Miniforge3", "Mambaforge", "Miniconda", "no-variant", "empty-with", "no-installer-selected"]
     steps:
       - uses: actions/checkout@v4
       - uses: ./
@@ -54,6 +54,13 @@ jobs:
       - uses: ./
         if: matrix.variant == 'empty-with'
         id: setup-miniconda-empty-with
+        continue-on-error: true
+      - uses: ./
+        if: matrix.variant == 'no-installer-selected'
+        id: setup-miniconda-no-installer
+        with:
+          condarc-file: etc/example-condarc.yml
+          run-post: false
         continue-on-error: true
       - name: Conda info
         shell: bash -el {0}
