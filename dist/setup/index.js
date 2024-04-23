@@ -49001,7 +49001,7 @@ exports.ensureLocalInstaller = ensureLocalInstaller;
 /***/ }),
 
 /***/ 3390:
-/***/ (function(__unused_webpack_module, exports) {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
@@ -49016,6 +49016,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.bundledMinicondaUser = void 0;
+const constants_1 = __nccwpck_require__(9042);
 /**
  * Provide a path to the pre-bundled (but probably old) Miniconda base installation
  *
@@ -49030,7 +49031,8 @@ exports.bundledMinicondaUser = {
             inputs.miniforgeVariant === "" &&
             inputs.miniforgeVersion === "" &&
             inputs.architecture === "x64" &&
-            inputs.installerUrl === "");
+            inputs.installerUrl === "" &&
+            constants_1.MINICONDA_DIR_PATH.length > 0);
     }),
     installerPath: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         // No actions are performed. This is the only place `useBundled` will ever be true.

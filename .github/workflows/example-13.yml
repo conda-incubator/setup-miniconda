@@ -27,6 +27,10 @@ jobs:
         os: ["macos-14"]
         variant:
           ["Miniforge3", "Mambaforge", "Miniconda", "no-variant", "empty-with"]
+        include:
+          # This is Intel, not Apple Silicon, but doesn't bundle Miniconda
+          - os: macos-13
+            variant: empty-with
     steps:
       - uses: actions/checkout@v4
       - uses: ./
@@ -74,7 +78,8 @@ jobs:
       - name: Install Python
         shell: bash -el {0}
         run: conda install -y python
-      - name: Check arm64
+      - name: Check architecture
+        if: matrix.os != 'macos-13'
         shell: bash -el {0}
         run: |
           python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
