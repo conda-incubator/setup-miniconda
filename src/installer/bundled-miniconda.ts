@@ -1,4 +1,5 @@
 import * as types from "../types";
+import { MINICONDA_DIR_PATH } from "../constants";
 
 /**
  * Provide a path to the pre-bundled (but probably old) Miniconda base installation
@@ -15,7 +16,8 @@ export const bundledMinicondaUser: types.IInstallerProvider = {
       inputs.miniforgeVariant === "" &&
       inputs.miniforgeVersion === "" &&
       inputs.architecture === "x64" &&
-      inputs.installerUrl === ""
+      inputs.installerUrl === "" &&
+      MINICONDA_DIR_PATH.length > 0
     );
   },
   installerPath: async (inputs, options) => {
