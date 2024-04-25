@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [v3.0.4] (2024-04-25)
+
+### Fixes
+
+- [#345] Fix running on macOS 13 on Intel since the runners no longer provide
+  miniconda by default.
+
+### Tasks and Maintenance
+
+- [#337] Bump conda-incubator/setup-miniconda from 3.0.2 to 3.0.3 (#337)
+- [#338] Bump normalize-url from 8.0.0 to 8.0.1
+- [#340] Bump undici from 5.27.4 to 5.28.5
+
+[v3.0.4]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v3.0.4
+[#337]: https://github.com/conda-incubator/setup-miniconda/pull/337
+[#338]: https://github.com/conda-incubator/setup-miniconda/pull/338
+[#340]: https://github.com/conda-incubator/setup-miniconda/pull/340
+[#345]: https://github.com/conda-incubator/setup-miniconda/pull/345
+
 ## [v3.0.3] (2024-02-27)
 
 ### Fixes
