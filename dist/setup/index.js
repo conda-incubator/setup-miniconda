@@ -49516,10 +49516,8 @@ function setPathVariables(options) {
         const condaPath = conda.condaBasePath(options);
         core.info(`Add "${condaBin}" to PATH`);
         core.addPath(condaBin);
-        if (!options.useBundled) {
-            core.info(`Set 'CONDA="${condaPath}"'`);
-            core.exportVariable("CONDA", condaPath);
-        }
+        core.info(`Set 'CONDA="${condaPath}"'`);
+        core.exportVariable("CONDA", condaPath);
     });
 }
 exports.setPathVariables = setPathVariables;
