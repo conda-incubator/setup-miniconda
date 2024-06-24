@@ -55,7 +55,11 @@ export async function installBaseTools(
   }
 
   if (tools.length) {
-    await conda.condaCommand(["install", "--name", "base", ...tools], options);
+    await conda.condaCommand(
+      ["install", "--name", "base", ...tools],
+      inputs,
+      options,
+    );
 
     // *Now* use the new options, as we may have a new conda/mamba with more supported
     // options that previously failed

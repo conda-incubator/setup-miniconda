@@ -42,7 +42,7 @@ export async function ensureEnvironment(
       const args = await provider.condaArgs(inputs, options);
       return await core.group(
         `Updating '${inputs.activateEnvironment}' env from ${provider.label}...`,
-        () => conda.condaCommand(args, options),
+        () => conda.condaCommand(args, inputs, options),
       );
     }
   }
