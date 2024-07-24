@@ -26,7 +26,7 @@ jobs:
       matrix:
         os: ["macos-14"]
         variant:
-          ["Miniforge3", "Mambaforge", "Miniconda", "no-variant", "empty-with"]
+          ["Miniforge3", "Miniconda", "no-variant", "empty-with"]
         include:
           # This is Intel, not Apple Silicon, but doesn't bundle Miniconda
           - os: macos-13
@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./
-        if: matrix.variant == 'Miniforge3' || matrix.variant == 'Mambaforge'
+        if: matrix.variant == 'Miniforge3'
         id: setup-miniforge
         continue-on-error: true
         with:
@@ -72,7 +72,7 @@ jobs:
         shell: bash -el {0}
         run: conda create -n unused --dry-run zlib
       - name: Run mamba
-        if: matrix.variant == 'Miniforge3' || matrix.variant == 'Mambaforge'
+        if: matrix.variant == 'Miniforge3'
         shell: bash -el {0}
         run: mamba --version
       - name: Install Python

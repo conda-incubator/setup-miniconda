@@ -137,5 +137,14 @@ export async function parseInputs(): Promise<types.IActionInputs> {
     core.info(JSON.stringify(inputs));
   }
 
+  if (inputs.miniforgeVariant === "Mambaforge") {
+    core.warning(
+      "'Mambaforge' variants are now equivalent to 'Miniforge3'. " +
+      "In the future, we will ignore with a warning and use 'Miniforge3'. " +
+      "Eventually, using 'Mambaforge' will throw an error. " +
+      "Please change to 'Miniforge3' at your earliest convenience."
+    )
+  }
+
   return inputs;
 }
