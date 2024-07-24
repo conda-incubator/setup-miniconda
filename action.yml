@@ -40,8 +40,8 @@ inputs:
     description:
       "If provided, this variant of Miniforge will be downloaded and installed.
       If `miniforge-version` is not provided, the `latest` version will be used.
-      Currently-known values: Miniforge3 (default), Miniforge-pypy3.
-      Visit https://github.com/conda-forge/miniforge/releases/ for more information on
+      Currently-known values: Miniforge3 (default), Miniforge-pypy3. Visit
+      https://github.com/conda-forge/miniforge/releases/ for more information on
       available variants."
     required: false
     default: ""

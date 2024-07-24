@@ -513,8 +513,8 @@ jobs:
           miniforge-version: latest
 ```
 
-In addition to `Miniforge3` with `conda`, `mamba` and `CPython`, you can also install
-`Miniforge-pypy3`, which replaces `CPython` with `PyPy.
+In addition to `Miniforge3` with `conda`, `mamba` and `CPython`, you can also
+install `Miniforge-pypy3`, which replaces `CPython` with `PyPy.
 
 ### Example 11: Alternative Architectures
 

@@ -25,8 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["macos-14"]
-        variant:
-          ["Miniforge3", "Miniconda", "no-variant", "empty-with"]
+        variant: ["Miniforge3", "Miniconda", "no-variant", "empty-with"]
         include:
           # This is Intel, not Apple Silicon, but doesn't bundle Miniconda
           - os: macos-13
