@@ -133,7 +133,7 @@ export async function applyCondaConfiguration(
           ["config", "--remove", "channels", "defaults"],
           options,
         );
-      } catch (error) {
+      } catch (err) {
         core.info(
           "Removing defaults raised an error -- it was probably not present.",
         );
