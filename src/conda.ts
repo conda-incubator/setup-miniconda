@@ -126,12 +126,18 @@ export async function applyCondaConfiguration(
   // LIFO: reverse order to preserve higher priority as listed in the option
   // .slice ensures working against a copy
   for (const channel of channels.slice().reverse()) {
+    core.info("Removing channel defaults");
     if (channel === "nodefaults") {
-      core.info("Removing channel defaults");
-      await condaCommand(
-        ["config", "--remove", "channels", "defaults"],
-        options,
-      );
+      try {
+        await condaCommand(
+          ["config", "--remove", "channels", "defaults"],
+          options,
+        );
+      } catch (error) {
+        core.info(
+          "Removing defaults raised an error -- it was probably not present.",
+        );
+      }
     } else {
       core.info(`Adding channel '${channel}'`);
       await condaCommand(["config", "--add", "channels", channel], options);
