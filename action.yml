@@ -193,6 +193,12 @@ inputs:
       for more information."
     required: false
     default: ""
+  no-implicit-channels:
+    description:
+      "Postprocess channels list to remove channels that were not added
+      explicitly in the 'channels' setting. Will default to 'true' in 2025.03."
+    required: false
+    default: ""
   show-channel-urls:
     description:
       'Conda configuration. Show channel URLs when displaying what is going to

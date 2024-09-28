@@ -92,6 +92,7 @@ export async function parseInputs(): Promise<types.IActionInputs> {
     minicondaVersion: core.getInput("miniconda-version"),
     miniforgeVariant: core.getInput("miniforge-variant"),
     miniforgeVersion: core.getInput("miniforge-version"),
+    noImplicitChannels: core.getInput("no-implicit-channels"),
     pythonVersion: core.getInput("python-version"),
     removeProfiles: core.getInput("remove-profiles"),
     condaConfig: Object.freeze({

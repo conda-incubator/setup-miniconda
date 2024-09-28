@@ -130,6 +130,20 @@ export async function applyCondaConfiguration(
     await condaCommand(["config", "--add", "channels", channel], options);
   }
 
+  if (inputs.noImplicitChannels && !channels.includes("defaults")) {
+    core.info("Removing implicitly added 'defaults' channel");
+    try {
+      await condaCommand(
+        ["config", "--remove", "channels", "defaults"],
+        options,
+      );
+    } catch (err) {
+      core.info(
+        "Removing defaults raised an error -- it was probably not present.",
+      );
+    }
+  }
+
   // All other options are just passed as their string representations
   for (const [key, value] of configEntries) {
     if (value.trim().length === 0 || key === "channels") {
