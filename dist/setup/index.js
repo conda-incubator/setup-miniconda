@@ -47287,7 +47287,7 @@ function applyCondaConfiguration(inputs, options) {
             core.info(`Adding channel '${channel}'`);
             yield condaCommand(["config", "--add", "channels", channel], options);
         }
-        if (inputs.noImplicitChannels && !channels.includes("defaults")) {
+        if (inputs.noImplicitChannels === "true" && !channels.includes("defaults")) {
             core.info("Removing implicitly added 'defaults' channel");
             try {
                 yield condaCommand(["config", "--remove", "channels", "defaults"], options);
