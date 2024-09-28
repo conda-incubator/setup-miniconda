@@ -47559,6 +47559,8 @@ exports.IGNORED_WARNINGS = [
     `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
     // Channel warnings are very boring and noisy
     `moving to the top`,
+    // This warning has no consequence for the installation and is noisy
+    `cygpath is not available, fallback to manual path conversion`,
 ];
 /**
  * Warnings that should be errors
