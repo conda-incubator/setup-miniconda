@@ -44,6 +44,7 @@ jobs:
       - shell: bash -el {0}
         run: |
           channels=$(conda config --show channels --json | jq -r '.channels | join(",")')
+          echo $channels
           if [[ "${{ matrix.no-implicit-channels }}" == "true" ]]; then
             if [[ "$channels" != "conda-forge" ]]; then
               exit 1
