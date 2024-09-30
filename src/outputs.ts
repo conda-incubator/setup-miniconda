@@ -14,10 +14,14 @@ import * as utils from "./utils";
  * Add Conda executable to PATH environment variable
  */
 export async function setPathVariables(
+  inputs: types.IActionInputs,
   options: types.IDynamicOptions,
 ): Promise<void> {
-  const condaBin: string = path.join(conda.condaBasePath(options), "condabin");
-  const condaPath: string = conda.condaBasePath(options);
+  const condaBin: string = path.join(
+    conda.condaBasePath(inputs, options),
+    "condabin",
+  );
+  const condaPath: string = conda.condaBasePath(inputs, options);
   core.info(`Add "${condaBin}" to PATH`);
   core.addPath(condaBin);
   if (!options.useBundled) {
@@ -29,9 +33,16 @@ export async function setPathVariables(
 /**
  * Ensure the conda cache path is available as an environment variable
  */
-export async function setCacheVariable(options: types.IDynamicOptions) {
+export async function setCacheVariable(
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions,
+) {
   const folder = utils.cacheFolder();
-  await conda.condaCommand(["config", "--add", "pkgs_dirs", folder], options);
+  await conda.condaCommand(
+    ["config", "--add", "pkgs_dirs", folder],
+    inputs,
+    options,
+  );
   core.exportVariable(constants.ENV_VAR_CONDA_PKGS, folder);
 }
 
