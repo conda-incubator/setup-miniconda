@@ -47234,11 +47234,12 @@ exports.condaExecutableLocations = condaExecutableLocations;
  *  Return existing conda or mamba executable
  */
 function condaExecutable(options, subcommand) {
-    for (const exe of condaExecutableLocations(Object.assign(Object.assign({}, options), { useMamba: true }), subcommand)) {
+    const locations = condaExecutableLocations(Object.assign(Object.assign({}, options), { useMamba: true }), subcommand);
+    for (const exe of locations) {
         if (fs.existsSync(exe))
             return exe;
     }
-    throw Error("No existing conda or mamba executable found!");
+    throw Error(`No existing conda or mamba executable found at any of ${locations}`);
 }
 exports.condaExecutable = condaExecutable;
 /**
