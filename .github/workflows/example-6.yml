@@ -30,6 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        mamba-version: ["1.5.10", "2"]
         include:
           - os: ubuntu-latest
             activate-environment: anaconda-client-env
@@ -47,7 +48,7 @@ jobs:
         with:
           miniforge-variant: Miniforge3
           python-version: "3.11"
-          mamba-version: "*"
+          mamba-version: ${{ matrix.mamba-version }}
           channels: conda-forge,nodefaults
           channel-priority: true
           activate-environment: ${{ matrix.activate-environment }}
