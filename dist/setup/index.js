@@ -48052,7 +48052,7 @@ exports.ensureYaml = {
         else {
             subcommand = "update";
         }
-        return ["env", subcommand, flag, nameOrPath, "--file", envFile];
+        return ["env", subcommand, flag, nameOrPath, "--file", envFile, "-vvv"];
     }),
 };
 
