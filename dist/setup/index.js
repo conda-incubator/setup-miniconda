@@ -47233,7 +47233,12 @@ function condaExecutableLocations(options, subcommand) {
         commandName = "mamba";
     }
     condaExes.push(path.join(dir, "condabin", constants.IS_WINDOWS ? commandName + ".bat" : commandName));
-    condaExes.push(path.join(dir, "bin", constants.IS_WINDOWS ? commandName + ".exe" : commandName));
+    if (constants.IS_WINDOWS) {
+        condaExes.push(path.join(dir, "Library", "bin", commandName + ".exe"));
+    }
+    else {
+        condaExes.push(path.join(dir, "bin", commandName));
+    }
     return condaExes;
 }
 exports.condaExecutableLocations = condaExecutableLocations;
