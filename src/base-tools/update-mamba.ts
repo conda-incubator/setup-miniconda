@@ -25,13 +25,15 @@ export const updateMamba: types.IToolProvider = {
   },
   postInstall: async (inputs, options) => {
     const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
-    if (!mambaBat.includes("condabin")) {
+    const parentDirName = path.basename(path.dirname(mambaBat));
+    if (parentDirName !== "condabin") {
       const condabinLocation = path.join(
         conda.condaBasePath(options),
         "condabin",
-        `mamba${constants.IS_WINDOWS ? ".bat" : ""}`,
+        path.basename(mambaBat),
       );
       if (!fs.existsSync(condabinLocation)) {
+        core.info(`Copying ${mambaBat} to ${condabinLocation}...`);
         fs.copyFileSync(mambaBat, condabinLocation);
       }
     }

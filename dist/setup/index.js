@@ -47062,9 +47062,11 @@ exports.updateMamba = {
     }),
     postInstall: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
-        if (!mambaBat.includes("condabin")) {
-            const condabinLocation = path.join(conda.condaBasePath(options), "condabin", `mamba${constants.IS_WINDOWS ? ".bat" : ""}`);
+        const parentDirName = path.basename(path.dirname(mambaBat));
+        if (parentDirName !== "condabin") {
+            const condabinLocation = path.join(conda.condaBasePath(options), "condabin", path.basename(mambaBat));
             if (!fs.existsSync(condabinLocation)) {
+                core.info(`Copying ${mambaBat} to ${condabinLocation}...`);
                 fs.copyFileSync(mambaBat, condabinLocation);
             }
         }
