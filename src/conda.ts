@@ -69,15 +69,14 @@ export function condaExecutable(
   options: types.IDynamicOptions,
   subcommand?: string,
 ) {
-  const locations = condaExecutableLocations(
-    { ...options, useMamba: true },
-    subcommand,
-  );
+  const locations = condaExecutableLocations(options, subcommand);
   for (const exe of locations) {
     if (fs.existsSync(exe)) return exe;
   }
   throw Error(
-    `No existing conda or mamba executable found at any of ${locations}`,
+    `No existing ${
+      options.useMamba ? "mamba" : "conda"
+    } executable found at any of ${locations}`,
   );
 }
 
