@@ -47177,7 +47177,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.condaInit = exports.applyCondaConfiguration = exports.copyConfig = exports.bootstrapConfig = exports.condaCommand = exports.isMambaInstalled = exports.condaExecutable = exports.envCommandFlag = exports.condaBasePath = void 0;
+exports.condaInit = exports.applyCondaConfiguration = exports.copyConfig = exports.bootstrapConfig = exports.condaCommand = exports.isMambaInstalled = exports.condaExecutable = exports.condaExecutableLocations = exports.envCommandFlag = exports.condaBasePath = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const os = __importStar(__nccwpck_require__(2037));
@@ -47213,25 +47213,43 @@ function envCommandFlag(inputs) {
 }
 exports.envCommandFlag = envCommandFlag;
 /**
- * Provide cross platform location of conda/mamba executable
+ * Provide cross platform location of conda/mamba executable in condabin and bin
  */
-function condaExecutable(options, subcommand) {
+function condaExecutableLocations(options, subcommand) {
     const dir = condaBasePath(options);
-    let condaExe;
+    let condaExes = [];
     let commandName = "conda";
     if (options.useMamba &&
         (subcommand == null || constants.MAMBA_SUBCOMMANDS.includes(subcommand))) {
         commandName = "mamba";
     }
     commandName = constants.IS_WINDOWS ? commandName + ".bat" : commandName;
-    condaExe = path.join(dir, "condabin", commandName);
-    return condaExe;
+    condaExes.push(path.join(dir, "condabin", commandName));
+    commandName = constants.IS_WINDOWS ? commandName + ".exe" : commandName;
+    condaExes.push(path.join(dir, "bin", commandName));
+    return condaExes;
+}
+exports.condaExecutableLocations = condaExecutableLocations;
+/**
+ *  Return existing conda or mamba executable
+ */
+function condaExecutable(options, subcommand) {
+    for (const exe of condaExecutableLocations(Object.assign(Object.assign({}, options), { useMamba: true }), subcommand)) {
+        if (fs.existsSync(exe))
+            return exe;
+    }
+    throw Error("No existing conda or mamba executable found!");
 }
 exports.condaExecutable = condaExecutable;
-/** Detect the presence of mamba */
+/**
+ * Detect the presence of mamba
+ */
 function isMambaInstalled(options) {
-    const mamba = condaExecutable(Object.assign(Object.assign({}, options), { useMamba: true }));
-    return fs.existsSync(mamba);
+    for (const exe of condaExecutableLocations(Object.assign(Object.assign({}, options), { useMamba: true }))) {
+        if (fs.existsSync(exe))
+            return true;
+    }
+    return false;
 }
 exports.isMambaInstalled = isMambaInstalled;
 /**
