@@ -98,7 +98,10 @@ export async function condaCommand(
   options: types.IDynamicOptions,
 ): Promise<void> {
   const command = [condaExecutable(options, cmd[0]), ...cmd];
-  return await utils.execute(command);
+  const env = options.useMamba
+    ? { MAMBA_ROOT_PREFIX: condaBasePath(options) }
+    : {};
+  return await utils.execute(command, env);
 }
 
 /**
