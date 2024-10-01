@@ -47043,6 +47043,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updateMamba = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
+const path = __importStar(__nccwpck_require__(1017));
 const core = __importStar(__nccwpck_require__(2186));
 const constants = __importStar(__nccwpck_require__(9042));
 const utils = __importStar(__nccwpck_require__(1314));
@@ -47060,13 +47061,19 @@ exports.updateMamba = {
         };
     }),
     postInstall: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
+        const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
+        if (!mambaBat.includes("condabin")) {
+            const condabinLocation = path.join(conda.condaBasePath(options), "condabin", `mamba${constants.IS_WINDOWS ? ".bat" : ""}`);
+            if (!fs.existsSync(condabinLocation)) {
+                fs.copyFileSync(mambaBat, condabinLocation);
+            }
+        }
         if (!constants.IS_WINDOWS) {
             core.info("`mamba` is already executable");
             return;
         }
         core.info("Creating bash wrapper for `mamba`...");
         // Add bat-less forwarder for bash users on Windows
-        const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
         const contents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
         fs.writeFileSync(mambaBat.slice(0, -4), contents);
         core.info(`... wrote ${mambaBat}:\n${contents}`);

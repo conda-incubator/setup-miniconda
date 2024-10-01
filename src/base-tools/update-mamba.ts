@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as path from "path";
 
 import * as core from "@actions/core";
 
@@ -23,14 +24,23 @@ export const updateMamba: types.IToolProvider = {
     };
   },
   postInstall: async (inputs, options) => {
+    const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
+    if (!mambaBat.includes("condabin")) {
+      const condabinLocation = path.join(
+        conda.condaBasePath(options),
+        "condabin",
+        `mamba${constants.IS_WINDOWS ? ".bat" : ""}`,
+      );
+      if (!fs.existsSync(condabinLocation)) {
+        fs.copyFileSync(mambaBat, condabinLocation);
+      }
+    }
     if (!constants.IS_WINDOWS) {
       core.info("`mamba` is already executable");
       return;
     }
     core.info("Creating bash wrapper for `mamba`...");
     // Add bat-less forwarder for bash users on Windows
-    const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
-
     const contents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
     fs.writeFileSync(mambaBat.slice(0, -4), contents);
     core.info(`... wrote ${mambaBat}:\n${contents}`);
