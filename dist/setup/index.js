@@ -48029,13 +48029,18 @@ exports.ensureYaml = {
             core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
             outputs.setEnvironmentFileOutputs(envFile, fs.readFileSync(inputs.environmentFile, "utf-8"));
         }
-        return [
-            "env",
-            "update",
-            ...conda.envCommandFlag(inputs),
-            "--file",
-            envFile,
-        ];
+        const [flag, nameOrPath] = conda.envCommandFlag(inputs);
+        let subcommand;
+        if (options.useMamba) {
+            const envPath = flag === "--name"
+                ? path.join(conda.condaBasePath(options), "envs", nameOrPath)
+                : nameOrPath;
+            subcommand = fs.existsSync(envPath) ? "update" : "create";
+        }
+        else {
+            subcommand = "update";
+        }
+        return ["env", subcommand, flag, nameOrPath, "--file", envFile];
     }),
 };
 
