@@ -1,1 +1,2 @@
-*.js -diff
+dist/setup/index.js linguist-generated=true
+dist/delete/index.js linguist-generated=true
