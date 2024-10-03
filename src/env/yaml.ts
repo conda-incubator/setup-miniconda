@@ -138,6 +138,6 @@ export const ensureYaml: types.IEnvProvider = {
     } else {
       subcommand = "update";
     }
-    return ["env", subcommand, flag, nameOrPath, "--file", envFile, "-vvv"];
+    return ["env", subcommand, flag, nameOrPath, "--file", envFile];
   },
 };

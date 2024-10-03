@@ -47271,9 +47271,14 @@ exports.isMambaInstalled = isMambaInstalled;
 function condaCommand(cmd, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const command = [condaExecutable(options, cmd[0]), ...cmd];
-        const env = options.useMamba
-            ? { MAMBA_ROOT_PREFIX: condaBasePath(options) }
-            : {};
+        let env = {};
+        if (options.useMamba) {
+            env.MAMBA_ROOT_PREFIX = condaBasePath(options);
+            if (constants.IS_WINDOWS) {
+                // mamba v2 hangs on Windows during this phase
+                env.MAMBA_COMPILE_PYC = "false";
+            }
+        }
         return yield utils.execute(command, env);
     });
 }
@@ -48052,7 +48057,7 @@ exports.ensureYaml = {
         else {
             subcommand = "update";
         }
-        return ["env", subcommand, flag, nameOrPath, "--file", envFile, "-vvv"];
+        return ["env", subcommand, flag, nameOrPath, "--file", envFile];
     }),
 };
 

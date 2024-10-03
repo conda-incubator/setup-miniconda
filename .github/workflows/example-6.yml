@@ -39,7 +39,7 @@ jobs:
           - os: macos-latest
             activate-environment: /tmp/anaconda-client-env
           - os: windows-latest
-            activate-environment: c:\ace
+            activate-environment: D:\ace
     defaults:
       run:
         shell: bash -el {0}
