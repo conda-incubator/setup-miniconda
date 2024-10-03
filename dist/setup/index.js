@@ -47076,11 +47076,12 @@ exports.updateMamba = {
             return;
         }
         mambaExec = mambaExec.replace(/\\/g, "/");
-        core.info(`Creating bash wrapper for 'mamba' in '${mambaExec.slice(0, -4)}'...`);
+        core.info(`Creating bash wrapper for 'mamba'...`);
         // Add bat-less forwarder for bash users on Windows
         const contents = `bash.exe -c "exec '${mambaExec}' $*" || exit 1`;
         fs.writeFileSync(mambaExec.slice(0, -4), contents);
-        core.info(`... wrote ${mambaExec}:\n${contents}`);
+        fs.chmodSync(mambaExec.slice(0, -4), "755");
+        core.info(`... wrote ${mambaExec.slice(0, -4)}:\n${contents}`);
     }),
 };
 
