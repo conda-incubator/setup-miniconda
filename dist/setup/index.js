@@ -47061,32 +47061,58 @@ exports.updateMamba = {
         };
     }),
     postInstall: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
-        let mambaExec = conda.condaExecutable(options);
-        const parentDirName = path.basename(path.dirname(mambaExec));
-        if (parentDirName !== "condabin") {
-            const condabinLocation = path.join(conda.condaBasePath(options), "condabin", path.basename(mambaExec));
+        const mambaExec = conda.condaExecutable(options);
+        const condabinLocation = path.join(conda.condaBasePath(options), "condabin", path.basename(mambaExec));
+        if (constants.IS_UNIX) {
+            // This is mamba 2.x with only $PREFIX/bin/mamba,
+            // we justneed a symlink in condabin
             if (!fs.existsSync(condabinLocation)) {
-                core.info(`Copying ${mambaExec} to ${condabinLocation}...`);
-                fs.copyFileSync(mambaExec, condabinLocation);
+                core.info(`Symlinking ${mambaExec} to ${condabinLocation}...`);
+                fs.symlinkSync(mambaExec, condabinLocation);
             }
-            mambaExec = condabinLocation;
         }
-        if (!constants.IS_WINDOWS) {
-            core.info("`mamba` is already executable");
-            return;
+        else {
+            // Place a bash forwarder for some shells
+            core.info(`Creating bash wrapper for 'mamba'...`);
+            // Add bat-less forwarder for bash users on Windows
+            const mambaBat = condabinLocation.slice(0, -4) + ".bat";
+            const forwarderContents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
+            fs.writeFileSync(mambaExec.slice(0, -4), forwarderContents);
+            core.info(`... wrote ${mambaExec.slice(0, -4)}:\n${forwarderContents}`);
+            if (!fs.existsSync(mambaBat)) {
+                // This is Windows and mamba 2.x, we need a mamba.bat like 1.x used to have
+                const contents = `
+@REM Copyright (C) 2012 Anaconda, Inc
+@REM SPDX-License-Identifier: BSD-3-Clause
+
+@REM echo _CE_CONDA is %_CE_CONDA%
+@REM echo _CE_M is %_CE_M%
+@REM echo CONDA_EXE is %CONDA_EXE%
+
+@IF NOT DEFINED _CE_CONDA (
+  @SET _CE_M=
+  @SET "CONDA_EXE=%~dp0..\\Scripts\\conda.exe"
+)
+@IF [%1]==[activate]   "%~dp0_conda_activate" %*
+@IF [%1]==[deactivate] "%~dp0_conda_activate" %*
+
+@SET MAMBA_EXES="%~dp0..\\Library\\bin\\mamba.exe"
+@CALL %MAMBA_EXES% %*
+
+@IF %errorlevel% NEQ 0 EXIT /B %errorlevel%
+
+@IF [%1]==[install]   "%~dp0_conda_activate" reactivate
+@IF [%1]==[update]    "%~dp0_conda_activate" reactivate
+@IF [%1]==[upgrade]   "%~dp0_conda_activate" reactivate
+@IF [%1]==[remove]    "%~dp0_conda_activate" reactivate
+@IF [%1]==[uninstall] "%~dp0_conda_activate" reactivate
+
+@EXIT /B %errorlevel%`;
+                core.info(`Creating BAT wrapper for 'mamba 2.x'...`);
+                fs.writeFileSync(mambaBat.slice(0, -4), contents);
+                core.info(`... wrote ${mambaBat}`);
+            }
         }
-        mambaExec = mambaExec.replace(/\\/g, "/");
-        const condaSh = path
-            .join(conda.condaBasePath(options), "etc", "profile.d", "conda.sh")
-            .replace(/\\/g, "/");
-        core.info(`Creating bash wrapper for 'mamba'...`);
-        // Add bat-less forwarder for bash users on Windows
-        const contents = `bash.exe -c "source '${condaSh}' && exec '${mambaExec}' $*" || exit 1`;
-        fs.writeFileSync(mambaExec.slice(0, -4), contents);
-        if (mambaExec.slice(-4) !== ".bat") {
-            fs.writeFileSync(mambaExec.slice(0, -4) + ".bat", contents);
-        }
-        core.info(`... wrote ${mambaExec.slice(0, -4)}:\n${contents}`);
     }),
 };
 
