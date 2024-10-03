@@ -43,14 +43,12 @@ export const updateMamba: types.IToolProvider = {
       return;
     }
     mambaExec = mambaExec.replace(/\\/g, "/");
+    const condaSh: string = path
+      .join(conda.condaBasePath(options), "etc", "profile.d", "conda.sh")
+      .replace(/\\/g, "/");
     core.info(`Creating bash wrapper for 'mamba'...`);
     // Add bat-less forwarder for bash users on Windows
-    const contents = `bash.exe -c "source '${path.join(
-      conda.condaBasePath(options),
-      "etc",
-      "profile.d",
-      "conda.sh",
-    )}' && exec '${mambaExec}' $*" || exit 1`;
+    const contents = `bash.exe -c "source '${condaSh}' && exec '${mambaExec}' $*" || exit 1`;
     fs.writeFileSync(mambaExec.slice(0, -4), contents);
     if (mambaExec.slice(-4) !== ".bat") {
       fs.writeFileSync(mambaExec.slice(0, -4) + ".bat", contents);
