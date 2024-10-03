@@ -24,28 +24,31 @@ export const updateMamba: types.IToolProvider = {
     };
   },
   postInstall: async (inputs, options) => {
-    let mambaExe = conda.condaExecutable(options).replace(/\\/g, "/");
-    const parentDirName = path.basename(path.dirname(mambaExe));
+    let mambaExec = conda.condaExecutable(options);
+    const parentDirName = path.basename(path.dirname(mambaExec));
     if (parentDirName !== "condabin") {
       const condabinLocation = path.join(
         conda.condaBasePath(options),
         "condabin",
-        path.basename(mambaExe),
+        path.basename(mambaExec),
       );
       if (!fs.existsSync(condabinLocation)) {
-        core.info(`Copying ${mambaExe} to ${condabinLocation}...`);
-        fs.copyFileSync(mambaExe, condabinLocation);
+        core.info(`Copying ${mambaExec} to ${condabinLocation}...`);
+        fs.copyFileSync(mambaExec, condabinLocation);
       }
-      mambaExe = condabinLocation;
+      mambaExec = condabinLocation;
     }
     if (!constants.IS_WINDOWS) {
       core.info("`mamba` is already executable");
       return;
     }
-    core.info("Creating bash wrapper for `mamba`...");
+    mambaExec = mambaExec.replace(/\\/g, "/");
+    core.info(
+      `Creating bash wrapper for 'mamba' in '${mambaExec.slice(0, -4)}'...`,
+    );
     // Add bat-less forwarder for bash users on Windows
-    const contents = `bash.exe -c "exec '${mambaExe}' $*" || exit 1`;
-    fs.writeFileSync(mambaExe.slice(0, -4), contents);
-    core.info(`... wrote ${mambaExe}:\n${contents}`);
+    const contents = `bash.exe -c "exec '${mambaExec}' $*" || exit 1`;
+    fs.writeFileSync(mambaExec.slice(0, -4), contents);
+    core.info(`... wrote ${mambaExec}:\n${contents}`);
   },
 };
