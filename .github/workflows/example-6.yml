@@ -64,11 +64,6 @@ jobs:
 
       # - uses: fawazahmed0/action-debug-vscode@main
 
-      - name: Universal call (= Windows, no .bat, from Bash)
-        run: |
-          which mamba
-          mamba --version
-
       - name: Windows, with .bat, from Bash
         if: matrix.os == 'windows-latest'
         run: mamba.bat --version
@@ -89,4 +84,7 @@ jobs:
       - name: Windows, no .bat, from PowerShell
         shell: pwsh
         if: matrix.os == 'windows-latest'
+        run: mamba --version
+
+      - name: Universal call (= Windows, no .bat, from Bash)
         run: mamba --version
