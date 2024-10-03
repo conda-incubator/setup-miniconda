@@ -61,6 +61,8 @@ jobs:
           conda config --show-sources
           conda config --show
           printenv | sort
+      
+      - uses: fawazahmed0/action-debug-vscode@main
 
       - name: Universal call (= Windows, no .bat, from Bash)
         run: |
