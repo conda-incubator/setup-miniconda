@@ -64,9 +64,6 @@ jobs:
 
       - name: Universal call (= Windows, no .bat, from Bash)
         run: |
-          set -x
-          which mamba
-          if [[ "${{ runner.os }}" == "Windows" ]]; then cat "$(which mamba)"; fi
           mamba --version
 
       - name: Windows, with .bat, from Bash
