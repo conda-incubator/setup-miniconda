@@ -66,6 +66,7 @@ jobs:
 
       - name: Universal call (= Windows, no .bat, from Bash)
         run: |
+          which mamba
           mamba --version
 
       - name: Windows, with .bat, from Bash
