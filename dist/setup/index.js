@@ -47072,14 +47072,16 @@ exports.updateMamba = {
             }
         }
         else {
-            // Place a bash forwarder for some shells
             core.info(`Creating bash wrapper for 'mamba'...`);
-            // Add bat-less forwarder for bash users on Windows
             const mambaBat = condabinLocation.slice(0, -4) + ".bat";
-            const forwarderContents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
-            fs.writeFileSync(mambaExec.slice(0, -4), forwarderContents);
-            core.info(`... wrote ${mambaExec.slice(0, -4)}:\n${forwarderContents}`);
-            if (!fs.existsSync(mambaBat)) {
+            if (fs.existsSync(mambaBat)) {
+                // Place a bash forwarder for some shells
+                // Add bat-less forwarder for bash users on Windows + mamba 1.x
+                const forwarderContents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
+                fs.writeFileSync(mambaExec.slice(0, -4), forwarderContents);
+                core.info(`... wrote ${mambaExec.slice(0, -4)}:\n${forwarderContents}`);
+            }
+            else {
                 // This is Windows and mamba 2.x, we need a mamba.bat like 1.x used to have
                 const contents = `
 @REM Copyright (C) 2012 Anaconda, Inc
