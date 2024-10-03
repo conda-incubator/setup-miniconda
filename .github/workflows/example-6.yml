@@ -63,7 +63,11 @@ jobs:
           printenv | sort
 
       - name: Universal call (= Windows, no .bat, from Bash)
-        run: mamba --version
+        run: |
+          set -x
+          which mamba
+          cat "$(which mamba)" | head -100
+          mamba --version
 
       - name: Windows, with .bat, from Bash
         if: matrix.os == 'windows-latest'
