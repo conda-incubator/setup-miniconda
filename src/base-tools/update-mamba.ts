@@ -45,9 +45,16 @@ export const updateMamba: types.IToolProvider = {
     mambaExec = mambaExec.replace(/\\/g, "/");
     core.info(`Creating bash wrapper for 'mamba'...`);
     // Add bat-less forwarder for bash users on Windows
-    const contents = `bash.exe -c "exec '${mambaExec}' $*" || exit 1`;
+    const contents = `bash.exe -c "source '${path.join(
+      conda.condaBasePath(options),
+      "etc",
+      "profile.d",
+      "conda.sh",
+    )}' && exec '${mambaExec}' $*" || exit 1`;
     fs.writeFileSync(mambaExec.slice(0, -4), contents);
-    fs.chmodSync(mambaExec.slice(0, -4), "755");
+    if (mambaExec.slice(-4) !== ".bat") {
+      fs.writeFileSync(mambaExec.slice(0, -4) + ".bat", contents);
+    }
     core.info(`... wrote ${mambaExec.slice(0, -4)}:\n${contents}`);
   },
 };
