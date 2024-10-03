@@ -109,10 +109,6 @@ export async function condaCommand(
   let env: { [key: string]: string } = {};
   if (options.useMamba) {
     env.MAMBA_ROOT_PREFIX = condaBasePath(options);
-    if (constants.IS_WINDOWS) {
-      // mamba v2 hangs on Windows during this phase
-      env.MAMBA_COMPILE_PYC = "false";
-    }
   }
   return await utils.execute(command, env);
 }

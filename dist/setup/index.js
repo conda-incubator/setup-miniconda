@@ -47307,10 +47307,6 @@ function condaCommand(cmd, options) {
         let env = {};
         if (options.useMamba) {
             env.MAMBA_ROOT_PREFIX = condaBasePath(options);
-            if (constants.IS_WINDOWS) {
-                // mamba v2 hangs on Windows during this phase
-                env.MAMBA_COMPILE_PYC = "false";
-            }
         }
         return yield utils.execute(command, env);
     });
