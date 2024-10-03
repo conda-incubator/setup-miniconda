@@ -66,7 +66,7 @@ jobs:
         run: |
           set -x
           which mamba
-          cat "$(which mamba)" | head -100
+          if [[ "${{ runner.os }}" == "Windows" ]]; then cat "$(which mamba)"; fi
           mamba --version
 
       - name: Windows, with .bat, from Bash
@@ -76,7 +76,7 @@ jobs:
       - name: Windows, .bat, from Cmd
         shell: cmd /C call {0}
         if: matrix.os == 'windows-latest'
-        run: mamba --version
+        run: mamba.bat --version
       - name: Windows, no .bat, from Cmd
         shell: cmd /C call {0}
         if: matrix.os == 'windows-latest'
