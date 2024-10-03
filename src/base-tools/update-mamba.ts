@@ -31,20 +31,15 @@ export const updateMamba: types.IToolProvider = {
       path.basename(mambaExec),
     );
     if (constants.IS_UNIX) {
-      // This is mamba 2.x with only $PREFIX/bin/mamba,
-      // we justneed a symlink in condabin
       if (!fs.existsSync(condabinLocation)) {
+        // This is mamba 2.x with only $PREFIX/bin/mamba,
+        // we just need a symlink in condabin
         core.info(`Symlinking ${mambaExec} to ${condabinLocation}...`);
         fs.symlinkSync(mambaExec, condabinLocation);
       }
     } else {
-      core.info(`Creating bash wrapper for 'mamba'...`);
+      core.info(`Creating .bat wrapper for 'mamba 2.x'...`);
       const mambaBat = condabinLocation.slice(0, -4) + ".bat";
-      // Place a bash forwarder for some shells
-      // Add bat-less forwarder for bash users on Windows + mamba 1.x
-      const forwarderContents = `cmd.exe /C CALL "${mambaBat}" $* || exit 1`;
-      fs.writeFileSync(condabinLocation.slice(0, -4), forwarderContents);
-      core.info(`... wrote ${mambaExec.slice(0, -4)}:\n${forwarderContents}`);
       if (!fs.existsSync(mambaBat)) {
         // This is Windows and mamba 2.x, we need a mamba.bat like 1.x used to have
         const contents = `
