@@ -47072,8 +47072,12 @@ exports.updateMamba = {
             }
         }
         else {
-            core.info(`Creating .bat wrapper for 'mamba 2.x'...`);
+            core.info(`Creating bash wrapper for 'mamba'...`);
             const mambaBat = condabinLocation.slice(0, -4) + ".bat";
+            // Add bat-less forwarder for bash users on Windows
+            const forwarderContents = `cmd.exe /C CALL "${mambaBat}" $* || exit 1`;
+            fs.writeFileSync(condabinLocation.slice(0, -4), forwarderContents);
+            core.info(`... wrote ${mambaExec.slice(0, -4)}:\n${forwarderContents}`);
             if (!fs.existsSync(mambaBat)) {
                 // This is Windows and mamba 2.x, we need a mamba.bat like 1.x used to have
                 const contents = `
@@ -47103,7 +47107,7 @@ exports.updateMamba = {
 @IF [%1]==[uninstall] "%~dp0_conda_activate" reactivate
 
 @EXIT /B %errorlevel%`;
-                core.info(`Creating BAT wrapper for 'mamba 2.x'...`);
+                core.info(`Creating .bat wrapper for 'mamba 2.x'...`);
                 fs.writeFileSync(mambaBat, contents);
                 core.info(`... wrote ${mambaBat}`);
             }
