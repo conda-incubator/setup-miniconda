@@ -43,7 +43,7 @@ export const updateMamba: types.IToolProvider = {
       // Place a bash forwarder for some shells
       // Add bat-less forwarder for bash users on Windows + mamba 1.x
       const forwarderContents = `cmd.exe /C CALL "${mambaBat}" $* || exit 1`;
-      fs.writeFileSync(mambaExec.slice(0, -4), forwarderContents);
+      fs.writeFileSync(condabinLocation.slice(0, -4), forwarderContents);
       core.info(`... wrote ${mambaExec.slice(0, -4)}:\n${forwarderContents}`);
       if (!fs.existsSync(mambaBat)) {
         // This is Windows and mamba 2.x, we need a mamba.bat like 1.x used to have
@@ -75,7 +75,7 @@ export const updateMamba: types.IToolProvider = {
 
 @EXIT /B %errorlevel%`;
         core.info(`Creating BAT wrapper for 'mamba 2.x'...`);
-        fs.writeFileSync(mambaBat.slice(0, -4), contents);
+        fs.writeFileSync(mambaBat, contents);
         core.info(`... wrote ${mambaBat}`);
       }
     }
