@@ -40,14 +40,14 @@ export function envCommandFlag(inputs: types.IActionInputs): string[] {
 }
 
 /**
- * Provide cross platform location of conda/mamba executable
+ * Provide cross platform location of conda/mamba executable in condabin and bin
  */
-export function condaExecutable(
+export function condaExecutableLocations(
   options: types.IDynamicOptions,
   subcommand?: string,
-): string {
+): string[] {
   const dir: string = condaBasePath(options);
-  let condaExe: string;
+  let condaExes: string[] = [];
   let commandName = "conda";
   if (
     options.useMamba &&
@@ -55,15 +55,47 @@ export function condaExecutable(
   ) {
     commandName = "mamba";
   }
-  commandName = constants.IS_WINDOWS ? commandName + ".bat" : commandName;
-  condaExe = path.join(dir, "condabin", commandName);
-  return condaExe;
+  condaExes.push(
+    path.join(
+      dir,
+      "condabin",
+      constants.IS_WINDOWS ? commandName + ".bat" : commandName,
+    ),
+  );
+  if (constants.IS_WINDOWS) {
+    condaExes.push(path.join(dir, "Library", "bin", commandName + ".exe"));
+  } else {
+    condaExes.push(path.join(dir, "bin", commandName));
+  }
+  return condaExes;
 }
 
-/** Detect the presence of mamba */
+/**
+ *  Return existing conda or mamba executable
+ */
+export function condaExecutable(
+  options: types.IDynamicOptions,
+  subcommand?: string,
+) {
+  const locations = condaExecutableLocations(options, subcommand);
+  for (const exe of locations) {
+    if (fs.existsSync(exe)) return exe;
+  }
+  throw Error(
+    `No existing ${
+      options.useMamba ? "mamba" : "conda"
+    } executable found at any of ${locations}`,
+  );
+}
+
+/**
+ * Detect the presence of mamba
+ */
 export function isMambaInstalled(options: types.IDynamicOptions) {
-  const mamba = condaExecutable({ ...options, useMamba: true });
-  return fs.existsSync(mamba);
+  for (const exe of condaExecutableLocations({ ...options, useMamba: true })) {
+    if (fs.existsSync(exe)) return true;
+  }
+  return false;
 }
 
 /**
@@ -74,7 +106,11 @@ export async function condaCommand(
   options: types.IDynamicOptions,
 ): Promise<void> {
   const command = [condaExecutable(options, cmd[0]), ...cmd];
-  return await utils.execute(command);
+  let env: { [key: string]: string } = {};
+  if (options.useMamba) {
+    env.MAMBA_ROOT_PREFIX = condaBasePath(options);
+  }
+  return await utils.execute(command, env);
 }
 
 /**
