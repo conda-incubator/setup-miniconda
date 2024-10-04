@@ -59,7 +59,7 @@ possibility of automatically activating the `test` environment on all shells.
 | [Caching packages](#caching-packages)                              | [![Caching Example Status][caching-badge]][caching]             |
 | [Caching environments](#caching-environments)                      | [![Caching Env Example Status][caching-env-badge]][caching-env] |
 | [Apple Silicon](#example-13-apple-silicon)                         | [![Apple Silicon][ex13-badge]][ex13]                            |
-| [No implicit channels](#example-14-no-implicit-channels)           | [![No implicit channels][ex14-badge]][ex14]                     |
+| [Remove defaults](#example-14-conda-remove-defaults)           | [![Remove defaults][ex14-badge]][ex14]                     |
 
 [ex1]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml
@@ -603,7 +603,7 @@ jobs:
           python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
 ```
 
-### Example 14: No implicit channels
+### Example 14: Remove `defaults` channel
 
 Workaround for this bug:
 [conda#12356](https://github.com/conda/conda/issues/12356).
@@ -625,7 +625,7 @@ jobs:
         with:
           miniforge-version: latest
           channels: conda-forge
-          no-implicit-channels: "true"
+          conda-remove-defaults: "true"
       - name: Check config
         shell: bash -el {0}
         run: |

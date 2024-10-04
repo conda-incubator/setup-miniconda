@@ -84,7 +84,7 @@ export interface IActionInputs {
   readonly minicondaVersion: string;
   readonly miniforgeVariant: string;
   readonly miniforgeVersion: string;
-  readonly noImplicitChannels: string;
+  readonly condaRemoveDefaults: string;
   readonly pythonVersion: string;
   readonly removeProfiles: string;
   readonly useMamba: string;

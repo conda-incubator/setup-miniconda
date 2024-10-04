@@ -166,7 +166,7 @@ export async function applyCondaConfiguration(
     await condaCommand(["config", "--add", "channels", channel], options);
   }
 
-  if (inputs.noImplicitChannels === "true" && !channels.includes("defaults")) {
+  if (inputs.condaRemoveDefaults === "true" && !channels.includes("defaults")) {
     core.info("Removing implicitly added 'defaults' channel");
     try {
       await condaCommand(

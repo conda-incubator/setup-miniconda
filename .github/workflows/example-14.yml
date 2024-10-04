@@ -1,4 +1,4 @@
-name: "Example 14: Remove implicitly added channels"
+name: "Example 14: Remove defaults channel"
 
 on:
   pull_request:
@@ -24,13 +24,13 @@ jobs:
     if:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
-    name: Ex14 (${{ matrix.os }}, ${{ matrix.no-implicit-channels }})
+    name: Ex14 (${{ matrix.os }}, ${{ matrix.conda-remove-defaults }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        no-implicit-channels: ["true", "false"]
+        conda-remove-defaults: ["true", "false"]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -40,12 +40,12 @@ jobs:
         with:
           channels: conda-forge
           python-version: "3.12"
-          no-implicit-channels: ${{ matrix.no-implicit-channels }}
+          conda-remove-defaults: ${{ matrix.conda-remove-defaults }}
       - shell: bash -el {0}
         run: |
           channels=$(conda config --show channels --json | jq -r '.channels | join(",")')
           echo $channels
-          if [[ "${{ matrix.no-implicit-channels }}" == "true" ]]; then
+          if [[ "${{ matrix.conda-remove-defaults }}" == "true" ]]; then
             if [[ "$channels" != "conda-forge" ]]; then
               exit 1
             fi
