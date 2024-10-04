@@ -51,7 +51,7 @@ jobs:
           python-version: "3.12"
       - shell: bash -el {0}
         run: |
-          cat <<EOF | python
+          cat <<EOF > script.py
           import json
           from subprocess import check_output
 
@@ -70,3 +70,4 @@ jobs:
           elif "nodefaults" in input_channels or remove_defaults:
             assert "defaults" not in channels
           EOF
+          python script.py
