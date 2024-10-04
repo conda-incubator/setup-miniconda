@@ -108,11 +108,8 @@ export const BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
  */
 export const CONDARC_PATH = path.join(os.homedir(), ".condarc");
 
-/** Where to put files. Should eventually be configurable */
-export const CONDA_CACHE_FOLDER = "conda_pkgs_dir";
-
-/** The environment variable exported */
-export const ENV_VAR_CONDA_PKGS = "CONDA_PKGS_DIR";
+/** Where to put files */
+export const DEFAULT_PKGS_DIR = "conda_pkgs_dir";
 
 /** Shell profiles names to update so `conda` works for *login shells* */
 export const PROFILES = [
