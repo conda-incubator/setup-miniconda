@@ -54,7 +54,8 @@ jobs:
           # conda-libmamba-solver is released with libmamba v2 compatibility.
           miniforge-version:
             ${{ matrix.mamba-version == '2' && '23.1.0-0' || 'latest' }}
-          solver: ${{ matrix.mamba-version == '2' && 'classic' || 'libmamba' }}
+          conda-solver:
+            ${{ matrix.mamba-version == '2' && 'classic' || 'libmamba' }}
           python-version: "3.11"
           mamba-version: ${{ matrix.mamba-version }}
           channels: conda-forge,nodefaults
