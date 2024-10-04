@@ -195,9 +195,9 @@ inputs:
     default: ""
   conda-remove-defaults:
     description:
-      "Postprocess channels list to remove 'defaults' if it was added
-      implicitly to the 'channels' setting. Will default to 'true' to
-      align with related changes in conda 25.3.0."
+      "Postprocess channels list to remove 'defaults' if it was added implicitly
+      to the 'channels' setting. Will default to 'true' to align with related
+      changes in conda 25.3.0."
     required: false
     default: ""
   show-channel-urls:

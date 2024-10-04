@@ -47355,7 +47355,7 @@ function applyCondaConfiguration(inputs, options) {
             core.info(`Adding channel '${channel}'`);
             yield condaCommand(["config", "--add", "channels", channel], options);
         }
-        if (inputs.noImplicitChannels === "true" && !channels.includes("defaults")) {
+        if (inputs.condaRemoveDefaults === "true" && !channels.includes("defaults")) {
             core.info("Removing implicitly added 'defaults' channel");
             try {
                 yield condaCommand(["config", "--remove", "channels", "defaults"], options);
@@ -48197,7 +48197,7 @@ function parseInputs() {
             minicondaVersion: core.getInput("miniconda-version"),
             miniforgeVariant: core.getInput("miniforge-variant"),
             miniforgeVersion: core.getInput("miniforge-version"),
-            noImplicitChannels: core.getInput("no-implicit-channels"),
+            condaRemoveDefaults: core.getInput("conda-remove-defaults"),
             pythonVersion: core.getInput("python-version"),
             removeProfiles: core.getInput("remove-profiles"),
             condaConfig: Object.freeze({
