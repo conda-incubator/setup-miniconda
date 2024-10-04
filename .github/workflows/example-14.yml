@@ -47,8 +47,8 @@ jobs:
         continue-on-error: true
         with:
           channels: ${{ matrix.channels }}
-          python-version: "3.12"
           conda-remove-defaults: ${{ matrix.conda-remove-defaults }}
+          activate-environment: ""
       - shell: bash -elc "python {0}"
         run: |
           from conda.base.context import context
