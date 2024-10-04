@@ -47352,8 +47352,19 @@ function applyCondaConfiguration(inputs, options) {
         // LIFO: reverse order to preserve higher priority as listed in the option
         // .slice ensures working against a copy
         for (const channel of channels.slice().reverse()) {
-            core.info(`Adding channel '${channel}'`);
-            yield condaCommand(["config", "--add", "channels", channel], options);
+            if (channel === "nodefaults") {
+                core.info("Removing channel defaults");
+                try {
+                    yield condaCommand(["config", "--remove", "channels", "defaults"], options);
+                }
+                catch (err) {
+                    core.info("Removing defaults raised an error -- it was probably not present.");
+                }
+            }
+            else {
+                core.info(`Adding channel '${channel}'`);
+                yield condaCommand(["config", "--add", "channels", channel], options);
+            }
         }
         // All other options are just passed as their string representations
         for (const [key, value] of configEntries) {
