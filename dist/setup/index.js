@@ -47359,6 +47359,7 @@ function applyCondaConfiguration(inputs, options) {
                     "In the future, 'nodefaults' as a way of removing 'defaults' won't be supported. " +
                     "Please set 'conda-remove-defaults' = 'true' to remove this warning.");
                 removeDefaults = true;
+                continue;
             }
             core.info(`Adding channel '${channel}'`);
             yield condaCommand(["config", "--add", "channels", channel], options);

@@ -172,6 +172,7 @@ export async function applyCondaConfiguration(
           "Please set 'conda-remove-defaults' = 'true' to remove this warning.",
       );
       removeDefaults = true;
+      continue;
     }
     core.info(`Adding channel '${channel}'`);
     await condaCommand(["config", "--add", "channels", channel], options);
