@@ -24,7 +24,9 @@ jobs:
     if:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
-    name: Ex14 (${{ matrix.os }}, ${{ matrix.conda-remove-defaults }})
+    name:
+      Ex14 (${{ matrix.os }}, remove=${{ matrix.conda-remove-defaults }},
+      channels=${{ matrix.channels }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -47,14 +49,20 @@ jobs:
           channels: ${{ matrix.channels }}
           python-version: "3.12"
           conda-remove-defaults: ${{ matrix.conda-remove-defaults }}
-      - shell: bash -el {0}
+      - shell: bash -elc "python {0}"
         run: |
-          channels=$(conda config --show channels --json | jq -r '.channels | join(",")')
-          echo $channels
-          if [[ "${{ matrix.conda-remove-defaults }}" == "true" ]]; then
-            if [[ "$channels" != "conda-forge" ]]; then
-              exit 1
-            fi
-          elif [[ "$channels" != "conda-forge,defaults" ]]; then
-              exit 1
-          fi
+          from conda.base.context import context
+
+          channels = context.channels
+          input_channels = "${{ matrix.channels }}"
+          remove_defaults = "${{ matrix.conda-remove-defaults }}" == "true"
+
+          print("Input channels:", input_channels)
+          print("Input remove-defaults:", remove_defaults)
+          print("Computed channels":, channels)
+
+          assert "nodefaults" not in channels
+          if "defaults" in input_channels:
+            assert "defaults" in channels
+          elif "nodefaults" in input_channels or remove_defaults:
+            assert "defaults" not in channels
