@@ -49,8 +49,9 @@ jobs:
           channels: ${{ matrix.channels }}
           conda-remove-defaults: ${{ matrix.conda-remove-defaults }}
           python-version: "3.12"
-      - shell: bash -elc "python {0}"
+      - shell: bash -el {0}
         run: |
+          cat <<EOF | python
           import json
           from subprocess import check_output
 
@@ -68,3 +69,4 @@ jobs:
             assert "defaults" in channels
           elif "nodefaults" in input_channels or remove_defaults:
             assert "defaults" not in channels
+          EOF
