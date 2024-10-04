@@ -56,7 +56,7 @@ jobs:
 
           out = check_output(["conda", "config", "--show", "channels", "--json"])
           channels = json.loads(out)["channels"]
-          input_channels = "${{ matrix.channels }}"
+          input_channels = "${{ matrix.channels }}".split(",")
           remove_defaults = "${{ matrix.conda-remove-defaults }}" == "true"
 
           print("Input channels:", input_channels)
