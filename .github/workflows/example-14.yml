@@ -59,7 +59,7 @@ jobs:
 
           print("Input channels:", input_channels)
           print("Input remove-defaults:", remove_defaults)
-          print("Computed channels":, channels)
+          print("Computed channels:", channels)
 
           assert "nodefaults" not in channels
           if "defaults" in input_channels:
