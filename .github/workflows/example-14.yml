@@ -53,11 +53,12 @@ jobs:
         run: |
           cat <<EOF | python
           import json
+          import os
           from subprocess import check_output
 
           out = check_output(
             [
-              "conda${{ runner.os == 'Windows' && '.exe' || ''}}",
+              os.environ["CONDA_EXE"],
               "config",
               "--show",
               "channels",
