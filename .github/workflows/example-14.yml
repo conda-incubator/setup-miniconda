@@ -51,11 +51,19 @@ jobs:
           python-version: "3.12"
       - shell: bash -el {0}
         run: |
-          cat <<EOF > script.py
+          cat <<EOF | python
           import json
           from subprocess import check_output
 
-          out = check_output(["conda", "config", "--show", "channels", "--json"])
+          out = check_output(
+            [
+              "conda${{ runner.os == 'Windows' && '.exe' || ''}}",
+              "config",
+              "--show",
+              "channels",
+              "--json",
+            ]
+          )
           channels = json.loads(out)["channels"]
           input_channels = "${{ matrix.channels }}".split(",")
           remove_defaults = "${{ matrix.conda-remove-defaults }}" == "true"
@@ -70,4 +78,3 @@ jobs:
           elif "nodefaults" in input_channels or remove_defaults:
             assert "defaults" not in channels
           EOF
-          python script.py
