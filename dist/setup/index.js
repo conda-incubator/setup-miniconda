@@ -47043,6 +47043,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updateMamba = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
+const path = __importStar(__nccwpck_require__(1017));
 const core = __importStar(__nccwpck_require__(2186));
 const constants = __importStar(__nccwpck_require__(9042));
 const utils = __importStar(__nccwpck_require__(1314));
@@ -47060,16 +47061,57 @@ exports.updateMamba = {
         };
     }),
     postInstall: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
-        if (!constants.IS_WINDOWS) {
-            core.info("`mamba` is already executable");
-            return;
+        const mambaExec = conda.condaExecutable(options);
+        const condabinLocation = path.join(conda.condaBasePath(options), "condabin", path.basename(mambaExec));
+        if (constants.IS_UNIX) {
+            if (!fs.existsSync(condabinLocation)) {
+                // This is mamba 2.x with only $PREFIX/bin/mamba,
+                // we just need a symlink in condabin
+                core.info(`Symlinking ${mambaExec} to ${condabinLocation}...`);
+                fs.symlinkSync(mambaExec, condabinLocation);
+            }
         }
-        core.info("Creating bash wrapper for `mamba`...");
-        // Add bat-less forwarder for bash users on Windows
-        const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
-        const contents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
-        fs.writeFileSync(mambaBat.slice(0, -4), contents);
-        core.info(`... wrote ${mambaBat}:\n${contents}`);
+        else {
+            core.info(`Creating bash wrapper for 'mamba'...`);
+            const mambaBat = condabinLocation.slice(0, -4) + ".bat";
+            // Add bat-less forwarder for bash users on Windows
+            const forwarderContents = `cmd.exe /C CALL "${mambaBat}" $* || exit 1`;
+            fs.writeFileSync(condabinLocation.slice(0, -4), forwarderContents);
+            core.info(`... wrote ${mambaExec.slice(0, -4)}:\n${forwarderContents}`);
+            if (!fs.existsSync(mambaBat)) {
+                // This is Windows and mamba 2.x, we need a mamba.bat like 1.x used to have
+                const contents = `
+@REM Copyright (C) 2012 Anaconda, Inc
+@REM SPDX-License-Identifier: BSD-3-Clause
+
+@REM echo _CE_CONDA is %_CE_CONDA%
+@REM echo _CE_M is %_CE_M%
+@REM echo CONDA_EXE is %CONDA_EXE%
+
+@IF NOT DEFINED _CE_CONDA (
+  @SET _CE_M=
+  @SET "CONDA_EXE=%~dp0..\\Scripts\\conda.exe"
+)
+@IF [%1]==[activate]   "%~dp0_conda_activate" %*
+@IF [%1]==[deactivate] "%~dp0_conda_activate" %*
+
+@SET MAMBA_EXES="%~dp0..\\Library\\bin\\mamba.exe"
+@CALL %MAMBA_EXES% %*
+
+@IF %errorlevel% NEQ 0 EXIT /B %errorlevel%
+
+@IF [%1]==[install]   "%~dp0_conda_activate" reactivate
+@IF [%1]==[update]    "%~dp0_conda_activate" reactivate
+@IF [%1]==[upgrade]   "%~dp0_conda_activate" reactivate
+@IF [%1]==[remove]    "%~dp0_conda_activate" reactivate
+@IF [%1]==[uninstall] "%~dp0_conda_activate" reactivate
+
+@EXIT /B %errorlevel%`;
+                core.info(`Creating .bat wrapper for 'mamba 2.x'...`);
+                fs.writeFileSync(mambaBat, contents);
+                core.info(`... wrote ${mambaBat}`);
+            }
+        }
     }),
 };
 
@@ -47177,7 +47219,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.condaInit = exports.applyCondaConfiguration = exports.copyConfig = exports.bootstrapConfig = exports.condaCommand = exports.isMambaInstalled = exports.condaExecutable = exports.envCommandFlag = exports.condaBasePath = void 0;
+exports.condaInit = exports.applyCondaConfiguration = exports.copyConfig = exports.bootstrapConfig = exports.condaCommand = exports.isMambaInstalled = exports.condaExecutable = exports.condaExecutableLocations = exports.envCommandFlag = exports.condaBasePath = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const os = __importStar(__nccwpck_require__(2037));
@@ -47213,25 +47255,47 @@ function envCommandFlag(inputs) {
 }
 exports.envCommandFlag = envCommandFlag;
 /**
- * Provide cross platform location of conda/mamba executable
+ * Provide cross platform location of conda/mamba executable in condabin and bin
  */
-function condaExecutable(options, subcommand) {
+function condaExecutableLocations(options, subcommand) {
     const dir = condaBasePath(options);
-    let condaExe;
+    let condaExes = [];
     let commandName = "conda";
     if (options.useMamba &&
         (subcommand == null || constants.MAMBA_SUBCOMMANDS.includes(subcommand))) {
         commandName = "mamba";
     }
-    commandName = constants.IS_WINDOWS ? commandName + ".bat" : commandName;
-    condaExe = path.join(dir, "condabin", commandName);
-    return condaExe;
+    condaExes.push(path.join(dir, "condabin", constants.IS_WINDOWS ? commandName + ".bat" : commandName));
+    if (constants.IS_WINDOWS) {
+        condaExes.push(path.join(dir, "Library", "bin", commandName + ".exe"));
+    }
+    else {
+        condaExes.push(path.join(dir, "bin", commandName));
+    }
+    return condaExes;
+}
+exports.condaExecutableLocations = condaExecutableLocations;
+/**
+ *  Return existing conda or mamba executable
+ */
+function condaExecutable(options, subcommand) {
+    const locations = condaExecutableLocations(options, subcommand);
+    for (const exe of locations) {
+        if (fs.existsSync(exe))
+            return exe;
+    }
+    throw Error(`No existing ${options.useMamba ? "mamba" : "conda"} executable found at any of ${locations}`);
 }
 exports.condaExecutable = condaExecutable;
-/** Detect the presence of mamba */
+/**
+ * Detect the presence of mamba
+ */
 function isMambaInstalled(options) {
-    const mamba = condaExecutable(Object.assign(Object.assign({}, options), { useMamba: true }));
-    return fs.existsSync(mamba);
+    for (const exe of condaExecutableLocations(Object.assign(Object.assign({}, options), { useMamba: true }))) {
+        if (fs.existsSync(exe))
+            return true;
+    }
+    return false;
 }
 exports.isMambaInstalled = isMambaInstalled;
 /**
@@ -47240,7 +47304,11 @@ exports.isMambaInstalled = isMambaInstalled;
 function condaCommand(cmd, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const command = [condaExecutable(options, cmd[0]), ...cmd];
-        return yield utils.execute(command);
+        let env = {};
+        if (options.useMamba) {
+            env.MAMBA_ROOT_PREFIX = condaBasePath(options);
+        }
+        return yield utils.execute(command, env);
     });
 }
 exports.condaCommand = condaCommand;
@@ -48016,13 +48084,18 @@ exports.ensureYaml = {
             core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
             outputs.setEnvironmentFileOutputs(envFile, fs.readFileSync(inputs.environmentFile, "utf-8"));
         }
-        return [
-            "env",
-            "update",
-            ...conda.envCommandFlag(inputs),
-            "--file",
-            envFile,
-        ];
+        const [flag, nameOrPath] = conda.envCommandFlag(inputs);
+        let subcommand;
+        if (options.useMamba) {
+            const envPath = flag === "--name"
+                ? path.join(conda.condaBasePath(options), "envs", nameOrPath)
+                : nameOrPath;
+            subcommand = fs.existsSync(envPath) ? "update" : "create";
+        }
+        else {
+            subcommand = "update";
+        }
+        return ["env", subcommand, flag, nameOrPath, "--file", envFile];
     }),
 };
 
@@ -49019,7 +49092,7 @@ exports.isBaseEnv = isBaseEnv;
 /**
  * Run exec.exec with error handling
  */
-function execute(command) {
+function execute(command, env = {}) {
     return __awaiter(this, void 0, void 0, function* () {
         let options = {
             errStream: new stream.Writable(),
@@ -49043,6 +49116,7 @@ function execute(command) {
                     core.warning(stringData);
                 },
             },
+            env: Object.assign(Object.assign({}, process.env), env),
         };
         const rc = yield exec.exec(command[0], command.slice(1), options);
         if (rc !== 0) {

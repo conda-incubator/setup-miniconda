@@ -26473,7 +26473,7 @@ exports.isBaseEnv = isBaseEnv;
 /**
  * Run exec.exec with error handling
  */
-function execute(command) {
+function execute(command, env = {}) {
     return __awaiter(this, void 0, void 0, function* () {
         let options = {
             errStream: new stream.Writable(),
@@ -26497,6 +26497,7 @@ function execute(command) {
                     core.warning(stringData);
                 },
             },
+            env: Object.assign(Object.assign({}, process.env), env),
         };
         const rc = yield exec.exec(command[0], command.slice(1), options);
         if (rc !== 0) {

@@ -127,13 +127,17 @@ export const ensureYaml: types.IEnvProvider = {
         fs.readFileSync(inputs.environmentFile, "utf-8"),
       );
     }
-
-    return [
-      "env",
-      "update",
-      ...conda.envCommandFlag(inputs),
-      "--file",
-      envFile,
-    ];
+    const [flag, nameOrPath] = conda.envCommandFlag(inputs);
+    let subcommand: string;
+    if (options.useMamba) {
+      const envPath =
+        flag === "--name"
+          ? path.join(conda.condaBasePath(options), "envs", nameOrPath)
+          : nameOrPath;
+      subcommand = fs.existsSync(envPath) ? "update" : "create";
+    } else {
+      subcommand = "update";
+    }
+    return ["env", subcommand, flag, nameOrPath, "--file", envFile];
   },
 };
