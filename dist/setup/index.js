@@ -47349,19 +47349,34 @@ function applyCondaConfiguration(inputs, options) {
         if (!channels.length && ((_c = (_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) === null || _b === void 0 ? void 0 : _b.channels) === null || _c === void 0 ? void 0 : _c.length)) {
             channels = options.envSpec.yaml.channels;
         }
+        // This can be enabled via conda-remove-defaults and channels = nodefaults
+        let removeDefaults = inputs.condaRemoveDefaults === "true";
         // LIFO: reverse order to preserve higher priority as listed in the option
         // .slice ensures working against a copy
         for (const channel of channels.slice().reverse()) {
+            if (channel === "nodefaults") {
+                core.warning("'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
+                    "In the future, 'nodefaults' as a way of removing 'defaults' won't be supported. " +
+                    "Please set 'conda-remove-defaults' = 'true' to remove this warning.");
+                removeDefaults = true;
+            }
             core.info(`Adding channel '${channel}'`);
             yield condaCommand(["config", "--add", "channels", channel], options);
         }
-        if (inputs.condaRemoveDefaults === "true" && !channels.includes("defaults")) {
-            core.info("Removing implicitly added 'defaults' channel");
-            try {
-                yield condaCommand(["config", "--remove", "channels", "defaults"], options);
+        if (!channels.includes("defaults")) {
+            if (removeDefaults) {
+                core.info("Removing implicitly added 'defaults' channel");
+                try {
+                    yield condaCommand(["config", "--remove", "channels", "defaults"], options);
+                }
+                catch (err) {
+                    core.info("Removing defaults raised an error -- it was probably not present.");
+                }
             }
-            catch (err) {
-                core.info("Removing defaults raised an error -- it was probably not present.");
+            else {
+                core.warning("The 'defaults' channel might have been added implicitly. " +
+                    "If this is intentional, add 'defaults' to the 'channels' list. " +
+                    "Otherwise, consider setting 'conda-remove-defaults' to 'true'.");
             }
         }
         // All other options are just passed as their string representations

@@ -31,6 +31,12 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         conda-remove-defaults: ["true", "false"]
+        channels:
+          [
+            "conda-forge",
+            "conda-forge,nodefaults",
+            "conda-forge,defaults,nodefaults",
+          ]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +44,7 @@ jobs:
         id: setup-miniconda
         continue-on-error: true
         with:
-          channels: conda-forge
+          channels: ${{ matrix.channels }}
           python-version: "3.12"
           conda-remove-defaults: ${{ matrix.conda-remove-defaults }}
       - shell: bash -el {0}
