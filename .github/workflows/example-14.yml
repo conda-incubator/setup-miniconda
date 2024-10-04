@@ -48,12 +48,14 @@ jobs:
         with:
           channels: ${{ matrix.channels }}
           conda-remove-defaults: ${{ matrix.conda-remove-defaults }}
-          activate-environment: ""
+          python-version: "3.12"
       - shell: bash -elc "python {0}"
         run: |
-          from conda.base.context import context
+          import json
+          from subprocess import check_output
 
-          channels = context.channels
+          out = check_output(["conda", "config", "--show", "channels", "--json"])
+          channels = json.loads(out)["channels"]
           input_channels = "${{ matrix.channels }}"
           remove_defaults = "${{ matrix.conda-remove-defaults }}" == "true"
 
