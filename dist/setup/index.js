@@ -47290,10 +47290,15 @@ function condaExecutable(inputs, options, subcommand) {
     throw Error(`No existing ${options.useMamba ? "mamba" : "conda"} executable found at any of ${locations}`);
 }
 exports.condaExecutable = condaExecutable;
-/** Detect the presence of mamba */
+/**
+ * Detect the presence of mamba
+ */
 function isMambaInstalled(inputs, options) {
-    const mamba = condaExecutable(inputs, Object.assign(Object.assign({}, options), { useMamba: true }));
-    return fs.existsSync(mamba);
+    for (const exe of condaExecutableLocations(inputs, Object.assign(Object.assign({}, options), { useMamba: true }))) {
+        if (fs.existsSync(exe))
+            return true;
+    }
+    return false;
 }
 exports.isMambaInstalled = isMambaInstalled;
 /**
@@ -47302,7 +47307,11 @@ exports.isMambaInstalled = isMambaInstalled;
 function condaCommand(cmd, inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
-        return yield utils.execute(command);
+        let env = {};
+        if (options.useMamba) {
+            env.MAMBA_ROOT_PREFIX = condaBasePath(inputs, options);
+        }
+        return yield utils.execute(command, env);
     });
 }
 exports.condaCommand = condaCommand;

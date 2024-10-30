@@ -95,13 +95,20 @@ export function condaExecutable(
   );
 }
 
-/** Detect the presence of mamba */
+/**
+ * Detect the presence of mamba
+ */
 export function isMambaInstalled(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
 ) {
-  const mamba = condaExecutable(inputs, { ...options, useMamba: true });
-  return fs.existsSync(mamba);
+  for (const exe of condaExecutableLocations(inputs, {
+    ...options,
+    useMamba: true,
+  })) {
+    if (fs.existsSync(exe)) return true;
+  }
+  return false;
 }
 
 /**
@@ -113,7 +120,11 @@ export async function condaCommand(
   options: types.IDynamicOptions,
 ): Promise<void> {
   const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
-  return await utils.execute(command);
+  let env: { [key: string]: string } = {};
+  if (options.useMamba) {
+    env.MAMBA_ROOT_PREFIX = condaBasePath(inputs, options);
+  }
+  return await utils.execute(command, env);
 }
 
 /**
