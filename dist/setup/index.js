@@ -47236,7 +47236,9 @@ function condaBasePath(inputs, options) {
         condaPath = constants.MINICONDA_DIR_PATH;
     }
     else if (inputs.installationDir) {
-        condaPath = inputs.installationDir;
+        condaPath = constants.IS_WINDOWS
+            ? inputs.installationDir.replace("/", "\\")
+            : inputs.installationDir;
     }
     else {
         condaPath = path.join(os.homedir(), "miniconda3");
