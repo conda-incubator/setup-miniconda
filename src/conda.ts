@@ -221,9 +221,24 @@ export async function applyCondaConfiguration(
     }
   }
 
+  // Package directories are also comma-separated, like channels
+  let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+  for (const pkgsDir of pkgsDirs) {
+    core.info(`Adding pkgs_dir '${pkgsDir}'`);
+    await condaCommand(
+      ["config", "--add", "pkgs_dirs", pkgsDir],
+      inputs,
+      options,
+    );
+  }
+
   // All other options are just passed as their string representations
   for (const [key, value] of configEntries) {
-    if (value.trim().length === 0 || key === "channels") {
+    if (
+      value.trim().length === 0 ||
+      key === "channels" ||
+      key === "pkgs_dirs"
+    ) {
       continue;
     }
     core.info(`${key}: ${value}`);

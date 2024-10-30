@@ -19,12 +19,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  caching-example:
+  caching-ubuntu:
     # prevent cronjobs from running on forks
     if:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
-    name: Caching
+    name: Caching on Ubuntu
     runs-on: "ubuntu-latest"
     timeout-minutes: 30
     steps:
@@ -35,6 +35,8 @@ jobs:
           # Increase this value to reset cache if etc/example-environment.yml has not changed
           CACHE_NUMBER: 2
         with:
+          # Use faster GNU tar
+          enableCrossOsArchive: true
           path: ~/conda_pkgs_dir
           key:
             ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
@@ -45,3 +47,32 @@ jobs:
           channel-priority: strict
           environment-file: etc/example-environment-caching.yml
           use-only-tar-bz2: true
+  caching-windows:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Caching on Windows
+    runs-on: "windows-latest"
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache conda
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if etc/example-environment.yml has not changed
+          CACHE_NUMBER: 2
+        with:
+          # Use faster GNU tar
+          enableCrossOsArchive: true
+          path: D:\conda_pkgs_dir
+          key:
+            ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('etc/example-environment.yml') }}
+      - uses: ./
+        with:
+          activate-environment: anaconda-client-env
+          channel-priority: strict
+          environment-file: etc/example-environment-caching.yml
+          pkgs-dirs: D:\conda_pkgs_dir
+      - run: conda info

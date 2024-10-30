@@ -7,8 +7,21 @@ import * as core from "@actions/core";
 import * as constants from "./constants";
 
 /** The folder to use as the conda package cache */
-export function cacheFolder() {
-  return path.join(os.homedir(), constants.CONDA_CACHE_FOLDER);
+export function parsePkgsDirs(configuredPkgsDirs: string) {
+  // Package directories are also comma-separated, like channels
+  // We're also setting the appropriate conda config env var, to be safe
+  let pkgsDirs = configuredPkgsDirs
+    .trim()
+    .split(/,/)
+    .map((p) => p.trim())
+    .filter((p) => p.length);
+
+  // Falling back to our default package directories value
+  if (pkgsDirs.length) {
+    return pkgsDirs;
+  } else {
+    return [path.join(os.homedir(), constants.DEFAULT_PKGS_DIR)];
+  }
 }
 
 /**

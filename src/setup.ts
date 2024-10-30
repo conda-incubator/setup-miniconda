@@ -71,10 +71,6 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     env.getEnvSpec(inputs),
   );
 
-  await core.group("Configuring conda package cache...", () =>
-    outputs.setCacheVariable(inputs, options),
-  );
-
   await core.group("Applying initial configuration...", () =>
     conda.applyCondaConfiguration(inputs, options),
   );

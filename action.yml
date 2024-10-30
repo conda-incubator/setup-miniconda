@@ -213,6 +213,14 @@ inputs:
       for more information.'
     required: false
     default: ""
+  pkgs-dirs:
+    description:
+      'Conda configuration. Comma separated list of package directories
+      ("pkgs_dirs") to configure conda. See
+      https://docs.conda.io/projects/conda/en/stable/user-guide/configuration/use-condarc.html#specify-pkg-directories
+      for more information.'
+    required: false
+    default: ""
   use-only-tar-bz2:
     description:
       'Conda configuration. Conda 4.7 introduced a new .conda package file
