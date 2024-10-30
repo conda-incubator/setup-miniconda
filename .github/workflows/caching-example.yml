@@ -75,3 +75,4 @@ jobs:
           channel-priority: strict
           environment-file: etc/example-environment-caching.yml
           pkgs-dirs: D:\conda_pkgs_dir
+      - run: conda info
