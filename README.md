@@ -59,6 +59,7 @@ possibility of automatically activating the `test` environment on all shells.
 | [Caching packages](#caching-packages)                              | [![Caching Example Status][caching-badge]][caching]             |
 | [Caching environments](#caching-environments)                      | [![Caching Env Example Status][caching-env-badge]][caching-env] |
 | [Apple Silicon](#example-13-apple-silicon)                         | [![Apple Silicon][ex13-badge]][ex13]                            |
+| [Remove defaults](#example-14-conda-remove-defaults)               | [![Remove defaults][ex14-badge]][ex14]                          |
 
 [ex1]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml
@@ -112,6 +113,10 @@ possibility of automatically activating the `test` environment on all shells.
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-13.yml
 [ex13-badge]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-13.yml/badge.svg?branch=main
+[ex14]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-14.yml
+[ex14-badge]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-14.yml/badge.svg?branch=main
 
 ## Other Workflows
 
@@ -596,6 +601,35 @@ jobs:
         run: |
           conda install -y python
           python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
+```
+
+### Example 14: Remove `defaults` channel
+
+Workaround for this bug:
+[conda#12356](https://github.com/conda/conda/issues/12356).
+
+```yaml
+jobs:
+  example-13:
+    name: Ex14 (os=${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          miniforge-version: latest
+          channels: conda-forge
+          conda-remove-defaults: "true"
+      - name: Check config
+        shell: bash -el {0}
+        run: |
+          conda config --show-sources
 ```
 
 ## Caching
