@@ -87,6 +87,7 @@ export async function parseInputs(): Promise<types.IActionInputs> {
     condaVersion: core.getInput("conda-version"),
     environmentFile: core.getInput("environment-file"),
     installerUrl: core.getInput("installer-url"),
+    installationDir: core.getInput("installation-dir"),
     mambaVersion: core.getInput("mamba-version"),
     useMamba: core.getInput("use-mamba"),
     minicondaVersion: core.getInput("miniconda-version"),

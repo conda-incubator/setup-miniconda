@@ -132,7 +132,7 @@ export const ensureYaml: types.IEnvProvider = {
     if (options.useMamba) {
       const envPath =
         flag === "--name"
-          ? path.join(conda.condaBasePath(options), "envs", nameOrPath)
+          ? path.join(conda.condaBasePath(inputs, options), "envs", nameOrPath)
           : nameOrPath;
       subcommand = fs.existsSync(envPath) ? "update" : "create";
     } else {

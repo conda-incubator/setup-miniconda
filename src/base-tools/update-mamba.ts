@@ -24,9 +24,9 @@ export const updateMamba: types.IToolProvider = {
     };
   },
   postInstall: async (inputs, options) => {
-    const mambaExec = conda.condaExecutable(options);
+    const mambaExec = conda.condaExecutable(inputs, options);
     const condabinLocation = path.join(
-      conda.condaBasePath(options),
+      conda.condaBasePath(inputs, options),
       "condabin",
       path.basename(mambaExec),
     );
