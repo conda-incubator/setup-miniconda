@@ -24,19 +24,22 @@ jobs:
     if:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
-    name: Ex6 (${{ matrix.os }})
+    name:
+      Ex6 (${{ matrix.os }}, mamba ${{ matrix.mamba-version }}, ${{
+      matrix.activate-environment }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        mamba-version: ["1.5.10", "2"]
         include:
           - os: ubuntu-latest
             activate-environment: anaconda-client-env
           - os: macos-latest
             activate-environment: /tmp/anaconda-client-env
           - os: windows-latest
-            activate-environment: c:\ace
+            activate-environment: C:\ace
     defaults:
       run:
         shell: bash -el {0}
@@ -46,8 +49,15 @@ jobs:
       - uses: ./
         with:
           miniforge-variant: Miniforge3
+          # Use an old Miniforge (without conda-libmamba-solver) to allow updates to mamba v2.
+          # Set the solver to classic for those too. This can be removed when
+          # conda-libmamba-solver is released with libmamba v2 compatibility.
+          miniforge-version:
+            ${{ matrix.mamba-version == '2' && '23.1.0-0' || 'latest' }}
+          conda-solver:
+            ${{ matrix.mamba-version == '2' && 'classic' || 'libmamba' }}
           python-version: "3.11"
-          mamba-version: "*"
+          mamba-version: ${{ matrix.mamba-version }}
           channels: conda-forge,nodefaults
           channel-priority: true
           activate-environment: ${{ matrix.activate-environment }}
@@ -69,7 +79,7 @@ jobs:
       - name: Windows, .bat, from Cmd
         shell: cmd /C call {0}
         if: matrix.os == 'windows-latest'
-        run: mamba --version
+        run: mamba.bat --version
       - name: Windows, no .bat, from Cmd
         shell: cmd /C call {0}
         if: matrix.os == 'windows-latest'

@@ -34,7 +34,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
   // The desired installer may change the options
   options = { ...options, ...installerInfo.options };
 
-  const basePath = conda.condaBasePath(options);
+  const basePath = conda.condaBasePath(inputs, options);
 
   if (installerInfo.localInstallerPath && !options.useBundled) {
     options = await core.group("Running installer...", () =>
@@ -59,7 +59,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
   }
 
   await core.group("Setup environment variables...", () =>
-    outputs.setPathVariables(options),
+    outputs.setPathVariables(inputs, options),
   );
 
   if (inputs.condaConfigFile) {
@@ -69,6 +69,10 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
   // For potential 'channels' that may alter configuration
   options.envSpec = await core.group("Parsing environment...", () =>
     env.getEnvSpec(inputs),
+  );
+
+  await core.group("Configuring conda package cache...", () =>
+    outputs.setCacheVariable(inputs, options),
   );
 
   await core.group("Applying initial configuration...", () =>

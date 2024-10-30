@@ -29,6 +29,11 @@ inputs:
       installers"
     required: false
     default: ""
+  installation-dir:
+    description:
+      "If provided, the installer will be installed in the given directory."
+    required: false
+    default: ""
   miniconda-version:
     description:
       "If provided, this version of Miniconda3 will be downloaded and installed.
@@ -40,10 +45,9 @@ inputs:
     description:
       "If provided, this variant of Miniforge will be downloaded and installed.
       If `miniforge-version` is not provided, the `latest` version will be used.
-      Currently-known values: - Miniforge3 (default) - Miniforge-pypy3 -
-      Mambaforge - Mambaforge-pypy3 Visit
+      Currently-known values: Miniforge3 (default), Miniforge-pypy3. Visit
       https://github.com/conda-forge/miniforge/releases/ for more information on
-      available variants"
+      available variants."
     required: false
     default: ""
   miniforge-version:
@@ -192,6 +196,13 @@ inputs:
       priority. See
       https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/
       for more information."
+    required: false
+    default: ""
+  conda-remove-defaults:
+    description:
+      "Postprocess channels list to remove 'defaults' if it was added implicitly
+      to the 'channels' setting. Will default to 'true' to align with related
+      changes in conda 25.3.0."
     required: false
     default: ""
   show-channel-urls:

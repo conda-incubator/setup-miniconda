@@ -20866,348 +20866,6 @@ module.exports = new Type('tag:yaml.org,2002:timestamp', {
 
 /***/ }),
 
-/***/ 7129:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-// A linked list to keep track of recently-used-ness
-const Yallist = __nccwpck_require__(665)
-
-const MAX = Symbol('max')
-const LENGTH = Symbol('length')
-const LENGTH_CALCULATOR = Symbol('lengthCalculator')
-const ALLOW_STALE = Symbol('allowStale')
-const MAX_AGE = Symbol('maxAge')
-const DISPOSE = Symbol('dispose')
-const NO_DISPOSE_ON_SET = Symbol('noDisposeOnSet')
-const LRU_LIST = Symbol('lruList')
-const CACHE = Symbol('cache')
-const UPDATE_AGE_ON_GET = Symbol('updateAgeOnGet')
-
-const naiveLength = () => 1
-
-// lruList is a yallist where the head is the youngest
-// item, and the tail is the oldest.  the list contains the Hit
-// objects as the entries.
-// Each Hit object has a reference to its Yallist.Node.  This
-// never changes.
-//
-// cache is a Map (or PseudoMap) that matches the keys to
-// the Yallist.Node object.
-class LRUCache {
-  constructor (options) {
-    if (typeof options === 'number')
-      options = { max: options }
-
-    if (!options)
-      options = {}
-
-    if (options.max && (typeof options.max !== 'number' || options.max < 0))
-      throw new TypeError('max must be a non-negative number')
-    // Kind of weird to have a default max of Infinity, but oh well.
-    const max = this[MAX] = options.max || Infinity
-
-    const lc = options.length || naiveLength
-    this[LENGTH_CALCULATOR] = (typeof lc !== 'function') ? naiveLength : lc
-    this[ALLOW_STALE] = options.stale || false
-    if (options.maxAge && typeof options.maxAge !== 'number')
-      throw new TypeError('maxAge must be a number')
-    this[MAX_AGE] = options.maxAge || 0
-    this[DISPOSE] = options.dispose
-    this[NO_DISPOSE_ON_SET] = options.noDisposeOnSet || false
-    this[UPDATE_AGE_ON_GET] = options.updateAgeOnGet || false
-    this.reset()
-  }
-
-  // resize the cache when the max changes.
-  set max (mL) {
-    if (typeof mL !== 'number' || mL < 0)
-      throw new TypeError('max must be a non-negative number')
-
-    this[MAX] = mL || Infinity
-    trim(this)
-  }
-  get max () {
-    return this[MAX]
-  }
-
-  set allowStale (allowStale) {
-    this[ALLOW_STALE] = !!allowStale
-  }
-  get allowStale () {
-    return this[ALLOW_STALE]
-  }
-
-  set maxAge (mA) {
-    if (typeof mA !== 'number')
-      throw new TypeError('maxAge must be a non-negative number')
-
-    this[MAX_AGE] = mA
-    trim(this)
-  }
-  get maxAge () {
-    return this[MAX_AGE]
-  }
-
-  // resize the cache when the lengthCalculator changes.
-  set lengthCalculator (lC) {
-    if (typeof lC !== 'function')
-      lC = naiveLength
-
-    if (lC !== this[LENGTH_CALCULATOR]) {
-      this[LENGTH_CALCULATOR] = lC
-      this[LENGTH] = 0
-      this[LRU_LIST].forEach(hit => {
-        hit.length = this[LENGTH_CALCULATOR](hit.value, hit.key)
-        this[LENGTH] += hit.length
-      })
-    }
-    trim(this)
-  }
-  get lengthCalculator () { return this[LENGTH_CALCULATOR] }
-
-  get length () { return this[LENGTH] }
-  get itemCount () { return this[LRU_LIST].length }
-
-  rforEach (fn, thisp) {
-    thisp = thisp || this
-    for (let walker = this[LRU_LIST].tail; walker !== null;) {
-      const prev = walker.prev
-      forEachStep(this, fn, walker, thisp)
-      walker = prev
-    }
-  }
-
-  forEach (fn, thisp) {
-    thisp = thisp || this
-    for (let walker = this[LRU_LIST].head; walker !== null;) {
-      const next = walker.next
-      forEachStep(this, fn, walker, thisp)
-      walker = next
-    }
-  }
-
-  keys () {
-    return this[LRU_LIST].toArray().map(k => k.key)
-  }
-
-  values () {
-    return this[LRU_LIST].toArray().map(k => k.value)
-  }
-
-  reset () {
-    if (this[DISPOSE] &&
-        this[LRU_LIST] &&
-        this[LRU_LIST].length) {
-      this[LRU_LIST].forEach(hit => this[DISPOSE](hit.key, hit.value))
-    }
-
-    this[CACHE] = new Map() // hash of items by key
-    this[LRU_LIST] = new Yallist() // list of items in order of use recency
-    this[LENGTH] = 0 // length of items in the list
-  }
-
-  dump () {
-    return this[LRU_LIST].map(hit =>
-      isStale(this, hit) ? false : {
-        k: hit.key,
-        v: hit.value,
-        e: hit.now + (hit.maxAge || 0)
-      }).toArray().filter(h => h)
-  }
-
-  dumpLru () {
-    return this[LRU_LIST]
-  }
-
-  set (key, value, maxAge) {
-    maxAge = maxAge || this[MAX_AGE]
-
-    if (maxAge && typeof maxAge !== 'number')
-      throw new TypeError('maxAge must be a number')
-
-    const now = maxAge ? Date.now() : 0
-    const len = this[LENGTH_CALCULATOR](value, key)
-
-    if (this[CACHE].has(key)) {
-      if (len > this[MAX]) {
-        del(this, this[CACHE].get(key))
-        return false
-      }
-
-      const node = this[CACHE].get(key)
-      const item = node.value
-
-      // dispose of the old one before overwriting
-      // split out into 2 ifs for better coverage tracking
-      if (this[DISPOSE]) {
-        if (!this[NO_DISPOSE_ON_SET])
-          this[DISPOSE](key, item.value)
-      }
-
-      item.now = now
-      item.maxAge = maxAge
-      item.value = value
-      this[LENGTH] += len - item.length
-      item.length = len
-      this.get(key)
-      trim(this)
-      return true
-    }
-
-    const hit = new Entry(key, value, len, now, maxAge)
-
-    // oversized objects fall out of cache automatically.
-    if (hit.length > this[MAX]) {
-      if (this[DISPOSE])
-        this[DISPOSE](key, value)
-
-      return false
-    }
-
-    this[LENGTH] += hit.length
-    this[LRU_LIST].unshift(hit)
-    this[CACHE].set(key, this[LRU_LIST].head)
-    trim(this)
-    return true
-  }
-
-  has (key) {
-    if (!this[CACHE].has(key)) return false
-    const hit = this[CACHE].get(key).value
-    return !isStale(this, hit)
-  }
-
-  get (key) {
-    return get(this, key, true)
-  }
-
-  peek (key) {
-    return get(this, key, false)
-  }
-
-  pop () {
-    const node = this[LRU_LIST].tail
-    if (!node)
-      return null
-
-    del(this, node)
-    return node.value
-  }
-
-  del (key) {
-    del(this, this[CACHE].get(key))
-  }
-
-  load (arr) {
-    // reset the cache
-    this.reset()
-
-    const now = Date.now()
-    // A previous serialized cache has the most recent items first
-    for (let l = arr.length - 1; l >= 0; l--) {
-      const hit = arr[l]
-      const expiresAt = hit.e || 0
-      if (expiresAt === 0)
-        // the item was created without expiration in a non aged cache
-        this.set(hit.k, hit.v)
-      else {
-        const maxAge = expiresAt - now
-        // dont add already expired items
-        if (maxAge > 0) {
-          this.set(hit.k, hit.v, maxAge)
-        }
-      }
-    }
-  }
-
-  prune () {
-    this[CACHE].forEach((value, key) => get(this, key, false))
-  }
-}
-
-const get = (self, key, doUse) => {
-  const node = self[CACHE].get(key)
-  if (node) {
-    const hit = node.value
-    if (isStale(self, hit)) {
-      del(self, node)
-      if (!self[ALLOW_STALE])
-        return undefined
-    } else {
-      if (doUse) {
-        if (self[UPDATE_AGE_ON_GET])
-          node.value.now = Date.now()
-        self[LRU_LIST].unshiftNode(node)
-      }
-    }
-    return hit.value
-  }
-}
-
-const isStale = (self, hit) => {
-  if (!hit || (!hit.maxAge && !self[MAX_AGE]))
-    return false
-
-  const diff = Date.now() - hit.now
-  return hit.maxAge ? diff > hit.maxAge
-    : self[MAX_AGE] && (diff > self[MAX_AGE])
-}
-
-const trim = self => {
-  if (self[LENGTH] > self[MAX]) {
-    for (let walker = self[LRU_LIST].tail;
-      self[LENGTH] > self[MAX] && walker !== null;) {
-      // We know that we're about to delete this one, and also
-      // what the next least recently used key will be, so just
-      // go ahead and set it now.
-      const prev = walker.prev
-      del(self, walker)
-      walker = prev
-    }
-  }
-}
-
-const del = (self, node) => {
-  if (node) {
-    const hit = node.value
-    if (self[DISPOSE])
-      self[DISPOSE](hit.key, hit.value)
-
-    self[LENGTH] -= hit.length
-    self[CACHE].delete(hit.key)
-    self[LRU_LIST].removeNode(node)
-  }
-}
-
-class Entry {
-  constructor (key, value, length, now, maxAge) {
-    this.key = key
-    this.value = value
-    this.length = length
-    this.now = now
-    this.maxAge = maxAge || 0
-  }
-}
-
-const forEachStep = (self, fn, node, thisp) => {
-  let hit = node.value
-  if (isStale(self, hit)) {
-    del(self, node)
-    if (!self[ALLOW_STALE])
-      hit = undefined
-  }
-  if (hit)
-    fn.call(thisp, hit.value, hit.key, self)
-}
-
-module.exports = LRUCache
-
-
-/***/ }),
-
 /***/ 9241:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -21848,8 +21506,8 @@ class Range {
 
 module.exports = Range
 
-const LRU = __nccwpck_require__(7129)
-const cache = new LRU({ max: 1000 })
+const LRU = __nccwpck_require__(5339)
+const cache = new LRU()
 
 const parseOptions = __nccwpck_require__(785)
 const Comparator = __nccwpck_require__(1532)
@@ -22120,9 +21778,10 @@ const replaceGTE0 = (comp, options) => {
 // 1.2 - 3.4.5 => >=1.2.0 <=3.4.5
 // 1.2.3 - 3.4 => >=1.2.0 <3.5.0-0 Any 3.4.x will do
 // 1.2 - 3.4 => >=1.2.0 <3.5.0-0
+// TODO build?
 const hyphenReplace = incPr => ($0,
   from, fM, fm, fp, fpr, fb,
-  to, tM, tm, tp, tpr, tb) => {
+  to, tM, tm, tp, tpr) => {
   if (isX(fM)) {
     from = ''
   } else if (isX(fm)) {
@@ -22354,7 +22013,7 @@ class SemVer {
     do {
       const a = this.build[i]
       const b = other.build[i]
-      debug('prerelease compare', i, a, b)
+      debug('build compare', i, a, b)
       if (a === undefined && b === undefined) {
         return 0
       } else if (b === undefined) {
@@ -22596,35 +22255,43 @@ const coerce = (version, options) => {
 
   let match = null
   if (!options.rtl) {
-    match = version.match(re[t.COERCE])
+    match = version.match(options.includePrerelease ? re[t.COERCEFULL] : re[t.COERCE])
   } else {
     // Find the right-most coercible string that does not share
     // a terminus with a more left-ward coercible string.
     // Eg, '1.2.3.4' wants to coerce '2.3.4', not '3.4' or '4'
+    // With includePrerelease option set, '1.2.3.4-rc' wants to coerce '2.3.4-rc', not '2.3.4'
     //
     // Walk through the string checking with a /g regexp
     // Manually set the index so as to pick up overlapping matches.
     // Stop when we get a match that ends at the string end, since no
     // coercible string can be more right-ward without the same terminus.
+    const coerceRtlRegex = options.includePrerelease ? re[t.COERCERTLFULL] : re[t.COERCERTL]
     let next
-    while ((next = re[t.COERCERTL].exec(version)) &&
+    while ((next = coerceRtlRegex.exec(version)) &&
         (!match || match.index + match[0].length !== version.length)
     ) {
       if (!match ||
             next.index + next[0].length !== match.index + match[0].length) {
         match = next
       }
-      re[t.COERCERTL].lastIndex = next.index + next[1].length + next[2].length
+      coerceRtlRegex.lastIndex = next.index + next[1].length + next[2].length
     }
     // leave it in a clean state
-    re[t.COERCERTL].lastIndex = -1
+    coerceRtlRegex.lastIndex = -1
   }
 
   if (match === null) {
     return null
   }
 
-  return parse(`${match[2]}.${match[3] || '0'}.${match[4] || '0'}`, options)
+  const major = match[2]
+  const minor = match[3] || '0'
+  const patch = match[4] || '0'
+  const prerelease = options.includePrerelease && match[5] ? `-${match[5]}` : ''
+  const build = options.includePrerelease && match[6] ? `+${match[6]}` : ''
+
+  return parse(`${major}.${minor}.${patch}${prerelease}${build}`, options)
 }
 module.exports = coerce
 
@@ -23135,6 +22802,53 @@ module.exports = {
 
 /***/ }),
 
+/***/ 5339:
+/***/ ((module) => {
+
+class LRUCache {
+  constructor () {
+    this.max = 1000
+    this.map = new Map()
+  }
+
+  get (key) {
+    const value = this.map.get(key)
+    if (value === undefined) {
+      return undefined
+    } else {
+      // Remove the key from the map and add it to the end
+      this.map.delete(key)
+      this.map.set(key, value)
+      return value
+    }
+  }
+
+  delete (key) {
+    return this.map.delete(key)
+  }
+
+  set (key, value) {
+    const deleted = this.delete(key)
+
+    if (!deleted && value !== undefined) {
+      // If cache is full, delete the least recently used item
+      if (this.map.size >= this.max) {
+        const firstKey = this.map.keys().next().value
+        this.delete(firstKey)
+      }
+
+      this.map.set(key, value)
+    }
+
+    return this
+  }
+}
+
+module.exports = LRUCache
+
+
+/***/ }),
+
 /***/ 785:
 /***/ ((module) => {
 
@@ -23316,12 +23030,17 @@ createToken('XRANGELOOSE', `^${src[t.GTLT]}\\s*${src[t.XRANGEPLAINLOOSE]}$`)
 
 // Coercion.
 // Extract anything that could conceivably be a part of a valid semver
-createToken('COERCE', `${'(^|[^\\d])' +
+createToken('COERCEPLAIN', `${'(^|[^\\d])' +
               '(\\d{1,'}${MAX_SAFE_COMPONENT_LENGTH}})` +
               `(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?` +
-              `(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?` +
+              `(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?`)
+createToken('COERCE', `${src[t.COERCEPLAIN]}(?:$|[^\\d])`)
+createToken('COERCEFULL', src[t.COERCEPLAIN] +
+              `(?:${src[t.PRERELEASE]})?` +
+              `(?:${src[t.BUILD]})?` +
               `(?:$|[^\\d])`)
 createToken('COERCERTL', src[t.COERCE], true)
+createToken('COERCERTLFULL', src[t.COERCEFULL], true)
 
 // Tilde ranges.
 // Meaning is "reasonably at or greater than"
@@ -30585,6 +30304,132 @@ module.exports = buildConnector
 
 /***/ }),
 
+/***/ 4462:
+/***/ ((module) => {
+
+"use strict";
+
+
+/** @type {Record<string, string | undefined>} */
+const headerNameLowerCasedRecord = {}
+
+// https://developer.mozilla.org/docs/Web/HTTP/Headers
+const wellknownHeaderNames = [
+  'Accept',
+  'Accept-Encoding',
+  'Accept-Language',
+  'Accept-Ranges',
+  'Access-Control-Allow-Credentials',
+  'Access-Control-Allow-Headers',
+  'Access-Control-Allow-Methods',
+  'Access-Control-Allow-Origin',
+  'Access-Control-Expose-Headers',
+  'Access-Control-Max-Age',
+  'Access-Control-Request-Headers',
+  'Access-Control-Request-Method',
+  'Age',
+  'Allow',
+  'Alt-Svc',
+  'Alt-Used',
+  'Authorization',
+  'Cache-Control',
+  'Clear-Site-Data',
+  'Connection',
+  'Content-Disposition',
+  'Content-Encoding',
+  'Content-Language',
+  'Content-Length',
+  'Content-Location',
+  'Content-Range',
+  'Content-Security-Policy',
+  'Content-Security-Policy-Report-Only',
+  'Content-Type',
+  'Cookie',
+  'Cross-Origin-Embedder-Policy',
+  'Cross-Origin-Opener-Policy',
+  'Cross-Origin-Resource-Policy',
+  'Date',
+  'Device-Memory',
+  'Downlink',
+  'ECT',
+  'ETag',
+  'Expect',
+  'Expect-CT',
+  'Expires',
+  'Forwarded',
+  'From',
+  'Host',
+  'If-Match',
+  'If-Modified-Since',
+  'If-None-Match',
+  'If-Range',
+  'If-Unmodified-Since',
+  'Keep-Alive',
+  'Last-Modified',
+  'Link',
+  'Location',
+  'Max-Forwards',
+  'Origin',
+  'Permissions-Policy',
+  'Pragma',
+  'Proxy-Authenticate',
+  'Proxy-Authorization',
+  'RTT',
+  'Range',
+  'Referer',
+  'Referrer-Policy',
+  'Refresh',
+  'Retry-After',
+  'Sec-WebSocket-Accept',
+  'Sec-WebSocket-Extensions',
+  'Sec-WebSocket-Key',
+  'Sec-WebSocket-Protocol',
+  'Sec-WebSocket-Version',
+  'Server',
+  'Server-Timing',
+  'Service-Worker-Allowed',
+  'Service-Worker-Navigation-Preload',
+  'Set-Cookie',
+  'SourceMap',
+  'Strict-Transport-Security',
+  'Supports-Loading-Mode',
+  'TE',
+  'Timing-Allow-Origin',
+  'Trailer',
+  'Transfer-Encoding',
+  'Upgrade',
+  'Upgrade-Insecure-Requests',
+  'User-Agent',
+  'Vary',
+  'Via',
+  'WWW-Authenticate',
+  'X-Content-Type-Options',
+  'X-DNS-Prefetch-Control',
+  'X-Frame-Options',
+  'X-Permitted-Cross-Domain-Policies',
+  'X-Powered-By',
+  'X-Requested-With',
+  'X-XSS-Protection'
+]
+
+for (let i = 0; i < wellknownHeaderNames.length; ++i) {
+  const key = wellknownHeaderNames[i]
+  const lowerCasedKey = key.toLowerCase()
+  headerNameLowerCasedRecord[key] = headerNameLowerCasedRecord[lowerCasedKey] =
+    lowerCasedKey
+}
+
+// Note: object prototypes should not be able to be referenced. e.g. `Object#hasOwnProperty`.
+Object.setPrototypeOf(headerNameLowerCasedRecord, null)
+
+module.exports = {
+  wellknownHeaderNames,
+  headerNameLowerCasedRecord
+}
+
+
+/***/ }),
+
 /***/ 8045:
 /***/ ((module) => {
 
@@ -31415,6 +31260,7 @@ const { InvalidArgumentError } = __nccwpck_require__(8045)
 const { Blob } = __nccwpck_require__(4300)
 const nodeUtil = __nccwpck_require__(3837)
 const { stringify } = __nccwpck_require__(3477)
+const { headerNameLowerCasedRecord } = __nccwpck_require__(4462)
 
 const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(v => Number(v))
 
@@ -31622,6 +31468,15 @@ const KEEPALIVE_TIMEOUT_EXPR = /timeout=(\d+)/
 function parseKeepAliveTimeout (val) {
   const m = val.toString().match(KEEPALIVE_TIMEOUT_EXPR)
   return m ? parseInt(m[1], 10) * 1000 : null
+}
+
+/**
+ * Retrieves a header name and returns its lowercase value.
+ * @param {string | Buffer} value Header name
+ * @returns {string}
+ */
+function headerNameToString (value) {
+  return headerNameLowerCasedRecord[value] || value.toLowerCase()
 }
 
 function parseHeaders (headers, obj = {}) {
@@ -31895,6 +31750,7 @@ module.exports = {
   isIterable,
   isAsyncIterable,
   isDestroyed,
+  headerNameToString,
   parseRawHeaders,
   parseHeaders,
   parseKeepAliveTimeout,
@@ -38542,14 +38398,18 @@ const { isBlobLike, toUSVString, ReadableStreamFrom } = __nccwpck_require__(3983
 const assert = __nccwpck_require__(9491)
 const { isUint8Array } = __nccwpck_require__(9830)
 
+let supportedHashes = []
+
 // https://nodejs.org/api/crypto.html#determining-if-crypto-support-is-unavailable
 /** @type {import('crypto')|undefined} */
 let crypto
 
 try {
   crypto = __nccwpck_require__(6113)
+  const possibleRelevantHashes = ['sha256', 'sha384', 'sha512']
+  supportedHashes = crypto.getHashes().filter((hash) => possibleRelevantHashes.includes(hash))
+/* c8 ignore next 3 */
 } catch {
-
 }
 
 function responseURL (response) {
@@ -39077,66 +38937,56 @@ function bytesMatch (bytes, metadataList) {
     return true
   }
 
-  // 3. If parsedMetadata is the empty set, return true.
+  // 3. If response is not eligible for integrity validation, return false.
+  // TODO
+
+  // 4. If parsedMetadata is the empty set, return true.
   if (parsedMetadata.length === 0) {
     return true
   }
 
-  // 4. Let metadata be the result of getting the strongest
+  // 5. Let metadata be the result of getting the strongest
   //    metadata from parsedMetadata.
-  const list = parsedMetadata.sort((c, d) => d.algo.localeCompare(c.algo))
-  // get the strongest algorithm
-  const strongest = list[0].algo
-  // get all entries that use the strongest algorithm; ignore weaker
-  const metadata = list.filter((item) => item.algo === strongest)
+  const strongest = getStrongestMetadata(parsedMetadata)
+  const metadata = filterMetadataListByAlgorithm(parsedMetadata, strongest)
 
-  // 5. For each item in metadata:
+  // 6. For each item in metadata:
   for (const item of metadata) {
     // 1. Let algorithm be the alg component of item.
     const algorithm = item.algo
 
     // 2. Let expectedValue be the val component of item.
-    let expectedValue = item.hash
+    const expectedValue = item.hash
 
     // See https://github.com/web-platform-tests/wpt/commit/e4c5cc7a5e48093220528dfdd1c4012dc3837a0e
     // "be liberal with padding". This is annoying, and it's not even in the spec.
 
-    if (expectedValue.endsWith('==')) {
-      expectedValue = expectedValue.slice(0, -2)
-    }
-
     // 3. Let actualValue be the result of applying algorithm to bytes.
     let actualValue = crypto.createHash(algorithm).update(bytes).digest('base64')
 
-    if (actualValue.endsWith('==')) {
-      actualValue = actualValue.slice(0, -2)
+    if (actualValue[actualValue.length - 1] === '=') {
+      if (actualValue[actualValue.length - 2] === '=') {
+        actualValue = actualValue.slice(0, -2)
+      } else {
+        actualValue = actualValue.slice(0, -1)
+      }
     }
 
     // 4. If actualValue is a case-sensitive match for expectedValue,
     //    return true.
-    if (actualValue === expectedValue) {
-      return true
-    }
-
-    let actualBase64URL = crypto.createHash(algorithm).update(bytes).digest('base64url')
-
-    if (actualBase64URL.endsWith('==')) {
-      actualBase64URL = actualBase64URL.slice(0, -2)
-    }
-
-    if (actualBase64URL === expectedValue) {
+    if (compareBase64Mixed(actualValue, expectedValue)) {
       return true
     }
   }
 
-  // 6. Return false.
+  // 7. Return false.
   return false
 }
 
 // https://w3c.github.io/webappsec-subresource-integrity/#grammardef-hash-with-options
 // https://www.w3.org/TR/CSP2/#source-list-syntax
 // https://www.rfc-editor.org/rfc/rfc5234#appendix-B.1
-const parseHashWithOptions = /((?<algo>sha256|sha384|sha512)-(?<hash>[A-z0-9+/]{1}.*={0,2}))( +[\x21-\x7e]?)?/i
+const parseHashWithOptions = /(?<algo>sha256|sha384|sha512)-((?<hash>[A-Za-z0-9+/]+|[A-Za-z0-9_-]+)={0,2}(?:\s|$)( +[!-~]*)?)?/i
 
 /**
  * @see https://w3c.github.io/webappsec-subresource-integrity/#parse-metadata
@@ -39150,8 +39000,6 @@ function parseMetadata (metadata) {
   // 2. Let empty be equal to true.
   let empty = true
 
-  const supportedHashes = crypto.getHashes()
-
   // 3. For each token returned by splitting metadata on spaces:
   for (const token of metadata.split(' ')) {
     // 1. Set empty to false.
@@ -39161,7 +39009,11 @@ function parseMetadata (metadata) {
     const parsedToken = parseHashWithOptions.exec(token)
 
     // 3. If token does not parse, continue to the next token.
-    if (parsedToken === null || parsedToken.groups === undefined) {
+    if (
+      parsedToken === null ||
+      parsedToken.groups === undefined ||
+      parsedToken.groups.algo === undefined
+    ) {
       // Note: Chromium blocks the request at this point, but Firefox
       // gives a warning that an invalid integrity was given. The
       // correct behavior is to ignore these, and subsequently not
@@ -39170,11 +39022,11 @@ function parseMetadata (metadata) {
     }
 
     // 4. Let algorithm be the hash-algo component of token.
-    const algorithm = parsedToken.groups.algo
+    const algorithm = parsedToken.groups.algo.toLowerCase()
 
     // 5. If algorithm is a hash function recognized by the user
     //    agent, add the parsed token to result.
-    if (supportedHashes.includes(algorithm.toLowerCase())) {
+    if (supportedHashes.includes(algorithm)) {
       result.push(parsedToken.groups)
     }
   }
@@ -39185,6 +39037,82 @@ function parseMetadata (metadata) {
   }
 
   return result
+}
+
+/**
+ * @param {{ algo: 'sha256' | 'sha384' | 'sha512' }[]} metadataList
+ */
+function getStrongestMetadata (metadataList) {
+  // Let algorithm be the algo component of the first item in metadataList.
+  // Can be sha256
+  let algorithm = metadataList[0].algo
+  // If the algorithm is sha512, then it is the strongest
+  // and we can return immediately
+  if (algorithm[3] === '5') {
+    return algorithm
+  }
+
+  for (let i = 1; i < metadataList.length; ++i) {
+    const metadata = metadataList[i]
+    // If the algorithm is sha512, then it is the strongest
+    // and we can break the loop immediately
+    if (metadata.algo[3] === '5') {
+      algorithm = 'sha512'
+      break
+    // If the algorithm is sha384, then a potential sha256 or sha384 is ignored
+    } else if (algorithm[3] === '3') {
+      continue
+    // algorithm is sha256, check if algorithm is sha384 and if so, set it as
+    // the strongest
+    } else if (metadata.algo[3] === '3') {
+      algorithm = 'sha384'
+    }
+  }
+  return algorithm
+}
+
+function filterMetadataListByAlgorithm (metadataList, algorithm) {
+  if (metadataList.length === 1) {
+    return metadataList
+  }
+
+  let pos = 0
+  for (let i = 0; i < metadataList.length; ++i) {
+    if (metadataList[i].algo === algorithm) {
+      metadataList[pos++] = metadataList[i]
+    }
+  }
+
+  metadataList.length = pos
+
+  return metadataList
+}
+
+/**
+ * Compares two base64 strings, allowing for base64url
+ * in the second string.
+ *
+* @param {string} actualValue always base64
+ * @param {string} expectedValue base64 or base64url
+ * @returns {boolean}
+ */
+function compareBase64Mixed (actualValue, expectedValue) {
+  if (actualValue.length !== expectedValue.length) {
+    return false
+  }
+  for (let i = 0; i < actualValue.length; ++i) {
+    if (actualValue[i] !== expectedValue[i]) {
+      if (
+        (actualValue[i] === '+' && expectedValue[i] === '-') ||
+        (actualValue[i] === '/' && expectedValue[i] === '_')
+      ) {
+        continue
+      }
+      return false
+    }
+  }
+
+  return true
 }
 
 // https://w3c.github.io/webappsec-upgrade-insecure-requests/#upgrade-request
@@ -39602,7 +39530,8 @@ module.exports = {
   urlHasHttpsScheme,
   urlIsHttpHttpsScheme,
   readAllBytes,
-  normalizeMethodRecord
+  normalizeMethodRecord,
+  parseMetadata
 }
 
 
@@ -41689,12 +41618,17 @@ function parseLocation (statusCode, headers) {
 
 // https://tools.ietf.org/html/rfc7231#section-6.4.4
 function shouldRemoveHeader (header, removeContent, unknownOrigin) {
-  return (
-    (header.length === 4 && header.toString().toLowerCase() === 'host') ||
-    (removeContent && header.toString().toLowerCase().indexOf('content-') === 0) ||
-    (unknownOrigin && header.length === 13 && header.toString().toLowerCase() === 'authorization') ||
-    (unknownOrigin && header.length === 6 && header.toString().toLowerCase() === 'cookie')
-  )
+  if (header.length === 4) {
+    return util.headerNameToString(header) === 'host'
+  }
+  if (removeContent && util.headerNameToString(header).startsWith('content-')) {
+    return true
+  }
+  if (unknownOrigin && (header.length === 13 || header.length === 6 || header.length === 19)) {
+    const name = util.headerNameToString(header)
+    return name === 'authorization' || name === 'cookie' || name === 'proxy-authorization'
+  }
+  return false
 }
 
 // https://tools.ietf.org/html/rfc7231#section-6.4
@@ -46842,456 +46776,6 @@ exports["default"] = _default;
 
 /***/ }),
 
-/***/ 4091:
-/***/ ((module) => {
-
-"use strict";
-
-module.exports = function (Yallist) {
-  Yallist.prototype[Symbol.iterator] = function* () {
-    for (let walker = this.head; walker; walker = walker.next) {
-      yield walker.value
-    }
-  }
-}
-
-
-/***/ }),
-
-/***/ 665:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-module.exports = Yallist
-
-Yallist.Node = Node
-Yallist.create = Yallist
-
-function Yallist (list) {
-  var self = this
-  if (!(self instanceof Yallist)) {
-    self = new Yallist()
-  }
-
-  self.tail = null
-  self.head = null
-  self.length = 0
-
-  if (list && typeof list.forEach === 'function') {
-    list.forEach(function (item) {
-      self.push(item)
-    })
-  } else if (arguments.length > 0) {
-    for (var i = 0, l = arguments.length; i < l; i++) {
-      self.push(arguments[i])
-    }
-  }
-
-  return self
-}
-
-Yallist.prototype.removeNode = function (node) {
-  if (node.list !== this) {
-    throw new Error('removing node which does not belong to this list')
-  }
-
-  var next = node.next
-  var prev = node.prev
-
-  if (next) {
-    next.prev = prev
-  }
-
-  if (prev) {
-    prev.next = next
-  }
-
-  if (node === this.head) {
-    this.head = next
-  }
-  if (node === this.tail) {
-    this.tail = prev
-  }
-
-  node.list.length--
-  node.next = null
-  node.prev = null
-  node.list = null
-
-  return next
-}
-
-Yallist.prototype.unshiftNode = function (node) {
-  if (node === this.head) {
-    return
-  }
-
-  if (node.list) {
-    node.list.removeNode(node)
-  }
-
-  var head = this.head
-  node.list = this
-  node.next = head
-  if (head) {
-    head.prev = node
-  }
-
-  this.head = node
-  if (!this.tail) {
-    this.tail = node
-  }
-  this.length++
-}
-
-Yallist.prototype.pushNode = function (node) {
-  if (node === this.tail) {
-    return
-  }
-
-  if (node.list) {
-    node.list.removeNode(node)
-  }
-
-  var tail = this.tail
-  node.list = this
-  node.prev = tail
-  if (tail) {
-    tail.next = node
-  }
-
-  this.tail = node
-  if (!this.head) {
-    this.head = node
-  }
-  this.length++
-}
-
-Yallist.prototype.push = function () {
-  for (var i = 0, l = arguments.length; i < l; i++) {
-    push(this, arguments[i])
-  }
-  return this.length
-}
-
-Yallist.prototype.unshift = function () {
-  for (var i = 0, l = arguments.length; i < l; i++) {
-    unshift(this, arguments[i])
-  }
-  return this.length
-}
-
-Yallist.prototype.pop = function () {
-  if (!this.tail) {
-    return undefined
-  }
-
-  var res = this.tail.value
-  this.tail = this.tail.prev
-  if (this.tail) {
-    this.tail.next = null
-  } else {
-    this.head = null
-  }
-  this.length--
-  return res
-}
-
-Yallist.prototype.shift = function () {
-  if (!this.head) {
-    return undefined
-  }
-
-  var res = this.head.value
-  this.head = this.head.next
-  if (this.head) {
-    this.head.prev = null
-  } else {
-    this.tail = null
-  }
-  this.length--
-  return res
-}
-
-Yallist.prototype.forEach = function (fn, thisp) {
-  thisp = thisp || this
-  for (var walker = this.head, i = 0; walker !== null; i++) {
-    fn.call(thisp, walker.value, i, this)
-    walker = walker.next
-  }
-}
-
-Yallist.prototype.forEachReverse = function (fn, thisp) {
-  thisp = thisp || this
-  for (var walker = this.tail, i = this.length - 1; walker !== null; i--) {
-    fn.call(thisp, walker.value, i, this)
-    walker = walker.prev
-  }
-}
-
-Yallist.prototype.get = function (n) {
-  for (var i = 0, walker = this.head; walker !== null && i < n; i++) {
-    // abort out of the list early if we hit a cycle
-    walker = walker.next
-  }
-  if (i === n && walker !== null) {
-    return walker.value
-  }
-}
-
-Yallist.prototype.getReverse = function (n) {
-  for (var i = 0, walker = this.tail; walker !== null && i < n; i++) {
-    // abort out of the list early if we hit a cycle
-    walker = walker.prev
-  }
-  if (i === n && walker !== null) {
-    return walker.value
-  }
-}
-
-Yallist.prototype.map = function (fn, thisp) {
-  thisp = thisp || this
-  var res = new Yallist()
-  for (var walker = this.head; walker !== null;) {
-    res.push(fn.call(thisp, walker.value, this))
-    walker = walker.next
-  }
-  return res
-}
-
-Yallist.prototype.mapReverse = function (fn, thisp) {
-  thisp = thisp || this
-  var res = new Yallist()
-  for (var walker = this.tail; walker !== null;) {
-    res.push(fn.call(thisp, walker.value, this))
-    walker = walker.prev
-  }
-  return res
-}
-
-Yallist.prototype.reduce = function (fn, initial) {
-  var acc
-  var walker = this.head
-  if (arguments.length > 1) {
-    acc = initial
-  } else if (this.head) {
-    walker = this.head.next
-    acc = this.head.value
-  } else {
-    throw new TypeError('Reduce of empty list with no initial value')
-  }
-
-  for (var i = 0; walker !== null; i++) {
-    acc = fn(acc, walker.value, i)
-    walker = walker.next
-  }
-
-  return acc
-}
-
-Yallist.prototype.reduceReverse = function (fn, initial) {
-  var acc
-  var walker = this.tail
-  if (arguments.length > 1) {
-    acc = initial
-  } else if (this.tail) {
-    walker = this.tail.prev
-    acc = this.tail.value
-  } else {
-    throw new TypeError('Reduce of empty list with no initial value')
-  }
-
-  for (var i = this.length - 1; walker !== null; i--) {
-    acc = fn(acc, walker.value, i)
-    walker = walker.prev
-  }
-
-  return acc
-}
-
-Yallist.prototype.toArray = function () {
-  var arr = new Array(this.length)
-  for (var i = 0, walker = this.head; walker !== null; i++) {
-    arr[i] = walker.value
-    walker = walker.next
-  }
-  return arr
-}
-
-Yallist.prototype.toArrayReverse = function () {
-  var arr = new Array(this.length)
-  for (var i = 0, walker = this.tail; walker !== null; i++) {
-    arr[i] = walker.value
-    walker = walker.prev
-  }
-  return arr
-}
-
-Yallist.prototype.slice = function (from, to) {
-  to = to || this.length
-  if (to < 0) {
-    to += this.length
-  }
-  from = from || 0
-  if (from < 0) {
-    from += this.length
-  }
-  var ret = new Yallist()
-  if (to < from || to < 0) {
-    return ret
-  }
-  if (from < 0) {
-    from = 0
-  }
-  if (to > this.length) {
-    to = this.length
-  }
-  for (var i = 0, walker = this.head; walker !== null && i < from; i++) {
-    walker = walker.next
-  }
-  for (; walker !== null && i < to; i++, walker = walker.next) {
-    ret.push(walker.value)
-  }
-  return ret
-}
-
-Yallist.prototype.sliceReverse = function (from, to) {
-  to = to || this.length
-  if (to < 0) {
-    to += this.length
-  }
-  from = from || 0
-  if (from < 0) {
-    from += this.length
-  }
-  var ret = new Yallist()
-  if (to < from || to < 0) {
-    return ret
-  }
-  if (from < 0) {
-    from = 0
-  }
-  if (to > this.length) {
-    to = this.length
-  }
-  for (var i = this.length, walker = this.tail; walker !== null && i > to; i--) {
-    walker = walker.prev
-  }
-  for (; walker !== null && i > from; i--, walker = walker.prev) {
-    ret.push(walker.value)
-  }
-  return ret
-}
-
-Yallist.prototype.splice = function (start, deleteCount, ...nodes) {
-  if (start > this.length) {
-    start = this.length - 1
-  }
-  if (start < 0) {
-    start = this.length + start;
-  }
-
-  for (var i = 0, walker = this.head; walker !== null && i < start; i++) {
-    walker = walker.next
-  }
-
-  var ret = []
-  for (var i = 0; walker && i < deleteCount; i++) {
-    ret.push(walker.value)
-    walker = this.removeNode(walker)
-  }
-  if (walker === null) {
-    walker = this.tail
-  }
-
-  if (walker !== this.head && walker !== this.tail) {
-    walker = walker.prev
-  }
-
-  for (var i = 0; i < nodes.length; i++) {
-    walker = insert(this, walker, nodes[i])
-  }
-  return ret;
-}
-
-Yallist.prototype.reverse = function () {
-  var head = this.head
-  var tail = this.tail
-  for (var walker = head; walker !== null; walker = walker.prev) {
-    var p = walker.prev
-    walker.prev = walker.next
-    walker.next = p
-  }
-  this.head = tail
-  this.tail = head
-  return this
-}
-
-function insert (self, node, value) {
-  var inserted = node === self.head ?
-    new Node(value, null, node, self) :
-    new Node(value, node, node.next, self)
-
-  if (inserted.next === null) {
-    self.tail = inserted
-  }
-  if (inserted.prev === null) {
-    self.head = inserted
-  }
-
-  self.length++
-
-  return inserted
-}
-
-function push (self, item) {
-  self.tail = new Node(item, self.tail, null, self)
-  if (!self.head) {
-    self.head = self.tail
-  }
-  self.length++
-}
-
-function unshift (self, item) {
-  self.head = new Node(item, null, self.head, self)
-  if (!self.tail) {
-    self.tail = self.head
-  }
-  self.length++
-}
-
-function Node (value, prev, next, list) {
-  if (!(this instanceof Node)) {
-    return new Node(value, prev, next, list)
-  }
-
-  this.list = list
-  this.value = value
-
-  if (prev) {
-    prev.next = this
-    this.prev = prev
-  } else {
-    this.prev = null
-  }
-
-  if (next) {
-    next.prev = this
-    this.next = next
-  } else {
-    this.next = null
-  }
-}
-
-try {
-  // add if support for Symbol.iterator is present
-  __nccwpck_require__(4091)(Yallist)
-} catch (er) {}
-
-
-/***/ }),
-
 /***/ 2916:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -47377,7 +46861,7 @@ function installBaseTools(inputs, options) {
             }
         }
         if (tools.length) {
-            yield conda.condaCommand(["install", "--name", "base", ...tools], options);
+            yield conda.condaCommand(["install", "--name", "base", ...tools], inputs, options);
             // *Now* use the new options, as we may have a new conda/mamba with more supported
             // options that previously failed
             yield conda.applyCondaConfiguration(inputs, postInstallOptions);
@@ -47559,6 +47043,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updateMamba = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
+const path = __importStar(__nccwpck_require__(1017));
 const core = __importStar(__nccwpck_require__(2186));
 const constants = __importStar(__nccwpck_require__(9042));
 const utils = __importStar(__nccwpck_require__(1314));
@@ -47576,16 +47061,57 @@ exports.updateMamba = {
         };
     }),
     postInstall: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
-        if (!constants.IS_WINDOWS) {
-            core.info("`mamba` is already executable");
-            return;
+        const mambaExec = conda.condaExecutable(inputs, options);
+        const condabinLocation = path.join(conda.condaBasePath(inputs, options), "condabin", path.basename(mambaExec));
+        if (constants.IS_UNIX) {
+            if (!fs.existsSync(condabinLocation)) {
+                // This is mamba 2.x with only $PREFIX/bin/mamba,
+                // we just need a symlink in condabin
+                core.info(`Symlinking ${mambaExec} to ${condabinLocation}...`);
+                fs.symlinkSync(mambaExec, condabinLocation);
+            }
         }
-        core.info("Creating bash wrapper for `mamba`...");
-        // Add bat-less forwarder for bash users on Windows
-        const mambaBat = conda.condaExecutable(options).replace(/\\/g, "/");
-        const contents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
-        fs.writeFileSync(mambaBat.slice(0, -4), contents);
-        core.info(`... wrote ${mambaBat}:\n${contents}`);
+        else {
+            core.info(`Creating bash wrapper for 'mamba'...`);
+            const mambaBat = condabinLocation.slice(0, -4) + ".bat";
+            // Add bat-less forwarder for bash users on Windows
+            const forwarderContents = `cmd.exe /C CALL "${mambaBat}" $* || exit 1`;
+            fs.writeFileSync(condabinLocation.slice(0, -4), forwarderContents);
+            core.info(`... wrote ${mambaExec.slice(0, -4)}:\n${forwarderContents}`);
+            if (!fs.existsSync(mambaBat)) {
+                // This is Windows and mamba 2.x, we need a mamba.bat like 1.x used to have
+                const contents = `
+@REM Copyright (C) 2012 Anaconda, Inc
+@REM SPDX-License-Identifier: BSD-3-Clause
+
+@REM echo _CE_CONDA is %_CE_CONDA%
+@REM echo _CE_M is %_CE_M%
+@REM echo CONDA_EXE is %CONDA_EXE%
+
+@IF NOT DEFINED _CE_CONDA (
+  @SET _CE_M=
+  @SET "CONDA_EXE=%~dp0..\\Scripts\\conda.exe"
+)
+@IF [%1]==[activate]   "%~dp0_conda_activate" %*
+@IF [%1]==[deactivate] "%~dp0_conda_activate" %*
+
+@SET MAMBA_EXES="%~dp0..\\Library\\bin\\mamba.exe"
+@CALL %MAMBA_EXES% %*
+
+@IF %errorlevel% NEQ 0 EXIT /B %errorlevel%
+
+@IF [%1]==[install]   "%~dp0_conda_activate" reactivate
+@IF [%1]==[update]    "%~dp0_conda_activate" reactivate
+@IF [%1]==[upgrade]   "%~dp0_conda_activate" reactivate
+@IF [%1]==[remove]    "%~dp0_conda_activate" reactivate
+@IF [%1]==[uninstall] "%~dp0_conda_activate" reactivate
+
+@EXIT /B %errorlevel%`;
+                core.info(`Creating .bat wrapper for 'mamba 2.x'...`);
+                fs.writeFileSync(mambaBat, contents);
+                core.info(`... wrote ${mambaBat}`);
+            }
+        }
     }),
 };
 
@@ -47693,7 +47219,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.condaInit = exports.applyCondaConfiguration = exports.copyConfig = exports.bootstrapConfig = exports.condaCommand = exports.isMambaInstalled = exports.condaExecutable = exports.envCommandFlag = exports.condaBasePath = void 0;
+exports.condaInit = exports.applyCondaConfiguration = exports.copyConfig = exports.bootstrapConfig = exports.condaCommand = exports.isMambaInstalled = exports.condaExecutable = exports.condaExecutableLocations = exports.envCommandFlag = exports.condaBasePath = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const os = __importStar(__nccwpck_require__(2037));
@@ -47704,10 +47230,15 @@ const utils = __importStar(__nccwpck_require__(1314));
 /**
  * Provide current location of miniconda or location where it will be installed
  */
-function condaBasePath(options) {
+function condaBasePath(inputs, options) {
     let condaPath;
     if (options.useBundled) {
         condaPath = constants.MINICONDA_DIR_PATH;
+    }
+    else if (inputs.installationDir) {
+        condaPath = constants.IS_WINDOWS
+            ? inputs.installationDir.replace("/", "\\")
+            : inputs.installationDir;
     }
     else {
         condaPath = path.join(os.homedir(), "miniconda3");
@@ -47729,34 +47260,60 @@ function envCommandFlag(inputs) {
 }
 exports.envCommandFlag = envCommandFlag;
 /**
- * Provide cross platform location of conda/mamba executable
+ * Provide cross platform location of conda/mamba executable in condabin and bin
  */
-function condaExecutable(options, subcommand) {
-    const dir = condaBasePath(options);
-    let condaExe;
+function condaExecutableLocations(inputs, options, subcommand) {
+    const dir = condaBasePath(inputs, options);
+    let condaExes = [];
     let commandName = "conda";
     if (options.useMamba &&
         (subcommand == null || constants.MAMBA_SUBCOMMANDS.includes(subcommand))) {
         commandName = "mamba";
     }
-    commandName = constants.IS_WINDOWS ? commandName + ".bat" : commandName;
-    condaExe = path.join(dir, "condabin", commandName);
-    return condaExe;
+    condaExes.push(path.join(dir, "condabin", constants.IS_WINDOWS ? commandName + ".bat" : commandName));
+    if (constants.IS_WINDOWS) {
+        condaExes.push(path.join(dir, "Library", "bin", commandName + ".exe"));
+    }
+    else {
+        condaExes.push(path.join(dir, "bin", commandName));
+    }
+    return condaExes;
+}
+exports.condaExecutableLocations = condaExecutableLocations;
+/**
+ *  Return existing conda or mamba executable
+ */
+function condaExecutable(inputs, options, subcommand) {
+    const locations = condaExecutableLocations(inputs, options, subcommand);
+    for (const exe of locations) {
+        if (fs.existsSync(exe))
+            return exe;
+    }
+    throw Error(`No existing ${options.useMamba ? "mamba" : "conda"} executable found at any of ${locations}`);
 }
 exports.condaExecutable = condaExecutable;
-/** Detect the presence of mamba */
-function isMambaInstalled(options) {
-    const mamba = condaExecutable(Object.assign(Object.assign({}, options), { useMamba: true }));
-    return fs.existsSync(mamba);
+/**
+ * Detect the presence of mamba
+ */
+function isMambaInstalled(inputs, options) {
+    for (const exe of condaExecutableLocations(inputs, Object.assign(Object.assign({}, options), { useMamba: true }))) {
+        if (fs.existsSync(exe))
+            return true;
+    }
+    return false;
 }
 exports.isMambaInstalled = isMambaInstalled;
 /**
  * Run Conda command
  */
-function condaCommand(cmd, options) {
+function condaCommand(cmd, inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        const command = [condaExecutable(options, cmd[0]), ...cmd];
-        return yield utils.execute(command);
+        const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
+        let env = {};
+        if (options.useMamba) {
+            env.MAMBA_ROOT_PREFIX = condaBasePath(inputs, options);
+        }
+        return yield utils.execute(command, env);
     });
 }
 exports.condaCommand = condaCommand;
@@ -47797,11 +47354,36 @@ function applyCondaConfiguration(inputs, options) {
         if (!channels.length && ((_c = (_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) === null || _b === void 0 ? void 0 : _b.channels) === null || _c === void 0 ? void 0 : _c.length)) {
             channels = options.envSpec.yaml.channels;
         }
+        // This can be enabled via conda-remove-defaults and channels = nodefaults
+        let removeDefaults = inputs.condaRemoveDefaults === "true";
         // LIFO: reverse order to preserve higher priority as listed in the option
         // .slice ensures working against a copy
         for (const channel of channels.slice().reverse()) {
+            if (channel === "nodefaults") {
+                core.warning("'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
+                    "In the future, 'nodefaults' as a way of removing 'defaults' won't be supported. " +
+                    "Please set 'conda-remove-defaults' = 'true' to remove this warning.");
+                removeDefaults = true;
+                continue;
+            }
             core.info(`Adding channel '${channel}'`);
-            yield condaCommand(["config", "--add", "channels", channel], options);
+            yield condaCommand(["config", "--add", "channels", channel], inputs, options);
+        }
+        if (!channels.includes("defaults")) {
+            if (removeDefaults) {
+                core.info("Removing implicitly added 'defaults' channel");
+                try {
+                    yield condaCommand(["config", "--remove", "channels", "defaults"], inputs, options);
+                }
+                catch (err) {
+                    core.info("Removing defaults raised an error -- it was probably not present.");
+                }
+            }
+            else {
+                core.warning("The 'defaults' channel might have been added implicitly. " +
+                    "If this is intentional, add 'defaults' to the 'channels' list. " +
+                    "Otherwise, consider setting 'conda-remove-defaults' to 'true'.");
+            }
         }
         // Package directories are also comma-separated, like channels
         let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
@@ -47820,15 +47402,15 @@ function applyCondaConfiguration(inputs, options) {
             }
             core.info(`${key}: ${value}`);
             try {
-                yield condaCommand(["config", "--set", key, value], options);
+                yield condaCommand(["config", "--set", key, value], inputs, options);
             }
             catch (err) {
                 core.warning(err);
             }
         }
         // Log all configuration information
-        yield condaCommand(["config", "--show-sources"], options);
-        yield condaCommand(["config", "--show"], options);
+        yield condaCommand(["config", "--show-sources"], inputs, options);
+        yield condaCommand(["config", "--show"], inputs, options);
     });
 }
 exports.applyCondaConfiguration = applyCondaConfiguration;
@@ -47850,12 +47432,12 @@ function condaInit(inputs, options) {
                     "chown",
                     "-R",
                     `${userName}:staff`,
-                    condaBasePath(options),
+                    condaBasePath(inputs, options),
                 ]);
             }
             else if (constants.IS_WINDOWS) {
                 for (let folder of constants.WIN_PERMS_FOLDERS) {
-                    ownPath = path.join(condaBasePath(options), folder);
+                    ownPath = path.join(condaBasePath(inputs, options), folder);
                     if (fs.existsSync(ownPath)) {
                         core.info(`Fixing ${folder} ownership`);
                         yield utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
@@ -47880,7 +47462,7 @@ function condaInit(inputs, options) {
         }
         // Run conda init
         for (let cmd of ["--all"]) {
-            yield condaCommand(["init", cmd], options);
+            yield condaCommand(["init", cmd], inputs, options);
         }
         if (inputs.removeProfiles == "true") {
             // Rename files
@@ -48085,6 +47667,8 @@ exports.IGNORED_WARNINGS = [
     `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
     // Channel warnings are very boring and noisy
     `moving to the top`,
+    // This warning has no consequence for the installation and is noisy
+    `cygpath is not available, fallback to manual path conversion`,
 ];
 /**
  * Warnings that should be errors
@@ -48297,7 +47881,7 @@ function ensureEnvironment(inputs, options) {
             if (yield provider.provides(inputs, options)) {
                 core.info(`... will ${provider.label}.`);
                 const args = yield provider.condaArgs(inputs, options);
-                return yield core.group(`Updating '${inputs.activateEnvironment}' env from ${provider.label}...`, () => conda.condaCommand(args, options));
+                return yield core.group(`Updating '${inputs.activateEnvironment}' env from ${provider.label}...`, () => conda.condaCommand(args, inputs, options));
             }
         }
         throw Error(`'activate-environment: ${inputs.activateEnvironment}' could not be created`);
@@ -48529,13 +48113,18 @@ exports.ensureYaml = {
             core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
             outputs.setEnvironmentFileOutputs(envFile, fs.readFileSync(inputs.environmentFile, "utf-8"));
         }
-        return [
-            "env",
-            "update",
-            ...conda.envCommandFlag(inputs),
-            "--file",
-            envFile,
-        ];
+        const [flag, nameOrPath] = conda.envCommandFlag(inputs);
+        let subcommand;
+        if (options.useMamba) {
+            const envPath = flag === "--name"
+                ? path.join(conda.condaBasePath(inputs, options), "envs", nameOrPath)
+                : nameOrPath;
+            subcommand = fs.existsSync(envPath) ? "update" : "create";
+        }
+        else {
+            subcommand = "update";
+        }
+        return ["env", subcommand, flag, nameOrPath, "--file", envFile];
     }),
 };
 
@@ -48632,11 +48221,13 @@ function parseInputs() {
             condaVersion: core.getInput("conda-version"),
             environmentFile: core.getInput("environment-file"),
             installerUrl: core.getInput("installer-url"),
+            installationDir: core.getInput("installation-dir"),
             mambaVersion: core.getInput("mamba-version"),
             useMamba: core.getInput("use-mamba"),
             minicondaVersion: core.getInput("miniconda-version"),
             miniforgeVariant: core.getInput("miniforge-variant"),
             miniforgeVersion: core.getInput("miniforge-version"),
+            condaRemoveDefaults: core.getInput("conda-remove-defaults"),
             pythonVersion: core.getInput("python-version"),
             removeProfiles: core.getInput("remove-profiles"),
             condaConfig: Object.freeze({
@@ -48674,6 +48265,13 @@ function parseInputs() {
         }
         if (core.isDebug()) {
             core.info(JSON.stringify(inputs));
+        }
+        if (inputs.miniforgeVariant === "Mambaforge" ||
+            inputs.miniforgeVariant === "Mambaforge-pypy3") {
+            core.warning("'Mambaforge' variants are now equivalent to 'Miniforge3'. " +
+                "In the future, we will ignore with a warning and use 'Miniforge3'. " +
+                "Eventually, using 'Mambaforge' will throw an error. " +
+                "Please change to 'Miniforge3' at your earliest convenience.");
         }
         return inputs;
     });
@@ -48795,7 +48393,7 @@ exports.ensureLocalInstaller = ensureLocalInstaller;
 /***/ }),
 
 /***/ 3390:
-/***/ (function(__unused_webpack_module, exports) {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
@@ -48810,6 +48408,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.bundledMinicondaUser = void 0;
+const constants_1 = __nccwpck_require__(9042);
 /**
  * Provide a path to the pre-bundled (but probably old) Miniconda base installation
  *
@@ -48824,7 +48423,8 @@ exports.bundledMinicondaUser = {
             inputs.miniforgeVariant === "" &&
             inputs.miniforgeVersion === "" &&
             inputs.architecture === "x64" &&
-            inputs.installerUrl === "");
+            inputs.installerUrl === "" &&
+            constants_1.MINICONDA_DIR_PATH.length > 0);
     }),
     installerPath: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
         // No actions are performed. This is the only place `useBundled` will ever be true.
@@ -49239,7 +48839,7 @@ function runInstaller(installerPath, outputPath, inputs, options) {
         }
         yield utils.execute(command);
         // The installer may have provisioned `mamba` in `base`: use now if requested
-        const mambaInInstaller = conda.isMambaInstalled(options);
+        const mambaInInstaller = conda.isMambaInstalled(inputs, options);
         if (mambaInInstaller) {
             core.info("Mamba was found in the `base` env");
             options = Object.assign(Object.assign({}, options), { mambaInInstaller, useMamba: mambaInInstaller && inputs.useMamba === "true" });
@@ -49301,10 +48901,10 @@ const conda = __importStar(__nccwpck_require__(6030));
 /**
  * Add Conda executable to PATH environment variable
  */
-function setPathVariables(options) {
+function setPathVariables(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        const condaBin = path.join(conda.condaBasePath(options), "condabin");
-        const condaPath = conda.condaBasePath(options);
+        const condaBin = path.join(conda.condaBasePath(inputs, options), "condabin");
+        const condaPath = conda.condaBasePath(inputs, options);
         core.info(`Add "${condaBin}" to PATH`);
         core.addPath(condaBin);
         if (!options.useBundled) {
@@ -49315,6 +48915,20 @@ function setPathVariables(options) {
 }
 exports.setPathVariables = setPathVariables;
 /**
+<<<<<<< HEAD
+=======
+ * Ensure the conda cache path is available as an environment variable
+ */
+function setCacheVariable(inputs, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const folder = utils.cacheFolder();
+        yield conda.condaCommand(["config", "--add", "pkgs_dirs", folder], inputs, options);
+        core.exportVariable(constants.ENV_VAR_CONDA_PKGS, folder);
+    });
+}
+exports.setCacheVariable = setCacheVariable;
+/**
+>>>>>>> 622526741e159097360b04b60e62baf8e5729315
  * Export the effective environment-file path
  */
 function setEnvironmentFileOutputs(envFile, envContent, patched = false) {
@@ -49390,7 +49004,7 @@ function setupMiniconda(inputs) {
         const installerInfo = yield core.group("Ensuring installer...", () => installer.getLocalInstallerPath(inputs, options));
         // The desired installer may change the options
         options = Object.assign(Object.assign({}, options), installerInfo.options);
-        const basePath = conda.condaBasePath(options);
+        const basePath = conda.condaBasePath(inputs, options);
         if (installerInfo.localInstallerPath && !options.useBundled) {
             options = yield core.group("Running installer...", () => installer.runInstaller(installerInfo.localInstallerPath, basePath, inputs, options));
         }
@@ -49402,12 +49016,16 @@ function setupMiniconda(inputs) {
                 'Miniforge for you, add `miniconda-version: "latest"` or `miniforge-version: "latest"`, ' +
                 "respectively, to the parameters for this action.");
         }
-        yield core.group("Setup environment variables...", () => outputs.setPathVariables(options));
+        yield core.group("Setup environment variables...", () => outputs.setPathVariables(inputs, options));
         if (inputs.condaConfigFile) {
             yield core.group("Copying condarc file...", () => conda.copyConfig(inputs));
         }
         // For potential 'channels' that may alter configuration
         options.envSpec = yield core.group("Parsing environment...", () => env.getEnvSpec(inputs));
+<<<<<<< HEAD
+=======
+        yield core.group("Configuring conda package cache...", () => outputs.setCacheVariable(inputs, options));
+>>>>>>> 622526741e159097360b04b60e62baf8e5729315
         yield core.group("Applying initial configuration...", () => conda.applyCondaConfiguration(inputs, options));
         yield core.group("Initializing conda shell integration...", () => conda.condaInit(inputs, options));
         // New base tools may change options
@@ -49523,7 +49141,7 @@ exports.isBaseEnv = isBaseEnv;
 /**
  * Run exec.exec with error handling
  */
-function execute(command) {
+function execute(command, env = {}) {
     return __awaiter(this, void 0, void 0, function* () {
         let options = {
             errStream: new stream.Writable(),
@@ -49547,6 +49165,7 @@ function execute(command) {
                     core.warning(stringData);
                 },
             },
+            env: Object.assign(Object.assign({}, process.env), env),
         };
         const rc = yield exec.exec(command[0], command.slice(1), options);
         if (rc !== 0) {

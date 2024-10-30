@@ -16,10 +16,17 @@ import * as utils from "./utils";
 /**
  * Provide current location of miniconda or location where it will be installed
  */
-export function condaBasePath(options: types.IDynamicOptions): string {
+export function condaBasePath(
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions,
+): string {
   let condaPath: string;
   if (options.useBundled) {
     condaPath = constants.MINICONDA_DIR_PATH;
+  } else if (inputs.installationDir) {
+    condaPath = constants.IS_WINDOWS
+      ? inputs.installationDir.replace("/", "\\")
+      : inputs.installationDir;
   } else {
     condaPath = path.join(os.homedir(), "miniconda3");
   }
@@ -40,14 +47,15 @@ export function envCommandFlag(inputs: types.IActionInputs): string[] {
 }
 
 /**
- * Provide cross platform location of conda/mamba executable
+ * Provide cross platform location of conda/mamba executable in condabin and bin
  */
-export function condaExecutable(
+export function condaExecutableLocations(
+  inputs: types.IActionInputs,
   options: types.IDynamicOptions,
   subcommand?: string,
-): string {
-  const dir: string = condaBasePath(options);
-  let condaExe: string;
+): string[] {
+  const dir: string = condaBasePath(inputs, options);
+  let condaExes: string[] = [];
   let commandName = "conda";
   if (
     options.useMamba &&
@@ -55,15 +63,54 @@ export function condaExecutable(
   ) {
     commandName = "mamba";
   }
-  commandName = constants.IS_WINDOWS ? commandName + ".bat" : commandName;
-  condaExe = path.join(dir, "condabin", commandName);
-  return condaExe;
+  condaExes.push(
+    path.join(
+      dir,
+      "condabin",
+      constants.IS_WINDOWS ? commandName + ".bat" : commandName,
+    ),
+  );
+  if (constants.IS_WINDOWS) {
+    condaExes.push(path.join(dir, "Library", "bin", commandName + ".exe"));
+  } else {
+    condaExes.push(path.join(dir, "bin", commandName));
+  }
+  return condaExes;
 }
 
-/** Detect the presence of mamba */
-export function isMambaInstalled(options: types.IDynamicOptions) {
-  const mamba = condaExecutable({ ...options, useMamba: true });
-  return fs.existsSync(mamba);
+/**
+ *  Return existing conda or mamba executable
+ */
+export function condaExecutable(
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions,
+  subcommand?: string,
+) {
+  const locations = condaExecutableLocations(inputs, options, subcommand);
+  for (const exe of locations) {
+    if (fs.existsSync(exe)) return exe;
+  }
+  throw Error(
+    `No existing ${
+      options.useMamba ? "mamba" : "conda"
+    } executable found at any of ${locations}`,
+  );
+}
+
+/**
+ * Detect the presence of mamba
+ */
+export function isMambaInstalled(
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions,
+) {
+  for (const exe of condaExecutableLocations(inputs, {
+    ...options,
+    useMamba: true,
+  })) {
+    if (fs.existsSync(exe)) return true;
+  }
+  return false;
 }
 
 /**
@@ -71,10 +118,15 @@ export function isMambaInstalled(options: types.IDynamicOptions) {
  */
 export async function condaCommand(
   cmd: string[],
+  inputs: types.IActionInputs,
   options: types.IDynamicOptions,
 ): Promise<void> {
-  const command = [condaExecutable(options, cmd[0]), ...cmd];
-  return await utils.execute(command);
+  const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
+  let env: { [key: string]: string } = {};
+  if (options.useMamba) {
+    env.MAMBA_ROOT_PREFIX = condaBasePath(inputs, options);
+  }
+  return await utils.execute(command, env);
 }
 
 /**
@@ -123,18 +175,57 @@ export async function applyCondaConfiguration(
     channels = options.envSpec.yaml.channels;
   }
 
+  // This can be enabled via conda-remove-defaults and channels = nodefaults
+  let removeDefaults: boolean = inputs.condaRemoveDefaults === "true";
+
   // LIFO: reverse order to preserve higher priority as listed in the option
   // .slice ensures working against a copy
   for (const channel of channels.slice().reverse()) {
+    if (channel === "nodefaults") {
+      core.warning(
+        "'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
+          "In the future, 'nodefaults' as a way of removing 'defaults' won't be supported. " +
+          "Please set 'conda-remove-defaults' = 'true' to remove this warning.",
+      );
+      removeDefaults = true;
+      continue;
+    }
     core.info(`Adding channel '${channel}'`);
-    await condaCommand(["config", "--add", "channels", channel], options);
+    await condaCommand(
+      ["config", "--add", "channels", channel],
+      inputs,
+      options,
+    );
+  }
+
+  if (!channels.includes("defaults")) {
+    if (removeDefaults) {
+      core.info("Removing implicitly added 'defaults' channel");
+      try {
+        await condaCommand(
+          ["config", "--remove", "channels", "defaults"],
+          inputs,
+          options,
+        );
+      } catch (err) {
+        core.info(
+          "Removing defaults raised an error -- it was probably not present.",
+        );
+      }
+    } else {
+      core.warning(
+        "The 'defaults' channel might have been added implicitly. " +
+          "If this is intentional, add 'defaults' to the 'channels' list. " +
+          "Otherwise, consider setting 'conda-remove-defaults' to 'true'.",
+      );
+    }
   }
 
   // Package directories are also comma-separated, like channels
   let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
   for (const pkgsDir of pkgsDirs) {
     core.info(`Adding pkgs_dir '${pkgsDir}'`);
-    await condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], options);
+    await condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], inputs, options);
   }
   // We're also setting the appropriate conda config environment variable, to be safe
   core.exportVariable("CONDA_PKGS_DIRS", pkgsDirs.join(","));
@@ -150,15 +241,15 @@ export async function applyCondaConfiguration(
     }
     core.info(`${key}: ${value}`);
     try {
-      await condaCommand(["config", "--set", key, value], options);
+      await condaCommand(["config", "--set", key, value], inputs, options);
     } catch (err) {
       core.warning(err as Error);
     }
   }
 
   // Log all configuration information
-  await condaCommand(["config", "--show-sources"], options);
-  await condaCommand(["config", "--show"], options);
+  await condaCommand(["config", "--show-sources"], inputs, options);
+  await condaCommand(["config", "--show"], inputs, options);
 }
 
 /**
@@ -183,11 +274,11 @@ export async function condaInit(
         "chown",
         "-R",
         `${userName}:staff`,
-        condaBasePath(options),
+        condaBasePath(inputs, options),
       ]);
     } else if (constants.IS_WINDOWS) {
       for (let folder of constants.WIN_PERMS_FOLDERS) {
-        ownPath = path.join(condaBasePath(options), folder);
+        ownPath = path.join(condaBasePath(inputs, options), folder);
         if (fs.existsSync(ownPath)) {
           core.info(`Fixing ${folder} ownership`);
           await utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
@@ -213,7 +304,7 @@ export async function condaInit(
 
   // Run conda init
   for (let cmd of ["--all"]) {
-    await condaCommand(["init", cmd], options);
+    await condaCommand(["init", cmd], inputs, options);
   }
 
   if (inputs.removeProfiles == "true") {

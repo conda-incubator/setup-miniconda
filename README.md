@@ -7,11 +7,11 @@ This action sets up a `base`
   available in `$CONDA`
 - installing a specific (or latest) version of
   - [Miniconda3][miniconda-repo]
-  - [Miniforge][miniforge-releases] (or Mambaforge)
+  - [Miniforge][miniforge-releases]
   - any [constructor]-based installer by or URL or filesystem path
 
 A `conda-build-version` or `mamba-version` may be provided to install specific
-versions of `conda` or `mamba` into `base`
+versions of `conda` or `mamba` into `base`.
 
 The base `condabin/` folder is added to `$PATH` and shell integration is
 initialized across all platforms.
@@ -59,6 +59,7 @@ possibility of automatically activating the `test` environment on all shells.
 | [Caching packages](#caching-packages)                              | [![Caching Example Status][caching-badge]][caching]             |
 | [Caching environments](#caching-environments)                      | [![Caching Env Example Status][caching-env-badge]][caching-env] |
 | [Apple Silicon](#example-13-apple-silicon)                         | [![Apple Silicon][ex13-badge]][ex13]                            |
+| [Remove defaults](#example-14-conda-remove-defaults)               | [![Remove defaults][ex14-badge]][ex14]                          |
 
 [ex1]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml
@@ -112,6 +113,10 @@ possibility of automatically activating the `test` environment on all shells.
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-13.yml
 [ex13-badge]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-13.yml/badge.svg?branch=main
+[ex14]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-14.yml
+[ex14-badge]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-14.yml/badge.svg?branch=main
 
 ## Other Workflows
 
@@ -403,6 +408,10 @@ jobs:
 
 ### Example 6: Mamba
 
+> Note: `conda` 23.10+ uses `conda-libmamba-solver` by default, which provides
+> comparable performance to `mamba`. Most users won't need this setting with
+> recent conda versions.
+
 Experimental! Use `mamba` to enable much faster conda installs. `mamba-version`
 accepts a version string `x.y` (including `"*"`). It requires you specify
 `conda-forge` as part of the channels, ideally with the highest priority.
@@ -509,40 +518,11 @@ jobs:
           miniforge-version: latest
 ```
 
-In addition to `Miniforge3` with `conda` and `CPython`, for each of its many
-supported platforms and architectures, additional variants including
-`Mambaforge` (which comes pre-installed `mamba` in addition to `conda` on all
-platforms) and `Miniforge-pypy3`/`Mamabaforge-pypy3` (which replace `CPython`
-with `pypy3` on Linux/MacOS) are available.
+In addition to `Miniforge3` with `conda`, `mamba` and `CPython`, you can also
+install `Miniforge-pypy3`, which replaces `CPython` with `PyPy.
 
-```yaml
-jobs:
-  example-10-mambaforge:
-    name: Ex10 (${{ matrix.os }}, Mambaforge)
-    runs-on: ${{ matrix.os }}-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ["ubuntu", "macos", "windows"]
-        include:
-          - os: ubuntu
-            environment-file: etc/example-environment-no-name.yml
-            miniforge-variant: Mambaforge
-            miniforge-version: 4.9.2-4
-          - os: windows
-            environment-file: etc/example-explicit.Windows.conda.lock
-            condarc-file: etc/example-condarc.yml
-            miniforge-variant: Mambaforge
-    steps:
-      - uses: actions/checkout@v4
-      - uses: conda-incubator/setup-miniconda@v3
-        with:
-          condarc-file: ${{ matrix.condarc-file }}
-          environment-file: ${{ matrix.environment-file }}
-          miniforge-variant: ${{ matrix.miniforge-variant }}
-          miniforge-version: ${{ matrix.miniforge-version }}
-          use-mamba: true
-```
+> [!TIP] You can customize the installation directory via the `installation-dir`
+> option.
 
 ### Example 11: Alternative Architectures
 
@@ -624,6 +604,35 @@ jobs:
         run: |
           conda install -y python
           python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
+```
+
+### Example 14: Remove `defaults` channel
+
+Workaround for this bug:
+[conda#12356](https://github.com/conda/conda/issues/12356).
+
+```yaml
+jobs:
+  example-13:
+    name: Ex14 (os=${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          miniforge-version: latest
+          channels: conda-forge
+          conda-remove-defaults: "true"
+      - name: Check config
+        shell: bash -el {0}
+        run: |
+          conda config --show-sources
 ```
 
 ## Caching
@@ -717,13 +726,11 @@ The first installation step should setup a Miniconda variant without specifying
 a environment file.
 
 ```yaml
-- name: Setup Mambaforge
+- name: Setup Miniforge
   uses: conda-incubator/setup-miniconda@v3
   with:
-    miniforge-variant: Mambaforge
     miniforge-version: latest
     activate-environment: anaconda-client-env
-    use-mamba: true
 ```
 
 It's a good idea to refresh the cache every 24 hours to avoid inconsistencies of

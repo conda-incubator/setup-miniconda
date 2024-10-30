@@ -46,7 +46,38 @@ jobs:
           python -VV
           printenv | sort
 
+  example-10-miniforge-installation-dir:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Ex10 (${{ matrix.os }}, Miniforge)
+    runs-on: ${{ matrix.os }}-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu", "macos", "windows"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: setup-miniconda
+        with:
+          environment-file: etc/example-environment.yml
+          miniforge-version: latest
+          installation-dir: ${{ github.workspace }}/miniforge-latest
+      - run: |
+          conda info
+          conda list
+          python -VV
+          printenv | sort
+
   example-10-mambaforge:
+    # NOTE: Mambaforge is now equivalent to Miniforge.
+    # We are only testing this to make sure there's a smooth transition.
+    # It should be removed once the product is definitely sunset.
     # prevent cronjobs from running on forks
     if:
       (github.event_name == 'schedule' && github.repository ==

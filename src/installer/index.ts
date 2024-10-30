@@ -85,7 +85,7 @@ export async function runInstaller(
   await utils.execute(command);
 
   // The installer may have provisioned `mamba` in `base`: use now if requested
-  const mambaInInstaller = conda.isMambaInstalled(options);
+  const mambaInInstaller = conda.isMambaInstalled(inputs, options);
   if (mambaInInstaller) {
     core.info("Mamba was found in the `base` env");
     options = {

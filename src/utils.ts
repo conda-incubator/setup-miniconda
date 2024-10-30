@@ -34,7 +34,7 @@ export function isBaseEnv(envName: string) {
 /**
  * Run exec.exec with error handling
  */
-export async function execute(command: string[]): Promise<void> {
+export async function execute(command: string[], env = {}): Promise<void> {
   let options: exec.ExecOptions = {
     errStream: new stream.Writable(),
     listeners: {
@@ -57,6 +57,7 @@ export async function execute(command: string[]): Promise<void> {
         core.warning(stringData);
       },
     },
+    env: { ...process.env, ...env },
   };
 
   const rc = await exec.exec(command[0], command.slice(1), options);
