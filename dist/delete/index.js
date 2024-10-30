@@ -29063,7 +29063,7 @@ function parseInputs() {
                 show_channel_urls: core.getInput("show-channel-urls"),
                 use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
                 solver: core.getInput("conda-solver"),
-                pkgs_dirs: core.getInput("pkgs-dir"),
+                pkgs_dirs: core.getInput("pkgs-dirs"),
                 // These are always set to avoid terminal issues
                 always_yes: "true",
                 changeps1: "false",

@@ -676,8 +676,8 @@ jobs:
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
 ```
 
-You may also set conda's package directories (`CONDA_PKGS_DIRS`) config value,
-if you want to change setup-miniconda's default of `~/conda_pkgs_dir` with the
+You may also set conda's package directories (`pkgs_dirs`) config value, if you
+want to change setup-miniconda's default of `~/conda_pkgs_dir` with the
 `pkgs-dirs` config option. This is a comma-separated string like the channels
 config option:
 

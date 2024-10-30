@@ -47391,8 +47391,6 @@ function applyCondaConfiguration(inputs, options) {
             core.info(`Adding pkgs_dir '${pkgsDir}'`);
             yield condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], inputs, options);
         }
-        // We're also setting the appropriate conda config environment variable, to be safe
-        core.exportVariable("CONDA_PKGS_DIRS", pkgsDirs.join(","));
         // All other options are just passed as their string representations
         for (const [key, value] of configEntries) {
             if (value.trim().length === 0 ||
@@ -48242,7 +48240,7 @@ function parseInputs() {
                 show_channel_urls: core.getInput("show-channel-urls"),
                 use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
                 solver: core.getInput("conda-solver"),
-                pkgs_dirs: core.getInput("pkgs-dir"),
+                pkgs_dirs: core.getInput("pkgs-dirs"),
                 // These are always set to avoid terminal issues
                 always_yes: "true",
                 changeps1: "false",
