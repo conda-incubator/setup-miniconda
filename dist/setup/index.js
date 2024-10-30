@@ -47061,8 +47061,8 @@ exports.updateMamba = {
         };
     }),
     postInstall: (inputs, options) => __awaiter(void 0, void 0, void 0, function* () {
-        const mambaExec = conda.condaExecutable(options);
-        const condabinLocation = path.join(conda.condaBasePath(options), "condabin", path.basename(mambaExec));
+        const mambaExec = conda.condaExecutable(inputs, options);
+        const condabinLocation = path.join(conda.condaBasePath(inputs, options), "condabin", path.basename(mambaExec));
         if (constants.IS_UNIX) {
             if (!fs.existsSync(condabinLocation)) {
                 // This is mamba 2.x with only $PREFIX/bin/mamba,
@@ -47112,15 +47112,6 @@ exports.updateMamba = {
                 core.info(`... wrote ${mambaBat}`);
             }
         }
-<<<<<<< HEAD
-        core.info("Creating bash wrapper for `mamba`...");
-        // Add bat-less forwarder for bash users on Windows
-        const mambaBat = conda.condaExecutable(inputs, options).replace(/\\/g, "/");
-        const contents = `bash.exe -c "exec '${mambaBat}' $*" || exit 1`;
-        fs.writeFileSync(mambaBat.slice(0, -4), contents);
-        core.info(`... wrote ${mambaBat}:\n${contents}`);
-=======
->>>>>>> 65da104b08926376b7a499693cf2fd47c4a5ada6
     }),
 };
 
@@ -47244,8 +47235,8 @@ function condaBasePath(inputs, options) {
     if (options.useBundled) {
         condaPath = constants.MINICONDA_DIR_PATH;
     }
-    else if (inputs.installDir) {
-        condaPath = inputs.installDir;
+    else if (inputs.installationDir) {
+        condaPath = inputs.installationDir;
     }
     else {
         condaPath = path.join(os.homedir(), "miniconda3");
@@ -47269,15 +47260,9 @@ exports.envCommandFlag = envCommandFlag;
 /**
  * Provide cross platform location of conda/mamba executable in condabin and bin
  */
-<<<<<<< HEAD
-function condaExecutable(inputs, options, subcommand) {
+function condaExecutableLocations(inputs, options, subcommand) {
     const dir = condaBasePath(inputs, options);
-    let condaExe;
-=======
-function condaExecutableLocations(options, subcommand) {
-    const dir = condaBasePath(options);
     let condaExes = [];
->>>>>>> 65da104b08926376b7a499693cf2fd47c4a5ada6
     let commandName = "conda";
     if (options.useMamba &&
         (subcommand == null || constants.MAMBA_SUBCOMMANDS.includes(subcommand))) {
@@ -47296,8 +47281,8 @@ exports.condaExecutableLocations = condaExecutableLocations;
 /**
  *  Return existing conda or mamba executable
  */
-function condaExecutable(options, subcommand) {
-    const locations = condaExecutableLocations(options, subcommand);
+function condaExecutable(inputs, options, subcommand) {
+    const locations = condaExecutableLocations(inputs, options, subcommand);
     for (const exe of locations) {
         if (fs.existsSync(exe))
             return exe;
@@ -47305,15 +47290,10 @@ function condaExecutable(options, subcommand) {
     throw Error(`No existing ${options.useMamba ? "mamba" : "conda"} executable found at any of ${locations}`);
 }
 exports.condaExecutable = condaExecutable;
-/**
- * Detect the presence of mamba
- */
+/** Detect the presence of mamba */
 function isMambaInstalled(inputs, options) {
-    for (const exe of condaExecutableLocations(Object.assign(Object.assign({}, options), { useMamba: true }))) {
-        if (fs.existsSync(exe))
-            return true;
-    }
-    return false;
+    const mamba = condaExecutable(inputs, Object.assign(Object.assign({}, options), { useMamba: true }));
+    return fs.existsSync(mamba);
 }
 exports.isMambaInstalled = isMambaInstalled;
 /**
@@ -47322,11 +47302,7 @@ exports.isMambaInstalled = isMambaInstalled;
 function condaCommand(cmd, inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
-        let env = {};
-        if (options.useMamba) {
-            env.MAMBA_ROOT_PREFIX = condaBasePath(options);
-        }
-        return yield utils.execute(command, env);
+        return yield utils.execute(command);
     });
 }
 exports.condaCommand = condaCommand;
@@ -47386,7 +47362,7 @@ function applyCondaConfiguration(inputs, options) {
             if (removeDefaults) {
                 core.info("Removing implicitly added 'defaults' channel");
                 try {
-                    yield condaCommand(["config", "--remove", "channels", "defaults"], options);
+                    yield condaCommand(["config", "--remove", "channels", "defaults"], inputs, options);
                 }
                 catch (err) {
                     core.info("Removing defaults raised an error -- it was probably not present.");
@@ -48122,7 +48098,7 @@ exports.ensureYaml = {
         let subcommand;
         if (options.useMamba) {
             const envPath = flag === "--name"
-                ? path.join(conda.condaBasePath(options), "envs", nameOrPath)
+                ? path.join(conda.condaBasePath(inputs, options), "envs", nameOrPath)
                 : nameOrPath;
             subcommand = fs.existsSync(envPath) ? "update" : "create";
         }
@@ -48226,7 +48202,7 @@ function parseInputs() {
             condaVersion: core.getInput("conda-version"),
             environmentFile: core.getInput("environment-file"),
             installerUrl: core.getInput("installer-url"),
-            installDir: core.getInput("install-dir"),
+            installationDir: core.getInput("installation-dir"),
             mambaVersion: core.getInput("mamba-version"),
             useMamba: core.getInput("use-mamba"),
             minicondaVersion: core.getInput("miniconda-version"),
