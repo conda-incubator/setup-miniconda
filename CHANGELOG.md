@@ -1,5 +1,44 @@
 # CHANGELOG
 
+## [v3.1.0] (2024-10-31)
+
+### Features
+
+- [#367]: Add `conda-remove-defaults` setting to remove the `defaults` channel
+  if added implicitly
+- [#342]: Add `installation-dir` to customize where the installers are installed
+  to
+- [#328]: Make conda's cache configurable via `pkgs-dirs`
+
+### Fixes
+
+- [#360]: Start deprecation of `miniforge-variant: Mambaforge`
+- [#362]: Ignore conda cygpath warning
+- [#368]: Address mamba v2 incompatibilities
+- [#350]: set `CONDA` environment variable regardless of useBundled option
+
+### Tasks and Maintenance
+
+- [#348]: Bump conda-incubator/setup-miniconda from 3.0.3 to 3.0.4
+- [#353]: Bump semver and @types/semver
+- [#356]: Bump braces from 3.0.2 to 3.0.3
+- [#359]: Bump semver from 7.6.2 to 7.6.3
+- [#370]: Bump @actions/core from 1.10.1 to 1.11.1
+
+[v3.1.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v3.1.0
+[#360]: https://github.com/conda-incubator/setup-miniconda/pull/360
+[#362]: https://github.com/conda-incubator/setup-miniconda/pull/362
+[#368]: https://github.com/conda-incubator/setup-miniconda/pull/368
+[#367]: https://github.com/conda-incubator/setup-miniconda/pull/367
+[#342]: https://github.com/conda-incubator/setup-miniconda/pull/342
+[#328]: https://github.com/conda-incubator/setup-miniconda/pull/328
+[#350]: https://github.com/conda-incubator/setup-miniconda/pull/350
+[#348]: https://github.com/conda-incubator/setup-miniconda/pull/348
+[#353]: https://github.com/conda-incubator/setup-miniconda/pull/353
+[#356]: https://github.com/conda-incubator/setup-miniconda/pull/356
+[#359]: https://github.com/conda-incubator/setup-miniconda/pull/359
+[#370]: https://github.com/conda-incubator/setup-miniconda/pull/370
+
 ## [v3.0.4] (2024-04-25)
 
 ### Fixes
