@@ -225,7 +225,11 @@ export async function applyCondaConfiguration(
   let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
   for (const pkgsDir of pkgsDirs) {
     core.info(`Adding pkgs_dir '${pkgsDir}'`);
-    await condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], inputs, options);
+    await condaCommand(
+      ["config", "--add", "pkgs_dirs", pkgsDir],
+      inputs,
+      options,
+    );
   }
   // We're also setting the appropriate conda config environment variable, to be safe
   core.exportVariable("CONDA_PKGS_DIRS", pkgsDirs.join(","));

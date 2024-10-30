@@ -47389,7 +47389,7 @@ function applyCondaConfiguration(inputs, options) {
         let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
         for (const pkgsDir of pkgsDirs) {
             core.info(`Adding pkgs_dir '${pkgsDir}'`);
-            yield condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], options);
+            yield condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], inputs, options);
         }
         // We're also setting the appropriate conda config environment variable, to be safe
         core.exportVariable("CONDA_PKGS_DIRS", pkgsDirs.join(","));
@@ -48915,20 +48915,6 @@ function setPathVariables(inputs, options) {
 }
 exports.setPathVariables = setPathVariables;
 /**
-<<<<<<< HEAD
-=======
- * Ensure the conda cache path is available as an environment variable
- */
-function setCacheVariable(inputs, options) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const folder = utils.cacheFolder();
-        yield conda.condaCommand(["config", "--add", "pkgs_dirs", folder], inputs, options);
-        core.exportVariable(constants.ENV_VAR_CONDA_PKGS, folder);
-    });
-}
-exports.setCacheVariable = setCacheVariable;
-/**
->>>>>>> 622526741e159097360b04b60e62baf8e5729315
  * Export the effective environment-file path
  */
 function setEnvironmentFileOutputs(envFile, envContent, patched = false) {
@@ -49022,10 +49008,6 @@ function setupMiniconda(inputs) {
         }
         // For potential 'channels' that may alter configuration
         options.envSpec = yield core.group("Parsing environment...", () => env.getEnvSpec(inputs));
-<<<<<<< HEAD
-=======
-        yield core.group("Configuring conda package cache...", () => outputs.setCacheVariable(inputs, options));
->>>>>>> 622526741e159097360b04b60e62baf8e5729315
         yield core.group("Applying initial configuration...", () => conda.applyCondaConfiguration(inputs, options));
         yield core.group("Initializing conda shell integration...", () => conda.condaInit(inputs, options));
         // New base tools may change options
