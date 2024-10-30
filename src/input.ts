@@ -87,12 +87,13 @@ export async function parseInputs(): Promise<types.IActionInputs> {
     condaVersion: core.getInput("conda-version"),
     environmentFile: core.getInput("environment-file"),
     installerUrl: core.getInput("installer-url"),
-    installDir: core.getInput("install-dir"),
+    installationDir: core.getInput("installation-dir"),
     mambaVersion: core.getInput("mamba-version"),
     useMamba: core.getInput("use-mamba"),
     minicondaVersion: core.getInput("miniconda-version"),
     miniforgeVariant: core.getInput("miniforge-variant"),
     miniforgeVersion: core.getInput("miniforge-version"),
+    condaRemoveDefaults: core.getInput("conda-remove-defaults"),
     pythonVersion: core.getInput("python-version"),
     removeProfiles: core.getInput("remove-profiles"),
     condaConfig: Object.freeze({
@@ -136,6 +137,18 @@ export async function parseInputs(): Promise<types.IActionInputs> {
 
   if (core.isDebug()) {
     core.info(JSON.stringify(inputs));
+  }
+
+  if (
+    inputs.miniforgeVariant === "Mambaforge" ||
+    inputs.miniforgeVariant === "Mambaforge-pypy3"
+  ) {
+    core.warning(
+      "'Mambaforge' variants are now equivalent to 'Miniforge3'. " +
+        "In the future, we will ignore with a warning and use 'Miniforge3'. " +
+        "Eventually, using 'Mambaforge' will throw an error. " +
+        "Please change to 'Miniforge3' at your earliest convenience.",
+    );
   }
 
   return inputs;

@@ -26253,6 +26253,8 @@ exports.IGNORED_WARNINGS = [
     `Key 'use_only_tar_bz2' is not a known primitive parameter.`,
     // Channel warnings are very boring and noisy
     `moving to the top`,
+    // This warning has no consequence for the installation and is noisy
+    `cygpath is not available, fallback to manual path conversion`,
 ];
 /**
  * Warnings that should be errors
@@ -26471,7 +26473,7 @@ exports.isBaseEnv = isBaseEnv;
 /**
  * Run exec.exec with error handling
  */
-function execute(command) {
+function execute(command, env = {}) {
     return __awaiter(this, void 0, void 0, function* () {
         let options = {
             errStream: new stream.Writable(),
@@ -26495,6 +26497,7 @@ function execute(command) {
                     core.warning(stringData);
                 },
             },
+            env: Object.assign(Object.assign({}, process.env), env),
         };
         const rc = yield exec.exec(command[0], command.slice(1), options);
         if (rc !== 0) {

@@ -1,0 +1,81 @@
+name: "Example 14: Remove defaults channel"
+
+on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - "develop"
+      - "main"
+      - "master"
+  schedule:
+    # Note that cronjobs run on master/main by default
+    - cron: "0 0 * * *"
+
+concurrency:
+  group:
+    ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  example-14:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name:
+      Ex14 (${{ matrix.os }}, remove=${{ matrix.conda-remove-defaults }},
+      channels=${{ matrix.channels }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        conda-remove-defaults: ["true", "false"]
+        channels:
+          [
+            "conda-forge",
+            "conda-forge,nodefaults",
+            "conda-forge,defaults,nodefaults",
+          ]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          channels: ${{ matrix.channels }}
+          conda-remove-defaults: ${{ matrix.conda-remove-defaults }}
+          python-version: "3.12"
+      - shell: bash -el {0}
+        run: |
+          cat <<EOF | python
+          import json
+          import os
+          from subprocess import check_output
+
+          out = check_output(
+            [
+              os.environ["CONDA_EXE"],
+              "config",
+              "--show",
+              "channels",
+              "--json",
+            ]
+          )
+          channels = json.loads(out)["channels"]
+          input_channels = "${{ matrix.channels }}".split(",")
+          remove_defaults = "${{ matrix.conda-remove-defaults }}" == "true"
+
+          print("Input channels:", input_channels)
+          print("Input remove-defaults:", remove_defaults)
+          print("Computed channels:", channels)
+
+          assert "nodefaults" not in channels
+          if "defaults" in input_channels:
+            assert "defaults" in channels
+          elif "nodefaults" in input_channels or remove_defaults:
+            assert "defaults" not in channels
+          EOF

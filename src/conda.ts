@@ -23,8 +23,8 @@ export function condaBasePath(
   let condaPath: string;
   if (options.useBundled) {
     condaPath = constants.MINICONDA_DIR_PATH;
-  } else if (inputs.installDir) {
-    condaPath = inputs.installDir;
+  } else if (inputs.installationDir) {
+    condaPath = inputs.installationDir;
   } else {
     condaPath = path.join(os.homedir(), "miniconda3");
   }
@@ -45,15 +45,15 @@ export function envCommandFlag(inputs: types.IActionInputs): string[] {
 }
 
 /**
- * Provide cross platform location of conda/mamba executable
+ * Provide cross platform location of conda/mamba executable in condabin and bin
  */
-export function condaExecutable(
+export function condaExecutableLocations(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
   subcommand?: string,
-): string {
+): string[] {
   const dir: string = condaBasePath(inputs, options);
-  let condaExe: string;
+  let condaExes: string[] = [];
   let commandName = "conda";
   if (
     options.useMamba &&
@@ -61,9 +61,38 @@ export function condaExecutable(
   ) {
     commandName = "mamba";
   }
-  commandName = constants.IS_WINDOWS ? commandName + ".bat" : commandName;
-  condaExe = path.join(dir, "condabin", commandName);
-  return condaExe;
+  condaExes.push(
+    path.join(
+      dir,
+      "condabin",
+      constants.IS_WINDOWS ? commandName + ".bat" : commandName,
+    ),
+  );
+  if (constants.IS_WINDOWS) {
+    condaExes.push(path.join(dir, "Library", "bin", commandName + ".exe"));
+  } else {
+    condaExes.push(path.join(dir, "bin", commandName));
+  }
+  return condaExes;
+}
+
+/**
+ *  Return existing conda or mamba executable
+ */
+export function condaExecutable(
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions,
+  subcommand?: string,
+) {
+  const locations = condaExecutableLocations(inputs, options, subcommand);
+  for (const exe of locations) {
+    if (fs.existsSync(exe)) return exe;
+  }
+  throw Error(
+    `No existing ${
+      options.useMamba ? "mamba" : "conda"
+    } executable found at any of ${locations}`,
+  );
 }
 
 /** Detect the presence of mamba */
@@ -133,15 +162,50 @@ export async function applyCondaConfiguration(
     channels = options.envSpec.yaml.channels;
   }
 
+  // This can be enabled via conda-remove-defaults and channels = nodefaults
+  let removeDefaults: boolean = inputs.condaRemoveDefaults === "true";
+
   // LIFO: reverse order to preserve higher priority as listed in the option
   // .slice ensures working against a copy
   for (const channel of channels.slice().reverse()) {
+    if (channel === "nodefaults") {
+      core.warning(
+        "'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
+          "In the future, 'nodefaults' as a way of removing 'defaults' won't be supported. " +
+          "Please set 'conda-remove-defaults' = 'true' to remove this warning.",
+      );
+      removeDefaults = true;
+      continue;
+    }
     core.info(`Adding channel '${channel}'`);
     await condaCommand(
       ["config", "--add", "channels", channel],
       inputs,
       options,
     );
+  }
+
+  if (!channels.includes("defaults")) {
+    if (removeDefaults) {
+      core.info("Removing implicitly added 'defaults' channel");
+      try {
+        await condaCommand(
+          ["config", "--remove", "channels", "defaults"],
+          inputs,
+          options,
+        );
+      } catch (err) {
+        core.info(
+          "Removing defaults raised an error -- it was probably not present.",
+        );
+      }
+    } else {
+      core.warning(
+        "The 'defaults' channel might have been added implicitly. " +
+          "If this is intentional, add 'defaults' to the 'channels' list. " +
+          "Otherwise, consider setting 'conda-remove-defaults' to 'true'.",
+      );
+    }
   }
 
   // All other options are just passed as their string representations
