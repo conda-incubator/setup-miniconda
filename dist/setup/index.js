@@ -46850,8 +46850,8 @@ function applyCondaConfiguration(inputs, options) {
         for (const channel of channels.slice().reverse()) {
             if (channel === "nodefaults") {
                 core.warning("'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
-                    "In the future, 'nodefaults' as a way of removing 'defaults' won't be supported. " +
-                    "Please set 'conda-remove-defaults' = 'true' to remove this warning.");
+                    "In the future, 'nodefaults' to remove 'defaults' won't be supported. " +
+                    "Please set 'conda-remove-defaults' = 'true' in setup-miniconda to remove this warning.");
                 removeDefaults = true;
                 continue;
             }
