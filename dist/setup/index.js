@@ -47108,9 +47108,9 @@ exports.MINICONDA_ARCHITECTURES = {
 exports.MINIFORGE_ARCHITECTURES = {
     x64: "x86_64",
     x86_64: "x86_64",
-    aarch64: "aarch64", // To be supported by github runners
+    aarch64: "aarch64",
     ppc64le: "ppc64le", // To be supported by github runners
-    arm64: "arm64", // To be supported by github runners
+    arm64: "arm64",
 };
 exports.OS_NAMES = {
     win32: "Windows",
@@ -47700,9 +47700,14 @@ const RULES = [
  */
 function parseInputs() {
     return __awaiter(this, void 0, void 0, function* () {
+        let arch = core.getInput("architecture") || process.arch;
+        if (arch === "arm64" && constants.OS_NAMES[process.platform] === "Linux") {
+            // https://github.com/conda-incubator/setup-miniconda/issues/385
+            arch = "aarch64";
+        }
         const inputs = Object.freeze({
             activateEnvironment: core.getInput("activate-environment"),
-            architecture: core.getInput("architecture") || process.arch,
+            architecture: arch,
             condaBuildVersion: core.getInput("conda-build-version"),
             condaConfigFile: core.getInput("condarc-file"),
             condaVersion: core.getInput("conda-version"),
