@@ -45,7 +45,7 @@ jobs:
           miniconda-version: latest
       - uses: ./
         if: matrix.variant == 'no-variant'
-        id: setup-miniconda-no-variant
+        id: setup-miniforge-no-variant
         continue-on-error: true
         with:
           miniforge-version: latest
