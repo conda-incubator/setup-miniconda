@@ -59,7 +59,7 @@ possibility of automatically activating the `test` environment on all shells.
 | [Caching packages](#caching-packages)                              | [![Caching Example Status][caching-badge]][caching]             |
 | [Caching environments](#caching-environments)                      | [![Caching Env Example Status][caching-env-badge]][caching-env] |
 | [Apple Silicon](#example-13-apple-silicon)                         | [![Apple Silicon][ex13-badge]][ex13]                            |
-| [Remove defaults](#example-14-conda-remove-defaults)               | [![Remove defaults][ex14-badge]][ex14]                          |
+| [Remove defaults](#example-14-remove-defaults-channel)             | [![Remove defaults][ex14-badge]][ex14]                          |
 | [Linux ARM](#example-15-linux-arm)                                 | [![Linux ARM][ex15-badge]][ex15]                                |
 
 [ex1]:
