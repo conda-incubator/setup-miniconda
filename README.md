@@ -60,6 +60,7 @@ possibility of automatically activating the `test` environment on all shells.
 | [Caching environments](#caching-environments)                      | [![Caching Env Example Status][caching-env-badge]][caching-env] |
 | [Apple Silicon](#example-13-apple-silicon)                         | [![Apple Silicon][ex13-badge]][ex13]                            |
 | [Remove defaults](#example-14-remove-defaults-channel)             | [![Remove defaults][ex14-badge]][ex14]                          |
+| [Linux ARM](#example-15-linux-arm)                                 | [![Linux ARM][ex15-badge]][ex15]                                |
 
 [ex1]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml
@@ -117,6 +118,10 @@ possibility of automatically activating the `test` environment on all shells.
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-14.yml
 [ex14-badge]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-14.yml/badge.svg?branch=main
+[ex15]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-15.yml
+[ex15-badge]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-15.yml/badge.svg?branch=main
 
 ## Other Workflows
 
@@ -595,10 +600,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./
-        id: setup-miniconda
+        id: setup-miniforge
         continue-on-error: true
         with:
-          miniconda-version: latest
+          miniforge-version: latest
       - name: Check arm64
         shell: bash -el {0}
         run: |
@@ -633,6 +638,31 @@ jobs:
         shell: bash -el {0}
         run: |
           conda config --show-sources
+```
+
+### Example 15: Linux ARM
+
+```yaml
+jobs:
+  example-15:
+    name: Ex15 (os=${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-24.04-arm"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: setup-miniconda
+        continue-on-error: true
+        with:
+          miniforge-version: latest
+      - name: Check ARM
+        shell: bash -el {0}
+        run: |
+          conda install -y python
+          python -c "import platform; assert platform.machine() == 'aarch64', platform.machine()"
 ```
 
 ## Caching
