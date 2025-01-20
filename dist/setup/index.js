@@ -47108,9 +47108,9 @@ exports.MINICONDA_ARCHITECTURES = {
 exports.MINIFORGE_ARCHITECTURES = {
     x64: "x86_64",
     x86_64: "x86_64",
-    aarch64: "aarch64", // To be supported by github runners
+    aarch64: "aarch64",
     ppc64le: "ppc64le", // To be supported by github runners
-    arm64: "arm64", // To be supported by github runners
+    arm64: "arm64",
 };
 exports.OS_NAMES = {
     win32: "Windows",
@@ -47700,9 +47700,14 @@ const RULES = [
  */
 function parseInputs() {
     return __awaiter(this, void 0, void 0, function* () {
+        let arch = core.getInput("architecture") || process.arch;
+        if (arch === "arm64" && constants.IS_LINUX) {
+            // https://github.com/conda-incubator/setup-miniconda/issues/385
+            arch = "aarch64";
+        }
         const inputs = Object.freeze({
             activateEnvironment: core.getInput("activate-environment"),
-            architecture: core.getInput("architecture") || process.arch,
+            architecture: arch,
             condaBuildVersion: core.getInput("conda-build-version"),
             condaConfigFile: core.getInput("condarc-file"),
             condaVersion: core.getInput("conda-version"),
@@ -48009,10 +48014,6 @@ function downloadMiniconda(pythonMajorVersion, inputs) {
         let arch = constants.MINICONDA_ARCHITECTURES[inputs.architecture.toLowerCase()];
         if (!arch) {
             throw new Error(`Invalid arch "${inputs.architecture}"!`);
-        }
-        // Backwards compatibility: ARM64 used to map to aarch64
-        if (arch === "arm64" && constants.IS_LINUX) {
-            arch = constants.MINICONDA_ARCHITECTURES["aarch64"];
         }
         let extension = constants.IS_UNIX ? "sh" : "exe";
         let osName = constants.OS_NAMES[process.platform];

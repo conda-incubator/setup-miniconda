@@ -52,10 +52,6 @@ export async function downloadMiniconda(
   if (!arch) {
     throw new Error(`Invalid arch "${inputs.architecture}"!`);
   }
-  // Backwards compatibility: ARM64 used to map to aarch64
-  if (arch === "arm64" && constants.IS_LINUX) {
-    arch = constants.MINICONDA_ARCHITECTURES["aarch64"];
-  }
 
   let extension: string = constants.IS_UNIX ? "sh" : "exe";
   let osName: string = constants.OS_NAMES[process.platform];

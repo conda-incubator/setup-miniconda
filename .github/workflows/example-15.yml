@@ -1,4 +1,4 @@
-name: "Example 13: Apple Silicon"
+name: "Example 15: Linux ARM"
 
 on:
   pull_request:
@@ -14,22 +14,18 @@ on:
     - cron: "0 0 * * *"
 
 jobs:
-  example-13:
+  example-15:
     # prevent cronjobs from running on forks
     if:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
-    name: Ex13 (os=${{ matrix.os }} variant=${{ matrix.variant }})
+    name: Ex15 (os=${{ matrix.os }} variant=${{ matrix.variant }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: ["macos-14"]
+        os: ["ubuntu-24.04-arm"]
         variant: ["Miniforge3", "Miniconda", "no-variant", "empty-with"]
-        include:
-          # This is Intel, not Apple Silicon, but doesn't bundle Miniconda
-          - os: macos-13
-            variant: empty-with
     steps:
       - uses: actions/checkout@v4
       - uses: ./
@@ -38,7 +34,6 @@ jobs:
         continue-on-error: true
         with:
           auto-update-conda: true
-          architecture: arm64
           miniforge-variant: ${{ matrix.variant }}
           miniforge-version: latest
       - uses: ./
@@ -78,7 +73,6 @@ jobs:
         shell: bash -el {0}
         run: conda install -y python
       - name: Check architecture
-        if: matrix.os != 'macos-13'
         shell: bash -el {0}
         run: |
-          python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
+          python -c "import platform; assert platform.machine() == 'aarch64', platform.machine()"
