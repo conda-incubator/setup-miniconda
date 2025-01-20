@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## [v3.1.1] (2025-01-20)
+
+### Fixes
+
+- [#378]: Make `nodefaults` warning more explicit
+- [#387]: Detect and support Linux ARM runners for both Miniconda and Miniforge
+
+### Tasks and Maintenance
+
+- [#374]: Bump conda-incubator/setup-miniconda from 3.0.4 to 3.1.0
+- [#375]: Bump actions/cache from 3 to 4
+- [#384]: Bump @actions/tool-cache from 2.0.1 to 2.0.2
+- [#386]: Fix link to example 14
+- [#388]: Fix mamba 1.x examples
+
+[v3.1.1]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v3.1.1
+[#374]: https://github.com/conda-incubator/setup-miniconda/pull/374
+[#375]: https://github.com/conda-incubator/setup-miniconda/pull/375
+[#378]: https://github.com/conda-incubator/setup-miniconda/pull/378
+[#384]: https://github.com/conda-incubator/setup-miniconda/pull/384
+[#386]: https://github.com/conda-incubator/setup-miniconda/pull/386
+[#387]: https://github.com/conda-incubator/setup-miniconda/pull/387
+[#388]: https://github.com/conda-incubator/setup-miniconda/pull/388
+
 ## [v3.1.0] (2024-10-31)
 
 ### Features
