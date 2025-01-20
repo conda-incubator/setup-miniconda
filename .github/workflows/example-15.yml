@@ -14,12 +14,12 @@ on:
     - cron: "0 0 * * *"
 
 jobs:
-  example-13:
+  example-15:
     # prevent cronjobs from running on forks
     if:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
-    name: Ex13 (os=${{ matrix.os }} variant=${{ matrix.variant }})
+    name: Ex15 (os=${{ matrix.os }} variant=${{ matrix.variant }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

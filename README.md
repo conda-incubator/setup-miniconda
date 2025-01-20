@@ -59,7 +59,7 @@ possibility of automatically activating the `test` environment on all shells.
 | [Caching packages](#caching-packages)                              | [![Caching Example Status][caching-badge]][caching]             |
 | [Caching environments](#caching-environments)                      | [![Caching Env Example Status][caching-env-badge]][caching-env] |
 | [Apple Silicon](#example-13-apple-silicon)                         | [![Apple Silicon][ex13-badge]][ex13]                            |
-| [Remove defaults](#example-14-conda-remove-defaults)               | [![Remove defaults][ex14-badge]][ex14]                          |
+| [Remove defaults](#example-14-remove-defaults-channel)             | [![Remove defaults][ex14-badge]][ex14]                          |
 | [Linux ARM](#example-15-linux-arm)                                 | [![Linux ARM][ex15-badge]][ex15]                                |
 
 [ex1]:
@@ -455,10 +455,10 @@ jobs:
 
 ### Example 7: Lockfiles
 
-`conda list --explicit` and [conda-lock][] support generating [explicit
-environment specifications][explicit-spec], which skip the environment solution
-step altogether, as they contain the _ordered_ list of exact URLs needed to
-reproduce the environment.
+`conda list --explicit` and [conda-lock][conda-lock] support generating
+[explicit environment specifications][explicit-spec], which skip the environment
+solution step altogether, as they contain the _ordered_ list of exact URLs
+needed to reproduce the environment.
 
 This means explicitly-defined environments which:
 
@@ -640,12 +640,12 @@ jobs:
           conda config --show-sources
 ```
 
-### Example 13: Linux ARM
+### Example 15: Linux ARM
 
 ```yaml
 jobs:
-  example-13:
-    name: Ex13 (os=${{ matrix.os }})
+  example-15:
+    name: Ex15 (os=${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
