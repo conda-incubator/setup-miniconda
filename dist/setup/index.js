@@ -47701,7 +47701,7 @@ const RULES = [
 function parseInputs() {
     return __awaiter(this, void 0, void 0, function* () {
         let arch = core.getInput("architecture") || process.arch;
-        if (arch === "arm64" && constants.OS_NAMES[process.platform] === "Linux") {
+        if (arch === "arm64" && constants.IS_LINUX) {
             // https://github.com/conda-incubator/setup-miniconda/issues/385
             arch = "aarch64";
         }
