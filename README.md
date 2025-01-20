@@ -600,7 +600,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./
-        id: setup-miniconda
+        id: setup-miniforge
         continue-on-error: true
         with:
           miniforge-version: latest
