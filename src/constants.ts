@@ -31,9 +31,9 @@ export const MINICONDA_ARCHITECTURES: types.IArchitectures = {
 export const MINIFORGE_ARCHITECTURES: types.IArchitectures = {
   x64: "x86_64",
   x86_64: "x86_64",
-  aarch64: "aarch64", // To be supported by github runners
+  aarch64: "aarch64",
   ppc64le: "ppc64le", // To be supported by github runners
-  arm64: "arm64", // To be supported by github runners
+  arm64: "arm64",
 };
 
 export const OS_NAMES: types.IOperatingSystems = {

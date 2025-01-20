@@ -79,9 +79,14 @@ const RULES: IRule[] = [
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
  */
 export async function parseInputs(): Promise<types.IActionInputs> {
+  let arch = core.getInput("architecture") || process.arch;
+  if (arch === "arm64" && constants.OS_NAMES[process.platform] === "Linux") {
+    // https://github.com/conda-incubator/setup-miniconda/issues/385
+    arch = "aarch64";
+  }
   const inputs: types.IActionInputs = Object.freeze({
     activateEnvironment: core.getInput("activate-environment"),
-    architecture: core.getInput("architecture") || process.arch,
+    architecture: arch,
     condaBuildVersion: core.getInput("conda-build-version"),
     condaConfigFile: core.getInput("condarc-file"),
     condaVersion: core.getInput("conda-version"),
