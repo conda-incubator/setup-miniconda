@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        mamba-version: ["1.5.10", "2"]
+        mamba-version: ["1.5.*", "2"]
         include:
           - os: ubuntu-latest
             activate-environment: anaconda-client-env
