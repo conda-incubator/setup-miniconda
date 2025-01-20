@@ -80,7 +80,7 @@ const RULES: IRule[] = [
  */
 export async function parseInputs(): Promise<types.IActionInputs> {
   let arch = core.getInput("architecture") || process.arch;
-  if (arch === "arm64" && constants.OS_NAMES[process.platform] === "Linux") {
+  if (arch === "arm64" && constants.IS_LINUX) {
     // https://github.com/conda-incubator/setup-miniconda/issues/385
     arch = "aarch64";
   }
