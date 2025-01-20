@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        mamba-version: ["1.5.10", "2"]
+        mamba-version: ["1.5.*", "2"]
         include:
           - os: ubuntu-latest
             activate-environment: anaconda-client-env
@@ -49,13 +49,7 @@ jobs:
       - uses: ./
         with:
           miniforge-variant: Miniforge3
-          # Use an old Miniforge (without conda-libmamba-solver) to allow updates to mamba v2.
-          # Set the solver to classic for those too. This can be removed when
-          # conda-libmamba-solver is released with libmamba v2 compatibility.
-          miniforge-version:
-            ${{ matrix.mamba-version == '2' && '23.1.0-0' || 'latest' }}
-          conda-solver:
-            ${{ matrix.mamba-version == '2' && 'classic' || 'libmamba' }}
+          miniforge-version: latest
           python-version: "3.11"
           mamba-version: ${{ matrix.mamba-version }}
           channels: conda-forge,nodefaults
