@@ -450,7 +450,7 @@ jobs:
 
 ### Example 7: Lockfiles
 
-`conda list --explicit` and [conda-lock][] support generating [explicit
+`conda list --explicit` and [conda-lock][conda-lock] support generating [explicit
 environment specifications][explicit-spec], which skip the environment solution
 step altogether, as they contain the _ordered_ list of exact URLs needed to
 reproduce the environment.
