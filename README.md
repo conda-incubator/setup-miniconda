@@ -640,12 +640,12 @@ jobs:
           conda config --show-sources
 ```
 
-### Example 13: Linux ARM
+### Example 15: Linux ARM
 
 ```yaml
 jobs:
-  example-13:
-    name: Ex13 (os=${{ matrix.os }})
+  example-15:
+    name: Ex15 (os=${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
