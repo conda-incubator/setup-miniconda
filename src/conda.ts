@@ -202,16 +202,24 @@ export async function applyCondaConfiguration(
   if (!channels.includes("defaults")) {
     if (removeDefaults) {
       core.info("Removing implicitly added 'defaults' channel");
-      try {
-        await condaCommand(
-          ["config", "--remove", "channels", "defaults"],
-          inputs,
-          options,
-        );
-      } catch (err) {
-        core.info(
-          "Removing defaults raised an error -- it was probably not present.",
-        );
+      const configsOutput = (await condaCommand(
+        ["config", "--show-sources", "--json"],
+        inputs,
+        options,
+        true,
+      )) as string;
+      const configs = JSON.parse(configsOutput) as Record<
+        string,
+        types.ICondaConfig
+      >;
+      for (const fileName in configs) {
+        if (configs[fileName].channels?.includes("defaults")) {
+          await condaCommand(
+            ["config", "--remove", "channels", "defaults", "--file", fileName],
+            inputs,
+            options,
+          );
+        }
       }
     } else {
       core.warning(
