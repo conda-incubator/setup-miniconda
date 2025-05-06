@@ -44,12 +44,15 @@ jobs:
           - os: ubuntu-latest
             mamba-version: "1.5.*"
             miniforge-version: "24.11.3-1"
+            activate-environment: true
           - os: macos-latest
             mamba-version: "1.5.*"
             miniforge-version: "24.11.3-1"
+            activate-environment: true
           - os: windows-latest
             mamba-version: "1.5.*"
             miniforge-version: "24.11.3-1"
+            activate-environment: true
     defaults:
       run:
         shell: bash -el {0}
