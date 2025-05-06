@@ -120,13 +120,14 @@ export async function condaCommand(
   cmd: string[],
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
-): Promise<void> {
+  captureOutput: boolean = false,
+): Promise<void | string> {
   const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
   let env: { [key: string]: string } = {};
   if (options.useMamba) {
     env.MAMBA_ROOT_PREFIX = condaBasePath(inputs, options);
   }
-  return await utils.execute(command, env);
+  return await utils.execute(command, env, captureOutput);
 }
 
 /**

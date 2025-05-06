@@ -40,10 +40,10 @@ export async function ensureEnvironment(
     if (await provider.provides(inputs, options)) {
       core.info(`... will ${provider.label}.`);
       const args = await provider.condaArgs(inputs, options);
-      return await core.group(
+      return (await core.group(
         `Updating '${inputs.activateEnvironment}' env from ${provider.label}...`,
         () => conda.condaCommand(args, inputs, options),
-      );
+      )) as void;
     }
   }
 

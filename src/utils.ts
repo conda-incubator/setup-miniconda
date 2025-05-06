@@ -34,12 +34,21 @@ export function isBaseEnv(envName: string) {
 /**
  * Run exec.exec with error handling
  */
-export async function execute(command: string[], env = {}): Promise<void> {
+export async function execute(
+  command: string[],
+  env = {},
+  captureOutput: boolean = false,
+): Promise<void | string> {
+  let capturedOutput = "";
+
   let options: exec.ExecOptions = {
     errStream: new stream.Writable(),
     listeners: {
       stdout: (data: Buffer) => {
         const stringData = data.toString();
+        if (captureOutput) {
+          capturedOutput += stringData;
+        }
         for (const forced_error of constants.FORCED_ERRORS) {
           if (stringData.includes(forced_error)) {
             throw new Error(`"${command}" failed with "${forced_error}"`);
@@ -63,6 +72,9 @@ export async function execute(command: string[], env = {}): Promise<void> {
   const rc = await exec.exec(command[0], command.slice(1), options);
   if (rc !== 0) {
     throw new Error(`${command[0]} return error code ${rc}`);
+  }
+  if (captureOutput) {
+    return capturedOutput;
   }
 }
 
