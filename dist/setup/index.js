@@ -47586,6 +47586,14 @@ const semver = __importStar(__nccwpck_require__(1383));
 const constants = __importStar(__nccwpck_require__(9042));
 const urlExt = (url) => path.posix.extname(new URL(url).pathname);
 /**
+ * Normalizes a version string by removing any Python version prefix
+ * @param version The version string to normalize
+ * @returns The normalized version string
+ */
+const normalizeVersion = (version) => {
+    return version.replace(/^py\d+_/, "");
+};
+/**
  * The currrent known set of input validation rules.
  *
  * ### Note
@@ -47615,7 +47623,7 @@ const RULES = [
     (i) => !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
         `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
     (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
-        semver.lt(i.minicondaVersion, "4.6.0")) &&
+        semver.lt(normalizeVersion(i.minicondaVersion), "4.6.0")) &&
         `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
 ];
 /*
