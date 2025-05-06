@@ -28677,13 +28677,17 @@ exports.isBaseEnv = isBaseEnv;
 /**
  * Run exec.exec with error handling
  */
-function execute(command, env = {}) {
+function execute(command, env = {}, captureOutput = false) {
     return __awaiter(this, void 0, void 0, function* () {
+        let capturedOutput = "";
         let options = {
             errStream: new stream.Writable(),
             listeners: {
                 stdout: (data) => {
                     const stringData = data.toString();
+                    if (captureOutput) {
+                        capturedOutput += stringData;
+                    }
                     for (const forced_error of constants.FORCED_ERRORS) {
                         if (stringData.includes(forced_error)) {
                             throw new Error(`"${command}" failed with "${forced_error}"`);
@@ -28706,6 +28710,9 @@ function execute(command, env = {}) {
         const rc = yield exec.exec(command[0], command.slice(1), options);
         if (rc !== 0) {
             throw new Error(`${command[0]} return error code ${rc}`);
+        }
+        if (captureOutput) {
+            return capturedOutput;
         }
     });
 }

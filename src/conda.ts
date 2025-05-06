@@ -120,13 +120,14 @@ export async function condaCommand(
   cmd: string[],
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
-): Promise<void> {
+  captureOutput: boolean = false,
+): Promise<void | string> {
   const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
   let env: { [key: string]: string } = {};
   if (options.useMamba) {
     env.MAMBA_ROOT_PREFIX = condaBasePath(inputs, options);
   }
-  return await utils.execute(command, env);
+  return await utils.execute(command, env, captureOutput);
 }
 
 /**
@@ -201,16 +202,24 @@ export async function applyCondaConfiguration(
   if (!channels.includes("defaults")) {
     if (removeDefaults) {
       core.info("Removing implicitly added 'defaults' channel");
-      try {
-        await condaCommand(
-          ["config", "--remove", "channels", "defaults"],
-          inputs,
-          options,
-        );
-      } catch (err) {
-        core.info(
-          "Removing defaults raised an error -- it was probably not present.",
-        );
+      const configsOutput = (await condaCommand(
+        ["config", "--show-sources", "--json"],
+        inputs,
+        options,
+        true,
+      )) as string;
+      const configs = JSON.parse(configsOutput) as Record<
+        string,
+        types.ICondaConfig
+      >;
+      for (const fileName in configs) {
+        if (configs[fileName].channels?.includes("defaults")) {
+          await condaCommand(
+            ["config", "--remove", "channels", "defaults", "--file", fileName],
+            inputs,
+            options,
+          );
+        }
       }
     } else {
       core.warning(
