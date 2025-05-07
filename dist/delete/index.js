@@ -28486,6 +28486,14 @@ const semver = __importStar(__nccwpck_require__(1383));
 const constants = __importStar(__nccwpck_require__(9042));
 const urlExt = (url) => path.posix.extname(new URL(url).pathname);
 /**
+ * Normalizes a version string by removing any Python version prefix
+ * @param version The version string to normalize
+ * @returns The normalized version string
+ */
+const normalizeVersion = (version) => {
+    return version.replace(/^py\d+_/, "");
+};
+/**
  * The currrent known set of input validation rules.
  *
  * ### Note
@@ -28515,7 +28523,7 @@ const RULES = [
     (i) => !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
         `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
     (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
-        semver.lt(i.minicondaVersion, "4.6.0")) &&
+        semver.lt(normalizeVersion(i.minicondaVersion), "4.6.0")) &&
         `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
 ];
 /*
@@ -28669,13 +28677,17 @@ exports.isBaseEnv = isBaseEnv;
 /**
  * Run exec.exec with error handling
  */
-function execute(command, env = {}) {
+function execute(command, env = {}, captureOutput = false) {
     return __awaiter(this, void 0, void 0, function* () {
+        let capturedOutput = "";
         let options = {
             errStream: new stream.Writable(),
             listeners: {
                 stdout: (data) => {
                     const stringData = data.toString();
+                    if (captureOutput) {
+                        capturedOutput += stringData;
+                    }
                     for (const forced_error of constants.FORCED_ERRORS) {
                         if (stringData.includes(forced_error)) {
                             throw new Error(`"${command}" failed with "${forced_error}"`);
@@ -28698,6 +28710,9 @@ function execute(command, env = {}) {
         const rc = yield exec.exec(command[0], command.slice(1), options);
         if (rc !== 0) {
             throw new Error(`${command[0]} return error code ${rc}`);
+        }
+        if (captureOutput) {
+            return capturedOutput;
         }
     });
 }

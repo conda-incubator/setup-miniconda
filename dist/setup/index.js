@@ -46717,14 +46717,14 @@ exports.isMambaInstalled = isMambaInstalled;
 /**
  * Run Conda command
  */
-function condaCommand(cmd, inputs, options) {
+function condaCommand(cmd, inputs, options, captureOutput = false) {
     return __awaiter(this, void 0, void 0, function* () {
         const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
         let env = {};
         if (options.useMamba) {
             env.MAMBA_ROOT_PREFIX = condaBasePath(inputs, options);
         }
-        return yield utils.execute(command, env);
+        return yield utils.execute(command, env, captureOutput);
     });
 }
 exports.condaCommand = condaCommand;
@@ -46752,7 +46752,7 @@ exports.copyConfig = copyConfig;
  * Setup Conda configuration
  */
 function applyCondaConfiguration(inputs, options) {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     return __awaiter(this, void 0, void 0, function* () {
         const configEntries = Object.entries(inputs.condaConfig);
         // Channels are special: if specified as an action input, these take priority
@@ -46783,11 +46783,12 @@ function applyCondaConfiguration(inputs, options) {
         if (!channels.includes("defaults")) {
             if (removeDefaults) {
                 core.info("Removing implicitly added 'defaults' channel");
-                try {
-                    yield condaCommand(["config", "--remove", "channels", "defaults"], inputs, options);
-                }
-                catch (err) {
-                    core.info("Removing defaults raised an error -- it was probably not present.");
+                const configsOutput = (yield condaCommand(["config", "--show-sources", "--json"], inputs, options, true));
+                const configs = JSON.parse(configsOutput);
+                for (const fileName in configs) {
+                    if ((_d = configs[fileName].channels) === null || _d === void 0 ? void 0 : _d.includes("defaults")) {
+                        yield condaCommand(["config", "--remove", "channels", "defaults", "--file", fileName], inputs, options);
+                    }
                 }
             }
             else {
@@ -47290,7 +47291,7 @@ function ensureEnvironment(inputs, options) {
             if (yield provider.provides(inputs, options)) {
                 core.info(`... will ${provider.label}.`);
                 const args = yield provider.condaArgs(inputs, options);
-                return yield core.group(`Updating '${inputs.activateEnvironment}' env from ${provider.label}...`, () => conda.condaCommand(args, inputs, options));
+                return (yield core.group(`Updating '${inputs.activateEnvironment}' env from ${provider.label}...`, () => conda.condaCommand(args, inputs, options)));
             }
         }
         throw Error(`'activate-environment: ${inputs.activateEnvironment}' could not be created`);
@@ -47585,6 +47586,14 @@ const semver = __importStar(__nccwpck_require__(1383));
 const constants = __importStar(__nccwpck_require__(9042));
 const urlExt = (url) => path.posix.extname(new URL(url).pathname);
 /**
+ * Normalizes a version string by removing any Python version prefix
+ * @param version The version string to normalize
+ * @returns The normalized version string
+ */
+const normalizeVersion = (version) => {
+    return version.replace(/^py\d+_/, "");
+};
+/**
  * The currrent known set of input validation rules.
  *
  * ### Note
@@ -47614,7 +47623,7 @@ const RULES = [
     (i) => !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
         `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
     (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
-        semver.lt(i.minicondaVersion, "4.6.0")) &&
+        semver.lt(normalizeVersion(i.minicondaVersion), "4.6.0")) &&
         `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
 ];
 /*
@@ -48531,13 +48540,17 @@ exports.isBaseEnv = isBaseEnv;
 /**
  * Run exec.exec with error handling
  */
-function execute(command, env = {}) {
+function execute(command, env = {}, captureOutput = false) {
     return __awaiter(this, void 0, void 0, function* () {
+        let capturedOutput = "";
         let options = {
             errStream: new stream.Writable(),
             listeners: {
                 stdout: (data) => {
                     const stringData = data.toString();
+                    if (captureOutput) {
+                        capturedOutput += stringData;
+                    }
                     for (const forced_error of constants.FORCED_ERRORS) {
                         if (stringData.includes(forced_error)) {
                             throw new Error(`"${command}" failed with "${forced_error}"`);
@@ -48560,6 +48573,9 @@ function execute(command, env = {}) {
         const rc = yield exec.exec(command[0], command.slice(1), options);
         if (rc !== 0) {
             throw new Error(`${command[0]} return error code ${rc}`);
+        }
+        if (captureOutput) {
+            return capturedOutput;
         }
     });
 }

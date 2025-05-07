@@ -79,3 +79,36 @@ jobs:
             echo "test-env not activated"
             exit 1
           )
+
+  issue-261:
+    # prevent version number normalization from causing issues
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name: Issue 261 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu", "macos", "windows"]
+        python-version: ["3.12"]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: setup-miniconda
+        with:
+          miniconda-version: "py312_25.3.1-1"
+          python-version: "3.12"
+          activate-environment: true
+          architecture: "x64"
+      - run: |
+          conda info
+          conda list
+          printenv | sort
+      - run: |
+          set -x
+          python -c "import sys; assert f'{sys.version_info.major}.{sys.version_info.minor}' == '${{ matrix.python-version }}'"
