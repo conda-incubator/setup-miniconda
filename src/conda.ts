@@ -240,13 +240,45 @@ export async function applyCondaConfiguration(
       options,
     );
   }
+  // auto_activate_base was renamed to auto_activate in 25.5.0
+  core.info(`auto_activate: ${inputs.condaConfig.auto_activate_base}`);
+  try {
+    // 25.5.0+
+    await condaCommand(
+      [
+        "config",
+        "--set",
+        "auto_activate",
+        inputs.condaConfig.auto_activate_base,
+      ],
+      inputs,
+      options,
+    );
+  } catch (err) {
+    try {
+      // <25.5.0
+      await condaCommand(
+        [
+          "config",
+          "--set",
+          "auto_activate_base",
+          inputs.condaConfig.auto_activate_base,
+        ],
+        inputs,
+        options,
+      );
+    } catch (err2) {
+      core.warning(err2 as Error);
+    }
+  }
 
   // All other options are just passed as their string representations
   for (const [key, value] of configEntries) {
     if (
       value.trim().length === 0 ||
       key === "channels" ||
-      key === "pkgs_dirs"
+      key === "pkgs_dirs" ||
+      key === "auto_activate_base"
     ) {
       continue;
     }
