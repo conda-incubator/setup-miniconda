@@ -47260,6 +47260,8 @@ exports.IGNORED_WARNINGS = [
     `moving to the top`,
     // This warning has no consequence for the installation and is noisy
     `cygpath is not available, fallback to manual path conversion`,
+    // Harmless warning for older Conda versions use auto_activate instead of auto_activate_base
+    `'auto_activate': unknown parameter`,
 ];
 /**
  * Warnings that should be errors
