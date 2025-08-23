@@ -46972,6 +46972,7 @@ function applyCondaConfiguration(inputs, options) {
         catch (err) {
             try {
                 // <25.5.0
+                core.warning("Using auto_activate_base is deprecated, please use auto_activate instead");
                 yield condaCommand([
                     "config",
                     "--set",
@@ -47012,7 +47013,8 @@ function condaInit(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         let ownPath;
         const isValidActivate = !utils.isBaseEnv(inputs.activateEnvironment);
-        const autoActivateBase = options.condaConfig["auto_activate_base"] === "true";
+        const autoActivateBase = options.condaConfig["auto_activate_base"] === "true" ||
+            options.condaConfig["activate_environment"] === "base";
         // Fix ownership of folders
         if (options.useBundled) {
             if (constants.IS_MAC) {
@@ -48610,7 +48612,7 @@ function setupMiniconda(inputs) {
         yield core.group("Initializing conda shell integration...", () => conda.condaInit(inputs, options));
         // New base tools may change options
         options = yield core.group("Adding tools to 'base' env...", () => baseTools.installBaseTools(inputs, options));
-        if (inputs.activateEnvironment) {
+        if (inputs.activateEnvironment && inputs.activateEnvironment !== "base") {
             yield core.group("Ensuring environment...", () => env.ensureEnvironment(inputs, options));
         }
         if (core.getState(constants.OUTPUT_ENV_FILE_WAS_PATCHED)) {
