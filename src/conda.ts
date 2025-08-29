@@ -257,6 +257,9 @@ export async function applyCondaConfiguration(
   } catch (err) {
     try {
       // <25.5.0
+      core.warning(
+        "Using auto_activate_base is deprecated, please use auto_activate instead",
+      );
       await condaCommand(
         [
           "config",
@@ -305,7 +308,8 @@ export async function condaInit(
   let ownPath: string;
   const isValidActivate = !utils.isBaseEnv(inputs.activateEnvironment);
   const autoActivateBase: boolean =
-    options.condaConfig["auto_activate_base"] === "true";
+    options.condaConfig["auto_activate_base"] === "true" ||
+    options.condaConfig["activate_environment"] === "base";
 
   // Fix ownership of folders
   if (options.useBundled) {

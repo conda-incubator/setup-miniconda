@@ -84,7 +84,7 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     baseTools.installBaseTools(inputs, options),
   );
 
-  if (inputs.activateEnvironment) {
+  if (inputs.activateEnvironment && inputs.activateEnvironment !== "base") {
     await core.group("Ensuring environment...", () =>
       env.ensureEnvironment(inputs, options),
     );
