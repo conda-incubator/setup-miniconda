@@ -139,7 +139,7 @@ inputs:
       'Conda configuration. If you’d prefer that conda’s base environment not be
       activated on startup, set the to "false". Default is "true". This setting
       always overrides if set to "true" or "false". If you want to use the
-      "condarc-file" setting pass and empty string. See
+      "condarc-file" setting pass an empty string. See
       https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/
       for more information.'
     required: false

@@ -308,8 +308,8 @@ export async function condaInit(
   let ownPath: string;
   const isValidActivate = !utils.isBaseEnv(inputs.activateEnvironment);
   const autoActivateBase: boolean =
-    options.condaConfig["auto_activate_base"] === "true" ||
-    options.condaConfig["activate_environment"] === "base";
+    options.condaConfig.auto_activate_base === "true" ||
+    inputs.activateEnvironment === "base";
 
   // Fix ownership of folders
   if (options.useBundled) {
