@@ -46858,7 +46858,7 @@ function isDefaultEnvironment(envName, inputs, options) {
         if (config.default_activation_env) {
             return config.default_activation_env === envName;
         }
-        return !utils.isBaseEnv(envName);
+        return utils.isBaseEnv(envName);
     });
 }
 /**

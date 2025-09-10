@@ -311,7 +311,7 @@ async function isDefaultEnvironment(
   if (config.default_activation_env) {
     return config.default_activation_env === envName;
   }
-  return !utils.isBaseEnv(envName);
+  return utils.isBaseEnv(envName);
 }
 
 /**
