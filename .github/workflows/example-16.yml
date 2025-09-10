@@ -1,0 +1,126 @@
+name: "Example 16: Default environment activation"
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - default-env-condarc-test
+  schedule:
+    # Note that cronjobs run on master/main by default
+    - cron: "0 0 * * *"
+
+jobs:
+  example-16:
+    # prevent cronjobs from running on forks
+    if:
+      (github.event_name == 'schedule' && github.repository ==
+      'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
+    name:
+      Ex16 (os=${{matrix.os}}, default env=${{ matrix.add-activation-env ==
+      'true' && 'default' || 'base' }})
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        add-activation-env: ["false", "true"]
+        os: ["ubuntu", "windows"]
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Download micromamba to create installer
+        uses: mamba-org/setup-micromamba@7f29b8b80078b1b601dfa018b0f7425c587c63bb # v2.0.6
+        with:
+          init-shell: none
+          micromamba-version: "latest"
+
+      - name: Set up Miniconda for installer builds
+        uses: ./
+        with:
+          activate-environment: ""
+          auto-activate: false
+
+      - name: Create installer
+        uses: conda-incubator/installer@2d2df0b03c6795f70e128c56403c7d084cca4fb8 # v0.1.0
+        id: create-installer
+        with:
+          conda-root: ${{ env.CONDA }}
+          environment-yaml-string: |
+            channels:
+              - conda-forge
+            dependencies:
+              - constructor
+            variables:
+              ADD_ACTIVATION_ENV: '${{ matrix.add-activation-env }}'
+              EXT: ${{ matrix.os == 'windows' && 'exe' || 'sh' }}
+          input-directory: etc/example-installers/default-environment/
+
+      - name: Determine installer file name
+        id: installer-file
+        env:
+          ARTIFACTS_DIRECTORY:
+            ${{ steps.create-installer.outputs.artifacts-directory }}
+          EXT: ${{ matrix.os == 'windows' && 'exe' || 'sh' }}
+        run: |
+          INSTALLER_FILE=$(find "${ARTIFACTS_DIRECTORY}" -name "*.${EXT}" | head -n 1)
+          echo "installer-file=${INSTALLER_FILE}" >> ${GITHUB_OUTPUT}
+        shell: bash
+
+      - name: Run installation
+        uses: ./
+        with:
+          activate-environment: ""
+          auto-activate: true
+          installation-dir: ${{ runner.temp }}/installer_test
+          installer-url:
+            file://${{ steps.installer-file.outputs.installer-file }}
+
+      - name: Output conda info (bash)
+        env:
+          DEFAULT_ENV: ${{ matrix.add-activation-env && 'default' || 'base' }}
+          TEST_DIR: ${{ runner.temp }}/installer_output
+        run: |
+          mkdir -p ${TEST_DIR}
+          conda info --json > "${TEST_DIR}/bash.json"
+        shell: bash -el {0}
+
+      - name: Output conda info (cmd.exe)
+        if: matrix.os == 'windows'
+        env:
+          TEST_DIR: ${{ runner.temp }}\installer_output
+        run: |
+          type %CONDA%\condabin\conda_hook.bat
+          conda info --json > "%TEST_DIR%\cmd.exe.json"
+        shell: cmd /C CALL {0}
+
+      - name: Output conda info (PowerShell)
+        if: matrix.os == 'windows'
+        env:
+          TEST_DIR: ${{ runner.temp }}\installer_output
+        run: conda info --json > "${env:TEST_DIR}\pwsh.json"
+        shell: pwsh
+
+      - name: Test default environments
+        env:
+          DEFAULT_ENV:
+            ${{ matrix.add-activation-env == 'true' && 'default' || 'base' }}
+          TEST_DIR: ${{ runner.temp }}/installer_output
+        run: |
+          import json
+          import os
+          from pathlib import Path
+          json_dir = Path(os.environ["TEST_DIR"])
+          default_env_expected = os.environ["DEFAULT_ENV"]
+          incorrect_environments = {}
+          for file in json_dir.iterdir():
+              conda_info = json.loads(file.read_text())
+              default_env = conda_info.get("active_prefix_name")
+              if default_env != default_env_expected:
+                incorrect_environments[str(file.name).removesuffix(".json")] = default_env
+          if incorrect_environments:
+              raise AssertionError(
+                  f"Found incorrect default environments: {incorrect_environments}"
+              )
+        shell: python
