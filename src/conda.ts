@@ -329,6 +329,7 @@ export async function condaInit(
   ));
   const autoActivateDefault: boolean =
     options.condaConfig.auto_activate === "true";
+  const installationDirectory = condaBasePath(inputs, options);
 
   // Fix ownership of folders
   if (options.useBundled) {
@@ -435,7 +436,6 @@ export async function condaInit(
   @SETLOCAL DisableDelayedExpansion
   :: ---------------------------------------------------------------------------`;
 
-  let extraShells: types.IShells;
   const shells: types.IShells = {
     "~/.bash_profile": bashExtraText,
     "~/.profile": bashExtraText,
@@ -446,24 +446,16 @@ export async function condaInit(
     "~/.config/powershell/profile.ps1": powerExtraText,
     "~/Documents/PowerShell/profile.ps1": powerExtraText,
     "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
+    [path.join(installationDirectory, "etc", "profile.d", "conda.sh")]:
+      bashExtraText,
+    [path.join(installationDirectory, "etc", "fish", "conf.d", "conda.fish")]:
+      bashExtraText,
+    [path.join(installationDirectory, "condabin", "conda_hook.bat")]:
+      batchExtraText,
   };
-  if (options.useBundled) {
-    extraShells = {
-      "C:/Miniconda/etc/profile.d/conda.sh": bashExtraText,
-      "C:/Miniconda/etc/fish/conf.d/conda.fish": bashExtraText,
-      "C:/Miniconda/condabin/conda_hook.bat": batchExtraText,
-    };
-  } else {
-    extraShells = {
-      "~/miniconda3/etc/profile.d/conda.sh": bashExtraText,
-      "~/miniconda3/etc/fish/conf.d/conda.fish": bashExtraText,
-      "~/miniconda3/condabin/conda_hook.bat": batchExtraText,
-    };
-  }
-  const allShells: types.IShells = { ...shells, ...extraShells };
-  Object.keys(allShells).forEach((key) => {
+  Object.keys(shells).forEach((key) => {
     let filePath: string = key.replace("~", os.homedir());
-    const text = allShells[key];
+    const text = shells[key];
     if (fs.existsSync(filePath)) {
       core.info(`Append to "${filePath}":\n ${text} \n`);
       fs.appendFileSync(filePath, text);
