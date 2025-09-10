@@ -185,8 +185,8 @@ Miniconda installation.
 
 ### Activate `base` environment
 
-If your specific workflow still needs to activate and use the default environment,
-you will need to do **both**:
+If your specific workflow still needs to activate and use the default
+environment, you will need to do **both**:
 
 - set `activate-environment` to an empty string
 - set `auto-activate` to `true`
