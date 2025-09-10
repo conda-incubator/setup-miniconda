@@ -241,31 +241,23 @@ export async function applyCondaConfiguration(
     );
   }
   // auto_activate_base was renamed to auto_activate in 25.5.0
-  core.info(`auto_activate: ${inputs.condaConfig.auto_activate_base}`);
+  core.info(`auto_activate: ${inputs.condaConfig.auto_activate}`);
   try {
     // 25.5.0+
     await condaCommand(
-      [
-        "config",
-        "--set",
-        "auto_activate",
-        inputs.condaConfig.auto_activate_base,
-      ],
+      ["config", "--set", "auto_activate", inputs.condaConfig.auto_activate],
       inputs,
       options,
     );
   } catch (err) {
     try {
       // <25.5.0
-      core.warning(
-        "Using auto_activate_base is deprecated, please use auto_activate instead",
-      );
       await condaCommand(
         [
           "config",
           "--set",
           "auto_activate_base",
-          inputs.condaConfig.auto_activate_base,
+          inputs.condaConfig.auto_activate,
         ],
         inputs,
         options,
@@ -281,7 +273,7 @@ export async function applyCondaConfiguration(
       value.trim().length === 0 ||
       key === "channels" ||
       key === "pkgs_dirs" ||
-      key === "auto_activate_base"
+      key === "auto_activate"
     ) {
       continue;
     }

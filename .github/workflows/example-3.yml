@@ -38,7 +38,7 @@ jobs:
           environment-file: etc/example-environment.yml
           python-version: 3.8
           condarc-file: etc/example-condarc.yml
-          auto-activate-base: false
+          auto-activate: false
           auto-update-conda: true
       - run: |
           conda info
@@ -60,7 +60,7 @@ jobs:
           environment-file: etc/example-environment-no-name.yml
           python-version: 3.8
           condarc-file: etc/example-condarc.yml
-          auto-activate-base: false
+          auto-activate: false
           auto-update-conda: true
       - run: |
           conda info
