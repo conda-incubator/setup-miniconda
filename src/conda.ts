@@ -290,6 +290,30 @@ export async function applyCondaConfiguration(
   await condaCommand(["config", "--show"], inputs, options);
 }
 
+/*
+ * Whether an environment is the default environment
+ */
+async function isDefaultEnvironment(
+  envName: string,
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions,
+): Promise<boolean> {
+  if (envName === "") {
+    return false;
+  }
+  const configsOutput = (await condaCommand(
+    ["config", "--show", "--json"],
+    inputs,
+    options,
+    true,
+  )) as string;
+  const config = JSON.parse(configsOutput) as types.ICondaConfig;
+  if (config.default_activation_env) {
+    return config.default_activation_env === envName;
+  }
+  return !utils.isBaseEnv(envName);
+}
+
 /**
  * Initialize Conda
  */
@@ -298,10 +322,13 @@ export async function condaInit(
   options: types.IDynamicOptions,
 ): Promise<void> {
   let ownPath: string;
-  const isValidActivate = !utils.isBaseEnv(inputs.activateEnvironment);
-  const autoActivateBase: boolean =
-    options.condaConfig.auto_activate_base === "true" ||
-    inputs.activateEnvironment === "base";
+  const isValidActivate = !(await isDefaultEnvironment(
+    inputs.activateEnvironment,
+    inputs,
+    options,
+  ));
+  const autoActivateDefault: boolean =
+    options.condaConfig.auto_activate === "true";
 
   // Fix ownership of folders
   if (options.useBundled) {
@@ -392,10 +419,10 @@ export async function condaInit(
   // Batch profiles
   let batchExtraText = `
   :: ---------------------------------------------------------------------------`;
-  if (autoActivateBase) {
+  if (autoActivateDefault) {
     batchExtraText += `
-  :: Conda Setup Action: Activate base
-  @CALL "%CONDA_BAT%" activate base`;
+  :: Conda Setup Action: Activate default environment
+  @CALL "%CONDA_BAT%" activate`;
   }
   if (isValidActivate) {
     batchExtraText += `

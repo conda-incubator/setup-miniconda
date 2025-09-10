@@ -129,6 +129,7 @@ export async function parseInputs(): Promise<types.IActionInputs> {
       channel_alias: core.getInput("channel-alias"),
       channel_priority: core.getInput("channel-priority"),
       channels: core.getInput("channels"),
+      default_activation_env: "", // Needed for type definition
       show_channel_urls: core.getInput("show-channel-urls"),
       use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
       solver: core.getInput("conda-solver"),

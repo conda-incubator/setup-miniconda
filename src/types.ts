@@ -61,6 +61,7 @@ export interface ICondaConfig {
   channel_alias: string;
   channel_priority: string;
   channels: string;
+  default_activation_env: string;
   show_channel_urls: string;
   use_only_tar_bz2: string;
   always_yes: string;
