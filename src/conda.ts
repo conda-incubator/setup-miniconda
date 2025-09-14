@@ -241,31 +241,23 @@ export async function applyCondaConfiguration(
     );
   }
   // auto_activate_base was renamed to auto_activate in 25.5.0
-  core.info(`auto_activate: ${inputs.condaConfig.auto_activate_base}`);
+  core.info(`auto_activate: ${inputs.condaConfig.auto_activate}`);
   try {
     // 25.5.0+
     await condaCommand(
-      [
-        "config",
-        "--set",
-        "auto_activate",
-        inputs.condaConfig.auto_activate_base,
-      ],
+      ["config", "--set", "auto_activate", inputs.condaConfig.auto_activate],
       inputs,
       options,
     );
   } catch (err) {
     try {
       // <25.5.0
-      core.warning(
-        "Using auto_activate_base is deprecated, please use auto_activate instead",
-      );
       await condaCommand(
         [
           "config",
           "--set",
           "auto_activate_base",
-          inputs.condaConfig.auto_activate_base,
+          inputs.condaConfig.auto_activate,
         ],
         inputs,
         options,
@@ -281,7 +273,7 @@ export async function applyCondaConfiguration(
       value.trim().length === 0 ||
       key === "channels" ||
       key === "pkgs_dirs" ||
-      key === "auto_activate_base"
+      key === "auto_activate"
     ) {
       continue;
     }
@@ -298,6 +290,30 @@ export async function applyCondaConfiguration(
   await condaCommand(["config", "--show"], inputs, options);
 }
 
+/*
+ * Whether an environment is the default environment
+ */
+async function isDefaultEnvironment(
+  envName: string,
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions,
+): Promise<boolean> {
+  if (envName === "") {
+    return false;
+  }
+  const configsOutput = (await condaCommand(
+    ["config", "--show", "--json"],
+    inputs,
+    options,
+    true,
+  )) as string;
+  const config = JSON.parse(configsOutput) as types.ICondaConfig;
+  if (config.default_activation_env) {
+    return config.default_activation_env === envName;
+  }
+  return utils.isBaseEnv(envName);
+}
+
 /**
  * Initialize Conda
  */
@@ -306,10 +322,14 @@ export async function condaInit(
   options: types.IDynamicOptions,
 ): Promise<void> {
   let ownPath: string;
-  const isValidActivate = !utils.isBaseEnv(inputs.activateEnvironment);
-  const autoActivateBase: boolean =
-    options.condaConfig["auto_activate_base"] === "true" ||
-    options.condaConfig["activate_environment"] === "base";
+  const isValidActivate = !(await isDefaultEnvironment(
+    inputs.activateEnvironment,
+    inputs,
+    options,
+  ));
+  const autoActivateDefault: boolean =
+    options.condaConfig.auto_activate === "true";
+  const installationDirectory = condaBasePath(inputs, options);
 
   // Fix ownership of folders
   if (options.useBundled) {
@@ -400,10 +420,10 @@ export async function condaInit(
   // Batch profiles
   let batchExtraText = `
   :: ---------------------------------------------------------------------------`;
-  if (autoActivateBase) {
+  if (autoActivateDefault) {
     batchExtraText += `
-  :: Conda Setup Action: Activate base
-  @CALL "%CONDA_BAT%" activate base`;
+  :: Conda Setup Action: Activate default environment
+  @CALL "%CONDA_BAT%" activate`;
   }
   if (isValidActivate) {
     batchExtraText += `
@@ -416,7 +436,6 @@ export async function condaInit(
   @SETLOCAL DisableDelayedExpansion
   :: ---------------------------------------------------------------------------`;
 
-  let extraShells: types.IShells;
   const shells: types.IShells = {
     "~/.bash_profile": bashExtraText,
     "~/.profile": bashExtraText,
@@ -427,24 +446,16 @@ export async function condaInit(
     "~/.config/powershell/profile.ps1": powerExtraText,
     "~/Documents/PowerShell/profile.ps1": powerExtraText,
     "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
+    [path.join(installationDirectory, "etc", "profile.d", "conda.sh")]:
+      bashExtraText,
+    [path.join(installationDirectory, "etc", "fish", "conf.d", "conda.fish")]:
+      bashExtraText,
+    [path.join(installationDirectory, "condabin", "conda_hook.bat")]:
+      batchExtraText,
   };
-  if (options.useBundled) {
-    extraShells = {
-      "C:/Miniconda/etc/profile.d/conda.sh": bashExtraText,
-      "C:/Miniconda/etc/fish/conf.d/conda.fish": bashExtraText,
-      "C:/Miniconda/condabin/conda_hook.bat": batchExtraText,
-    };
-  } else {
-    extraShells = {
-      "~/miniconda3/etc/profile.d/conda.sh": bashExtraText,
-      "~/miniconda3/etc/fish/conf.d/conda.fish": bashExtraText,
-      "~/miniconda3/condabin/conda_hook.bat": batchExtraText,
-    };
-  }
-  const allShells: types.IShells = { ...shells, ...extraShells };
-  Object.keys(allShells).forEach((key) => {
+  Object.keys(shells).forEach((key) => {
     let filePath: string = key.replace("~", os.homedir());
-    const text = allShells[key];
+    const text = shells[key];
     if (fs.existsSync(filePath)) {
       core.info(`Append to "${filePath}":\n ${text} \n`);
       fs.appendFileSync(filePath, text);

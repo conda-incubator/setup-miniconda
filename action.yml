@@ -134,16 +134,27 @@ inputs:
       for more information.'
     required: false
     default: ""
-  auto-activate-base:
+  auto-activate:
     description:
-      'Conda configuration. If you’d prefer that conda’s base environment not be
-      activated on startup, set the to "false". Default is "true". This setting
-      always overrides if set to "true" or "false". If you want to use the
-      "condarc-file" setting pass and empty string. See
+      'Conda configuration. If you’d prefer that conda’s default environment not
+      be activated on startup, set the to "false". Default is "true". This
+      setting always overrides if set to "true" or "false". If you want to use
+      the "condarc-file" setting pass an empty string. See
       https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/
       for more information.'
     required: false
     default: "true"
+  auto-activate-base:
+    description:
+      (deprecated in favor of `auto-activate`) 'Conda configuration. If you’d
+      prefer that conda’s base environment not be activated on startup, set the
+      to "false". Default is "true". This setting always overrides if set to
+      "true" or "false". If you want to use the "condarc-file" setting pass an
+      empty string. See
+      https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/
+      for more information.'
+    required: false
+    default: "legacy-placeholder"
   auto-update-conda:
     description:
       'Conda configuration. When "true", conda updates itself any time a user

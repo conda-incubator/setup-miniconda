@@ -61,6 +61,7 @@ possibility of automatically activating the `test` environment on all shells.
 | [Apple Silicon](#example-13-apple-silicon)                         | [![Apple Silicon][ex13-badge]][ex13]                            |
 | [Remove defaults](#example-14-remove-defaults-channel)             | [![Remove defaults][ex14-badge]][ex14]                          |
 | [Linux ARM](#example-15-linux-arm)                                 | [![Linux ARM][ex15-badge]][ex15]                                |
+| Default environments                                               | [![Default environments][ex16-badge]][ex16]                     |
 
 [ex1]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml
@@ -122,6 +123,10 @@ possibility of automatically activating the `test` environment on all shells.
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-15.yml
 [ex15-badge]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-15.yml/badge.svg?branch=main
+[ex16]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-16.yml
+[ex16-badge]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-16.yml/badge.svg?branch=main
 
 ## Other Workflows
 
@@ -180,16 +185,16 @@ Miniconda installation.
 
 ### Activate `base` environment
 
-If your specific workflow still needs to activate and use `base` you will need
-to do **both** of:
+If your specific workflow still needs to activate and use the default
+environment, you will need to do **both**:
 
 - set `activate-environment` to an empty string
-- set `auto-activate-base` to `true`
+- set `auto-activate` to `true`
 
 ```yaml
 - uses: conda-incubator/setup-miniconda@v3
   with:
-    auto-activate-base: true
+    auto-activate: true
     activate-environment: ""
 ```
 
@@ -330,7 +335,7 @@ jobs:
           environment-file: etc/example-environment.yml
           python-version: 3.5
           condarc-file: etc/example-condarc.yml
-          auto-activate-base: false
+          auto-activate: false
       - run: |
           conda info
           conda list
