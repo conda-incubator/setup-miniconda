@@ -78,6 +78,10 @@ jobs:
         add-activation-env: ["false", "true"]
         os: ["ubuntu", "windows"]
     steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
       - name: Obtain artifact
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
@@ -92,7 +96,6 @@ jobs:
           ARTIFACTS_DIRECTORY: ${{ runner.temp }}/_installer
           EXT: ${{ matrix.os == 'windows' && 'exe' || 'sh' }}
         run: |
-          [[ "$(uname)" == MINGW* ]] && ARTIFACTS_DIRECTORY=$(cygpath "${ARTIFACTS_DIRECTORY}")
           INSTALLER_FILE=$(find "${ARTIFACTS_DIRECTORY}" -name "*.${EXT}" | head -n 1)
           echo "installer-file=${INSTALLER_FILE}" >> ${GITHUB_OUTPUT}
         shell: bash
