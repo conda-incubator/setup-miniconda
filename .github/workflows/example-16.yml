@@ -10,14 +10,14 @@ on:
     - cron: "0 0 * * *"
 
 jobs:
-  example-16:
+  example-16-build:
     # prevent cronjobs from running on forks
     if:
       (github.event_name == 'schedule' && github.repository ==
       'conda-incubator/setup-miniconda') || (github.event_name != 'schedule')
     name:
-      Ex16 (os=${{matrix.os}}, default env=${{ matrix.add-activation-env ==
-      'true' && 'default' || 'base' }})
+      Build Ex16 (os=${{matrix.os}}, default env=${{ matrix.add-activation-env
+      == 'true' && 'default' || 'base' }})
     runs-on: ${{ matrix.os }}-latest
     strategy:
       fail-fast: false
@@ -56,13 +56,43 @@ jobs:
               EXT: ${{ matrix.os == 'windows' && 'exe' || 'sh' }}
           input-directory: etc/example-installers/default-environment/
 
+      - name: Upload installer to Github artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          path: ${{ steps.create-installer.outputs.artifacts-directory }}/*
+          name:
+            ex16-${{ matrix.os }}-${{ matrix.add-activation-env == 'false' &&
+            'no-' }}-activation-env
+
+  example-16-test:
+    needs: [example-16-build]
+    name:
+      Test Ex16 (os=${{matrix.os}}, default env=${{ matrix.add-activation-env ==
+      'true' && 'default' || 'base' }}, auto-activate-base=${{
+      matrix.auto-activate-base }})
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        auto-activate-base: ["false", "true"]
+        add-activation-env: ["false", "true"]
+        os: ["ubuntu", "windows"]
+    steps:
+      - name: Obtain artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name:
+            ex16-${{ matrix.os }}-${{ matrix.add-activation-env == 'false' &&
+            'no-' }}-activation-env
+          path: ${{ runner.temp }}/_installer
+
       - name: Determine installer file name
         id: installer-file
         env:
-          ARTIFACTS_DIRECTORY:
-            ${{ steps.create-installer.outputs.artifacts-directory }}
+          ARTIFACTS_DIRECTORY: ${{ runner.temp }}/_installer
           EXT: ${{ matrix.os == 'windows' && 'exe' || 'sh' }}
         run: |
+          [[ "$(uname)" == MINGW* ]] && ARTIFACTS_DIRECTORY=$(cygpath "${ARTIFACTS_DIRECTORY}")
           INSTALLER_FILE=$(find "${ARTIFACTS_DIRECTORY}" -name "*.${EXT}" | head -n 1)
           echo "installer-file=${INSTALLER_FILE}" >> ${GITHUB_OUTPUT}
         shell: bash
@@ -71,7 +101,11 @@ jobs:
         uses: ./
         with:
           activate-environment: ""
-          auto-activate: true
+          auto-activate-base:
+            ${{ matrix.auto-activate-base == 'true' && 'true' ||
+            'legacy-placeholder' }}
+          auto-activate:
+            ${{ matrix.auto-activate-base == 'true' && '' || 'true' }}
           installation-dir: ${{ runner.temp }}/installer_test
           installer-url:
             file://${{ steps.installer-file.outputs.installer-file }}
@@ -90,7 +124,6 @@ jobs:
         env:
           TEST_DIR: ${{ runner.temp }}\installer_output
         run: |
-          type %CONDA%\condabin\conda_hook.bat
           conda info --json > "%TEST_DIR%\cmd.exe.json"
         shell: cmd /C CALL {0}
 
@@ -104,12 +137,14 @@ jobs:
       - name: Test default environments
         env:
           DEFAULT_ENV:
-            ${{ matrix.add-activation-env == 'true' && 'default' || 'base' }}
+            ${{ matrix.add-activation-env == 'true' && matrix.auto-activate-base
+            == 'false' && 'default' || 'base' }}
           TEST_DIR: ${{ runner.temp }}/installer_output
         run: |
           import json
           import os
           from pathlib import Path
+
           json_dir = Path(os.environ["TEST_DIR"])
           default_env_expected = os.environ["DEFAULT_ENV"]
           incorrect_environments = {}
@@ -117,7 +152,7 @@ jobs:
               conda_info = json.loads(file.read_text())
               default_env = conda_info.get("active_prefix_name")
               if default_env != default_env_expected:
-                incorrect_environments[str(file.name).removesuffix(".json")] = default_env
+                  incorrect_environments[str(file.name).removesuffix(".json")] = default_env
           if incorrect_environments:
               raise AssertionError(
                   f"Found incorrect default environments: {incorrect_environments}"

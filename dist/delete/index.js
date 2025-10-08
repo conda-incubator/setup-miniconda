@@ -28694,10 +28694,15 @@ function parseInputs() {
             arch = "aarch64";
         }
         if (core.getInput("auto-activate-base") !== "legacy-placeholder") {
-            core.warning("`auto-activate-base` is deprecated. Please use `auto-activate`.");
+            core.warning("`auto-activate-base` is deprecated. Please use `auto-activate`. " +
+                "If your installer does not use the `base` environment as the default environment, " +
+                "also add `activate-environment: base`.");
         }
         const inputs = Object.freeze({
-            activateEnvironment: core.getInput("activate-environment"),
+            activateEnvironment: core.getInput("auto-activate-base") === "true" &&
+                core.getInput("activate-environment") === ""
+                ? "base"
+                : core.getInput("activate-environment"),
             architecture: arch,
             condaBuildVersion: core.getInput("conda-build-version"),
             condaConfigFile: core.getInput("condarc-file"),
