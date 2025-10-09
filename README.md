@@ -524,7 +524,7 @@ jobs:
 ```
 
 In addition to `Miniforge3` with `conda`, `mamba` and `CPython`, you can also
-install `Miniforge-pypy3`, which replaces `CPython` with `PyPy.
+install `Miniforge-pypy3`, which replaces `CPython` with `PyPy`.
 
 > [!TIP] You can customize the installation directory via the `installation-dir`
 > option.
