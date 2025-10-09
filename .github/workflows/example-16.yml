@@ -29,12 +29,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Download micromamba to create installer
-        uses: mamba-org/setup-micromamba@7f29b8b80078b1b601dfa018b0f7425c587c63bb # v2.0.6
-        with:
-          init-shell: none
-          micromamba-version: "latest"
-
       - name: Set up Miniconda for installer builds
         uses: ./
         with:
