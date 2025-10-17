@@ -28667,7 +28667,7 @@ const RULES = [
     (i, c) => !!(i.condaVersion && c.auto_update_conda === "true") &&
         `only one of 'conda-version: ${i.condaVersion}' or 'auto-update-conda: true' may be provided`,
     (i) => !!(i.pythonVersion && !i.activateEnvironment) &&
-        `'python-version: ${i.pythonVersion}' requires 'activate-environment: true'`,
+        `'python-version: ${i.pythonVersion}' requires 'activate-environment' to be set`,
     (i) => !!(i.minicondaVersion && i.miniforgeVersion) &&
         `only one of 'miniconda-version: ${i.minicondaVersion}' or 'miniforge-version: ${i.miniforgeVersion}' may be provided`,
     (i) => !!(i.installerUrl && i.minicondaVersion) &&
@@ -28693,8 +28693,16 @@ function parseInputs() {
             // https://github.com/conda-incubator/setup-miniconda/issues/385
             arch = "aarch64";
         }
+        if (core.getInput("auto-activate-base") !== "legacy-placeholder") {
+            core.warning("`auto-activate-base` is deprecated. Please use `auto-activate`. " +
+                "If your installer does not use the `base` environment as the default environment, " +
+                "also add `activate-environment: base`.");
+        }
         const inputs = Object.freeze({
-            activateEnvironment: core.getInput("activate-environment"),
+            activateEnvironment: core.getInput("auto-activate-base") === "true" &&
+                core.getInput("activate-environment") === ""
+                ? "base"
+                : core.getInput("activate-environment"),
             architecture: arch,
             condaBuildVersion: core.getInput("conda-build-version"),
             condaConfigFile: core.getInput("condarc-file"),
@@ -28714,11 +28722,14 @@ function parseInputs() {
                 add_anaconda_token: core.getInput("add-anaconda-token"),
                 add_pip_as_python_dependency: core.getInput("add-pip-as-python-dependency"),
                 allow_softlinks: core.getInput("allow-softlinks"),
-                auto_activate_base: core.getInput("auto-activate-base"),
+                auto_activate: core.getInput("auto-activate-base") === "legacy-placeholder"
+                    ? core.getInput("auto-activate")
+                    : core.getInput("auto-activate-base"),
                 auto_update_conda: core.getInput("auto-update-conda"),
                 channel_alias: core.getInput("channel-alias"),
                 channel_priority: core.getInput("channel-priority"),
                 channels: core.getInput("channels"),
+                default_activation_env: "", // Needed for type definition
                 show_channel_urls: core.getInput("show-channel-urls"),
                 use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
                 solver: core.getInput("conda-solver"),

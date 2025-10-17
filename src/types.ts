@@ -56,11 +56,12 @@ export interface ICondaConfig {
   add_anaconda_token: string;
   add_pip_as_python_dependency: string;
   allow_softlinks: string;
-  auto_activate_base: string;
+  auto_activate: string;
   auto_update_conda: string;
   channel_alias: string;
   channel_priority: string;
   channels: string;
+  default_activation_env: string;
   show_channel_urls: string;
   use_only_tar_bz2: string;
   always_yes: string;
