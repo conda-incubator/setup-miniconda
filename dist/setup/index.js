@@ -47000,6 +47000,20 @@ function applyCondaConfiguration(inputs, options) {
     });
 }
 exports.applyCondaConfiguration = applyCondaConfiguration;
+function _getFullEnvironmentPath(inputPathOrName, inputs, options) {
+    if (!inputPathOrName.includes("/")) {
+        // likely an environment name
+        const installationDirectory = condaBasePath(inputs, options);
+        if (utils.isBaseEnv(inputPathOrName)) {
+            return path.resolve(installationDirectory);
+        }
+        return path.resolve(installationDirectory, "envs", inputPathOrName);
+    }
+    if (inputPathOrName.startsWith("~/")) {
+        return path.resolve(os.homedir(), inputPathOrName.slice(2));
+    }
+    return path.resolve(inputPathOrName);
+}
 /*
  * Whether an environment is the default environment
  */
@@ -47011,7 +47025,9 @@ function isDefaultEnvironment(envName, inputs, options) {
         const configsOutput = (yield condaCommand(["config", "--show", "--json"], inputs, options, true));
         const config = JSON.parse(configsOutput);
         if (config.default_activation_env) {
-            return config.default_activation_env === envName;
+            const defaultEnv = _getFullEnvironmentPath(config.default_activation_env, inputs, options);
+            const activationEnv = _getFullEnvironmentPath(envName, inputs, options);
+            return defaultEnv === activationEnv;
         }
         return utils.isBaseEnv(envName);
     });
