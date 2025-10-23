@@ -1,0 +1,20 @@
+{% set ext = os.environ.get("EXT", "sh") %}
+{% set add_default_activation_env = os.environ.get("ADD_ACTIVATION_ENV", "false") == "true" %}
+
+name: DefaultEnv
+installer_type: {{ ext }}
+version: 1.0.0
+channels:
+  - conda-forge
+specs:
+  - conda >=25.5.0
+extra_envs:
+  default:
+    specs:
+      - python
+condarc:
+  channels:
+    - conda-forge
+{% if add_default_activation_env %}
+  default_activation_env: default
+{% endif %}

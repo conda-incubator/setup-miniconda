@@ -46959,25 +46959,19 @@ function applyCondaConfiguration(inputs, options) {
             yield condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], inputs, options);
         }
         // auto_activate_base was renamed to auto_activate in 25.5.0
-        core.info(`auto_activate: ${inputs.condaConfig.auto_activate_base}`);
+        core.info(`auto_activate: ${inputs.condaConfig.auto_activate}`);
         try {
             // 25.5.0+
-            yield condaCommand([
-                "config",
-                "--set",
-                "auto_activate",
-                inputs.condaConfig.auto_activate_base,
-            ], inputs, options);
+            yield condaCommand(["config", "--set", "auto_activate", inputs.condaConfig.auto_activate], inputs, options);
         }
         catch (err) {
             try {
                 // <25.5.0
-                core.warning("Using auto_activate_base is deprecated, please use auto_activate instead");
                 yield condaCommand([
                     "config",
                     "--set",
                     "auto_activate_base",
-                    inputs.condaConfig.auto_activate_base,
+                    inputs.condaConfig.auto_activate,
                 ], inputs, options);
             }
             catch (err2) {
@@ -46989,7 +46983,7 @@ function applyCondaConfiguration(inputs, options) {
             if (value.trim().length === 0 ||
                 key === "channels" ||
                 key === "pkgs_dirs" ||
-                key === "auto_activate_base") {
+                key === "auto_activate") {
                 continue;
             }
             core.info(`${key}: ${value}`);
@@ -47006,15 +47000,47 @@ function applyCondaConfiguration(inputs, options) {
     });
 }
 exports.applyCondaConfiguration = applyCondaConfiguration;
+function _getFullEnvironmentPath(inputPathOrName, inputs, options) {
+    if (!inputPathOrName.includes("/")) {
+        // likely an environment name
+        const installationDirectory = condaBasePath(inputs, options);
+        if (utils.isBaseEnv(inputPathOrName)) {
+            return path.resolve(installationDirectory);
+        }
+        return path.resolve(installationDirectory, "envs", inputPathOrName);
+    }
+    if (inputPathOrName.startsWith("~/")) {
+        return path.resolve(os.homedir(), inputPathOrName.slice(2));
+    }
+    return path.resolve(inputPathOrName);
+}
+/*
+ * Whether an environment is the default environment
+ */
+function isDefaultEnvironment(envName, inputs, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (envName === "") {
+            return false;
+        }
+        const configsOutput = (yield condaCommand(["config", "--show", "--json"], inputs, options, true));
+        const config = JSON.parse(configsOutput);
+        if (config.default_activation_env) {
+            const defaultEnv = _getFullEnvironmentPath(config.default_activation_env, inputs, options);
+            const activationEnv = _getFullEnvironmentPath(envName, inputs, options);
+            return defaultEnv === activationEnv;
+        }
+        return utils.isBaseEnv(envName);
+    });
+}
 /**
  * Initialize Conda
  */
 function condaInit(inputs, options) {
     return __awaiter(this, void 0, void 0, function* () {
         let ownPath;
-        const isValidActivate = !utils.isBaseEnv(inputs.activateEnvironment);
-        const autoActivateBase = options.condaConfig["auto_activate_base"] === "true" ||
-            options.condaConfig["activate_environment"] === "base";
+        const isValidActivate = !(yield isDefaultEnvironment(inputs.activateEnvironment, inputs, options));
+        const autoActivateDefault = options.condaConfig.auto_activate === "true";
+        const installationDirectory = condaBasePath(inputs, options);
         // Fix ownership of folders
         if (options.useBundled) {
             if (constants.IS_MAC) {
@@ -47101,10 +47127,10 @@ function condaInit(inputs, options) {
         // Batch profiles
         let batchExtraText = `
   :: ---------------------------------------------------------------------------`;
-        if (autoActivateBase) {
+        if (autoActivateDefault) {
             batchExtraText += `
-  :: Conda Setup Action: Activate base
-  @CALL "%CONDA_BAT%" activate base`;
+  :: Conda Setup Action: Activate default environment
+  @CALL "%CONDA_BAT%" activate`;
         }
         if (isValidActivate) {
             batchExtraText += `
@@ -47116,7 +47142,6 @@ function condaInit(inputs, options) {
   @SETLOCAL EnableExtensions
   @SETLOCAL DisableDelayedExpansion
   :: ---------------------------------------------------------------------------`;
-        let extraShells;
         const shells = {
             "~/.bash_profile": bashExtraText,
             "~/.profile": bashExtraText,
@@ -47127,25 +47152,13 @@ function condaInit(inputs, options) {
             "~/.config/powershell/profile.ps1": powerExtraText,
             "~/Documents/PowerShell/profile.ps1": powerExtraText,
             "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
+            [path.join(installationDirectory, "etc", "profile.d", "conda.sh")]: bashExtraText,
+            [path.join(installationDirectory, "etc", "fish", "conf.d", "conda.fish")]: bashExtraText,
+            [path.join(installationDirectory, "condabin", "conda_hook.bat")]: batchExtraText,
         };
-        if (options.useBundled) {
-            extraShells = {
-                "C:/Miniconda/etc/profile.d/conda.sh": bashExtraText,
-                "C:/Miniconda/etc/fish/conf.d/conda.fish": bashExtraText,
-                "C:/Miniconda/condabin/conda_hook.bat": batchExtraText,
-            };
-        }
-        else {
-            extraShells = {
-                "~/miniconda3/etc/profile.d/conda.sh": bashExtraText,
-                "~/miniconda3/etc/fish/conf.d/conda.fish": bashExtraText,
-                "~/miniconda3/condabin/conda_hook.bat": batchExtraText,
-            };
-        }
-        const allShells = Object.assign(Object.assign({}, shells), extraShells);
-        Object.keys(allShells).forEach((key) => {
+        Object.keys(shells).forEach((key) => {
             let filePath = key.replace("~", os.homedir());
-            const text = allShells[key];
+            const text = shells[key];
             if (fs.existsSync(filePath)) {
                 core.info(`Append to "${filePath}":\n ${text} \n`);
                 fs.appendFileSync(filePath, text);
@@ -47795,7 +47808,7 @@ const RULES = [
     (i, c) => !!(i.condaVersion && c.auto_update_conda === "true") &&
         `only one of 'conda-version: ${i.condaVersion}' or 'auto-update-conda: true' may be provided`,
     (i) => !!(i.pythonVersion && !i.activateEnvironment) &&
-        `'python-version: ${i.pythonVersion}' requires 'activate-environment: true'`,
+        `'python-version: ${i.pythonVersion}' requires 'activate-environment' to be set`,
     (i) => !!(i.minicondaVersion && i.miniforgeVersion) &&
         `only one of 'miniconda-version: ${i.minicondaVersion}' or 'miniforge-version: ${i.miniforgeVersion}' may be provided`,
     (i) => !!(i.installerUrl && i.minicondaVersion) &&
@@ -47821,8 +47834,16 @@ function parseInputs() {
             // https://github.com/conda-incubator/setup-miniconda/issues/385
             arch = "aarch64";
         }
+        if (core.getInput("auto-activate-base") !== "legacy-placeholder") {
+            core.warning("`auto-activate-base` is deprecated. Please use `auto-activate`. " +
+                "If your installer does not use the `base` environment as the default environment, " +
+                "also add `activate-environment: base`.");
+        }
         const inputs = Object.freeze({
-            activateEnvironment: core.getInput("activate-environment"),
+            activateEnvironment: core.getInput("auto-activate-base") === "true" &&
+                core.getInput("activate-environment") === ""
+                ? "base"
+                : core.getInput("activate-environment"),
             architecture: arch,
             condaBuildVersion: core.getInput("conda-build-version"),
             condaConfigFile: core.getInput("condarc-file"),
@@ -47842,11 +47863,14 @@ function parseInputs() {
                 add_anaconda_token: core.getInput("add-anaconda-token"),
                 add_pip_as_python_dependency: core.getInput("add-pip-as-python-dependency"),
                 allow_softlinks: core.getInput("allow-softlinks"),
-                auto_activate_base: core.getInput("auto-activate-base"),
+                auto_activate: core.getInput("auto-activate-base") === "legacy-placeholder"
+                    ? core.getInput("auto-activate")
+                    : core.getInput("auto-activate-base"),
                 auto_update_conda: core.getInput("auto-update-conda"),
                 channel_alias: core.getInput("channel-alias"),
                 channel_priority: core.getInput("channel-priority"),
                 channels: core.getInput("channels"),
+                default_activation_env: "", // Needed for type definition
                 show_channel_urls: core.getInput("show-channel-urls"),
                 use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
                 solver: core.getInput("conda-solver"),
