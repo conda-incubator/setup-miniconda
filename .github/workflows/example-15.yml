@@ -27,7 +27,7 @@ jobs:
         os: ["ubuntu-24.04-arm"]
         variant: ["Miniforge3", "Miniconda", "no-variant", "empty-with"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: ./
         if: matrix.variant == 'Miniforge3'
         id: setup-miniforge
