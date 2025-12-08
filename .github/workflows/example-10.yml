@@ -34,7 +34,7 @@ jobs:
       matrix:
         os: ["ubuntu", "macos", "windows"]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.1
       - uses: ./
         id: setup-miniconda
         with:
@@ -61,7 +61,7 @@ jobs:
       matrix:
         os: ["ubuntu", "macos", "windows"]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.1
       - uses: ./
         id: setup-miniconda
         with:
