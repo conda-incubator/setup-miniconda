@@ -33,7 +33,7 @@ jobs:
         python-version: ["3.8", "3.11"]
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.1
       - uses: ./
         id: setup-miniconda
         continue-on-error: true

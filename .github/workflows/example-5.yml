@@ -33,7 +33,7 @@ jobs:
         shell: bash -el {0}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.1
       - run: |
           curl -L ${MINIFORGE_URL} > /tmp/some-built-installer-${{ github.run_number }}.sh
       - uses: ./
@@ -58,7 +58,7 @@ jobs:
         shell: bash -el {0}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.1
       - uses: ./
         with:
           installer-url: https://github.com/conda-forge/miniforge/releases/download/4.11.0-0/Miniforge-pypy3-4.11.0-0-MacOSX-x86_64.sh?foo=bar&baz
@@ -77,7 +77,7 @@ jobs:
     runs-on: "windows-latest"
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.1
       - uses: ./
         with:
           installer-url:
