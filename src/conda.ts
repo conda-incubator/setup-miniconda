@@ -419,47 +419,62 @@ export async function condaInit(
   }
 
   // PowerShell profiles
-  let powerExtraText = `
-  # ----------------------------------------------------------------------------`;
+  // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+  const powerLines: string[] = [
+    "",
+    "# ----------------------------------------------------------------------------",
+  ];
   if (isValidActivate) {
-    powerExtraText += `
-  # Conda Setup Action: Custom activation
-  conda activate "${inputs.activateEnvironment}"`;
+    powerLines.push(
+      "# Conda Setup Action: Custom activation",
+      `conda activate "${inputs.activateEnvironment}"`,
+    );
   }
-  powerExtraText += `
-  # ----------------------------------------------------------------------------`;
+  powerLines.push("# ----------------------------------------------------------------------------");
+  const powerExtraText = powerLines.join("\n");
 
   // Bash profiles
-  let bashExtraText: string = `
-  # ----------------------------------------------------------------------------
-  # Conda Setup Action: Basic configuration
-  set -eo pipefail`;
+  // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+  const bashLines: string[] = [
+    "",
+    "# ----------------------------------------------------------------------------",
+    "# Conda Setup Action: Basic configuration",
+    "set -eo pipefail",
+  ];
   if (isValidActivate) {
-    bashExtraText += `
-  # Conda Setup Action: Custom activation
-  conda activate "${inputs.activateEnvironment}"`;
-    bashExtraText += `
-  # ----------------------------------------------------------------------------`;
+    bashLines.push(
+      "# Conda Setup Action: Custom activation",
+      `conda activate "${inputs.activateEnvironment}"`,
+      "# ----------------------------------------------------------------------------",
+    );
   }
+  const bashExtraText = bashLines.join("\n");
 
   // Batch profiles
-  let batchExtraText = `
-  :: ---------------------------------------------------------------------------`;
+  // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+  const batchLines: string[] = [
+    "",
+    ":: ---------------------------------------------------------------------------",
+  ];
   if (autoActivateDefault) {
-    batchExtraText += `
-  :: Conda Setup Action: Activate default environment
-  @CALL "%CONDA_BAT%" activate`;
+    batchLines.push(
+      ":: Conda Setup Action: Activate default environment",
+      '@CALL "%CONDA_BAT%" activate',
+    );
   }
   if (isValidActivate) {
-    batchExtraText += `
-  :: Conda Setup Action: Custom activation
-  @CALL "%CONDA_BAT%" activate "${inputs.activateEnvironment}"`;
+    batchLines.push(
+      ":: Conda Setup Action: Custom activation",
+      `@CALL "%CONDA_BAT%" activate "${inputs.activateEnvironment}"`,
+    );
   }
-  batchExtraText += `
-  :: Conda Setup Action: Basic configuration
-  @SETLOCAL EnableExtensions
-  @SETLOCAL DisableDelayedExpansion
-  :: ---------------------------------------------------------------------------`;
+  batchLines.push(
+    ":: Conda Setup Action: Basic configuration",
+    "@SETLOCAL EnableExtensions",
+    "@SETLOCAL DisableDelayedExpansion",
+    ":: ---------------------------------------------------------------------------",
+  );
+  const batchExtraText = batchLines.join("\n");
 
   const shells: types.IShells = {
     "~/.bash_profile": bashExtraText,
