@@ -4,21 +4,23 @@
 
 ### Fixes
 
-- Check all `.condarc` files when removing `defaults` by @marcoesters in
-  https://github.com/conda-incubator/setup-miniconda/pull/398
-- Add version normalization for minicondaVersion in input validation by @jezdez
-  in https://github.com/conda-incubator/setup-miniconda/pull/397
-- Workaround for auto_activate_base deprecation by @jaimergp in
-  https://github.com/conda-incubator/setup-miniconda/pull/402
+- [#398] Check all `.condarc` files when removing `defaults`
+- [#397] Add version normalization for minicondaVersion in input validation
+- [#402] Workaround for auto_activate_base deprecation
 
 ### Tasks and Maintenance
 
-- Bump conda-incubator/setup-miniconda from 3.1.0 to 3.1.1 by @dependabot in
-  https://github.com/conda-incubator/setup-miniconda/pull/391
-- Bump undici from 5.28.4 to 5.28.5 by @dependabot in
-  https://github.com/conda-incubator/setup-miniconda/pull/390
-- Bump semver and @types/semver by @dependabot in
-  https://github.com/conda-incubator/setup-miniconda/pull/399
+- [#391] Bump conda-incubator/setup-miniconda from 3.1.0 to 3.1.1
+- [#390] Bump undici from 5.28.4 to 5.28.5
+- [#399] Bump semver and @types/semver
+
+[v3.2.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v3.2.0
+[#390]: https://github.com/conda-incubator/setup-miniconda/pull/390
+[#391]: https://github.com/conda-incubator/setup-miniconda/pull/391
+[#397]: https://github.com/conda-incubator/setup-miniconda/pull/397
+[#398]: https://github.com/conda-incubator/setup-miniconda/pull/398
+[#399]: https://github.com/conda-incubator/setup-miniconda/pull/399
+[#402]: https://github.com/conda-incubator/setup-miniconda/pull/402
 
 ## [v3.1.1] (2025-01-20)
 
