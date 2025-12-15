@@ -36,7 +36,7 @@
   "homepage": "https://github.com/conda-incubator/setup-miniconda#conda-incubatorsetup-miniconda",
   "dependencies": {
     "@actions/core": "^2.0.1",
-    "@actions/exec": "^1.1.1",
+    "@actions/exec": "^2.0.0",
     "@actions/io": "^2.0.0",
     "@actions/tool-cache": "^2.0.2",
     "get-hrefs": "^4.0.0",
