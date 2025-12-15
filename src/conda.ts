@@ -430,7 +430,9 @@ export async function condaInit(
       `conda activate "${inputs.activateEnvironment}"`,
     );
   }
-  powerLines.push("# ----------------------------------------------------------------------------");
+  powerLines.push(
+    "# ----------------------------------------------------------------------------",
+  );
   const powerExtraText = powerLines.join("\n");
 
   // Bash profiles
