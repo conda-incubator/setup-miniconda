@@ -38,7 +38,7 @@
     "@actions/core": "^2.0.1",
     "@actions/exec": "^2.0.0",
     "@actions/io": "^2.0.0",
-    "@actions/tool-cache": "^2.0.2",
+    "@actions/tool-cache": "^3.0.0",
     "get-hrefs": "^4.0.0",
     "js-yaml": "^4.1.1",
     "normalize-url": "^8.1.1",
