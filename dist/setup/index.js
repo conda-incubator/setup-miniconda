@@ -50585,6 +50585,19 @@ function condaInit(inputs, options) {
             bashLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`, "# ----------------------------------------------------------------------------");
         }
         const bashExtraText = bashLines.join("\n");
+        // Xonsh profiles
+        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+        const xonshLines = [
+            "",
+            "# ----------------------------------------------------------------------------",
+            "# Conda Setup Action: Basic configuration",
+            "$RAISE_SUBPROC_ERROR = True", // equivalent to: set -e
+            "$XONSH_PIPEFAIL = True", // equivalent to: set -o pipefail
+        ];
+        if (isValidActivate) {
+            xonshLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`, "# ----------------------------------------------------------------------------");
+        }
+        const xonshExtraText = xonshLines.join("\n");
         // Batch profiles
         // NOTE: Using array.join() to prevent auto-formatters from adding indentation
         const batchLines = [
@@ -50605,7 +50618,7 @@ function condaInit(inputs, options) {
             "~/.zshrc": bashExtraText,
             "~/.config/fish/config.fish": bashExtraText,
             "~/.tcshrc": bashExtraText,
-            "~/.xonshrc": bashExtraText,
+            "~/.xonshrc": xonshExtraText,
             "~/.config/powershell/profile.ps1": powerExtraText,
             "~/Documents/PowerShell/profile.ps1": powerExtraText,
             "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
