@@ -458,8 +458,8 @@ export async function condaInit(
     "",
     "# ----------------------------------------------------------------------------",
     "# Conda Setup Action: Basic configuration",
-    "$RAISE_SUBPROC_ERROR = True",  // equivalent to: set -e
-    "$XONSH_PIPEFAIL = True",  // equivalent to: set -o pipefail
+    "$RAISE_SUBPROC_ERROR = True", // equivalent to: set -e
+    "$XONSH_PIPEFAIL = True", // equivalent to: set -o pipefail
   ];
   if (isValidActivate) {
     xonshLines.push(
