@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## [v3.3.0] (2026-01-20)
+
+### Fixes
+
+- [#410][410]: Ignore auto_activate warning
+- [#411][411]: Deprecate auto-activate-base input
+- [#414][414]: Activate default environment instead of `base` environment
+- [#435][435]: fix: remove accidental indentation from shell config template
+  strings
+- [#442][442]: Translate POSIX `set` to `xonsh`'s equivalent
+
+### Tasks and Maintenance
+
+- [#405][405], [#413][413], [#439][439]: Bump normalize-url from 8.0.1 to 8.1.1
+- [#425][425]: Bump @actions/io from 1.1.3 to 2.0.0
+- [#432][432]: Bump @actions/exec from 1.1.1 to 2.0.0
+- [#433][433], [#441][441]: Bump @actions/core from 1.11.1 to 2.0.2
+- [#416][416]: Bump semver and @types/semver
+- [#421][421]: Bump actions/setup-node from 5 to 6
+- [#427][427]: Bump js-yaml from 4.1.0 to 4.1.1
+
+[v3.3.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v3.3.0
+[405]: https://github.com/conda-incubator/setup-miniconda/pull/405
+[410]: https://github.com/conda-incubator/setup-miniconda/pull/410
+[411]: https://github.com/conda-incubator/setup-miniconda/pull/411
+[413]: https://github.com/conda-incubator/setup-miniconda/pull/413
+[414]: https://github.com/conda-incubator/setup-miniconda/pull/414
+[416]: https://github.com/conda-incubator/setup-miniconda/pull/416
+[421]: https://github.com/conda-incubator/setup-miniconda/pull/421
+[425]: https://github.com/conda-incubator/setup-miniconda/pull/425
+[427]: https://github.com/conda-incubator/setup-miniconda/pull/427
+[432]: https://github.com/conda-incubator/setup-miniconda/pull/432
+[433]: https://github.com/conda-incubator/setup-miniconda/pull/433
+[435]: https://github.com/conda-incubator/setup-miniconda/pull/435
+[439]: https://github.com/conda-incubator/setup-miniconda/pull/439
+[441]: https://github.com/conda-incubator/setup-miniconda/pull/441
+[442]: https://github.com/conda-incubator/setup-miniconda/pull/442
+
 ## [v3.2.0] (2025-06-04)
 
 ### Fixes
