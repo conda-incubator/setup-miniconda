@@ -27,7 +27,7 @@ jobs:
         solver: ["classic", "libmamba"]
         os: ["ubuntu-latest", "windows-latest"]
     steps:
-      - uses: actions/checkout@v6.0.1
+      - uses: actions/checkout@v6.0.2
       - uses: ./
         id: setup-miniconda
         continue-on-error: true
