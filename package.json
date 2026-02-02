@@ -1,6 +1,7 @@
 {
   "name": "setup-miniconda",
   "description": "GitHub action for setting up conda from default or custom installers",
+  "type": "module",
   "main": "lib/main.js",
   "scripts": {
     "build": "ncc build -o dist/setup src/setup.ts && ncc build -o dist/delete src/delete.ts",
