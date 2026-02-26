@@ -280,13 +280,17 @@ export async function writeCondaConfig(
   // Merge action-input channels with any existing channels from the user condarc,
   // with action-input channels taking higher priority (prepended).
   const existingChannels = (config.channels as string[]) || [];
+  // Only remove implicitly-added 'defaults'; if the user explicitly listed
+  // 'defaults' in their channels input, respect that even when nodefaults
+  // or conda-remove-defaults is set (matches old behavior).
+  const userExplicitlyAddedDefaults = filteredChannels.includes("defaults");
 
   if (filteredChannels.length) {
     const merged = [
       ...filteredChannels,
       ...existingChannels.filter((c) => !filteredChannels.includes(c)),
     ];
-    if (removeDefaults) {
+    if (removeDefaults && !userExplicitlyAddedDefaults) {
       config.channels = merged.filter((c) => c !== "defaults");
       core.info("Removing implicitly added 'defaults' channel");
     } else {
@@ -354,7 +358,7 @@ export async function writeCondaConfig(
   // If removeDefaults is set, also strip 'defaults' from prefix-level condarc
   // files that the installer or system may have written. The old subprocess-based
   // approach handled all config sources; we need to replicate that.
-  if (removeDefaults) {
+  if (removeDefaults && !userExplicitlyAddedDefaults) {
     const basePath = condaBasePath(inputs, options);
     const prefixCondarcPaths = [
       path.join(basePath, ".condarc"),
