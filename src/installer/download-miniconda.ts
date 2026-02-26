@@ -26,14 +26,25 @@ export async function downloadMiniconda(
   const osName: string = constants.OS_NAMES[process.platform];
   const minicondaVersion = inputs.minicondaVersion || "latest";
   const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
+  const url = constants.MINICONDA_BASE_URL + minicondaInstallerName;
   core.info(minicondaInstallerName);
 
-  return await base.ensureLocalInstaller({
-    url: constants.MINICONDA_BASE_URL + minicondaInstallerName,
-    tool: `Miniconda${pythonMajorVersion}`,
-    version: minicondaVersion,
-    arch: arch,
-  });
+  try {
+    return await base.ensureLocalInstaller({
+      url,
+      tool: `Miniconda${pythonMajorVersion}`,
+      version: minicondaVersion,
+      arch: arch,
+    });
+  } catch (err) {
+    throw new Error(
+      `Failed to download Miniconda installer from ${url}. ` +
+        `Please verify that miniconda-version '${minicondaVersion}' is valid ` +
+        `for ${osName}-${arch}. Browse available versions at ` +
+        `${constants.MINICONDA_BASE_URL}\n` +
+        `Original error: ${err}`,
+    );
+  }
 }
 
 /**

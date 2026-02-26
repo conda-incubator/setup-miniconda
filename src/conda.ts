@@ -18,13 +18,42 @@ const BOOLEAN_CONDARC_KEYS = new Set([
   "add_anaconda_token",
   "add_pip_as_python_dependency",
   "allow_softlinks",
-  "auto_activate_base",
+  "auto_activate",
   "auto_update_conda",
   "show_channel_urls",
   "use_only_tar_bz2",
   "always_yes",
   "changeps1",
   "notify_outdated_conda",
+]);
+
+/**
+ * Well-known conda configuration keys (from conda's context.py).
+ * Used to warn about possible typos in user-provided config.
+ */
+const KNOWN_CONDARC_KEYS = new Set([
+  ...BOOLEAN_CONDARC_KEYS,
+  "channels",
+  "channel_alias",
+  "channel_priority",
+  "channel_settings",
+  "custom_channels",
+  "custom_multichannels",
+  "default_channels",
+  "default_activation_env",
+  "denylist_channels",
+  "allowlist_channels",
+  "create_default_packages",
+  "envs_dirs",
+  "override_channels_enabled",
+  "pkgs_dirs",
+  "proxy_servers",
+  "repodata_threads",
+  "restore_free_channel",
+  "safety_checks",
+  "solver",
+  "ssl_verify",
+  "auto_activate_base",
 ]);
 
 /**
@@ -154,12 +183,18 @@ export async function bootstrapConfig(): Promise<void> {
   );
 }
 
+const TRUTHY_VALUES = new Set(["true", "yes", "on", "y", "1"]);
+const FALSY_VALUES = new Set(["false", "no", "off", "n", "0"]);
+
 /**
  * Coerce a string value to its appropriate YAML type for a given condarc key.
+ * Handles all YAML 1.1 boolean literals (true/false/yes/no/on/off/y/n/1/0).
  */
 function coerceConfigValue(key: string, value: string): boolean | string {
   if (BOOLEAN_CONDARC_KEYS.has(key)) {
-    return value.toLowerCase() === "true" || value.toLowerCase() === "yes";
+    const lower = value.toLowerCase();
+    if (TRUTHY_VALUES.has(lower)) return true;
+    if (FALSY_VALUES.has(lower)) return false;
   }
   return value;
 }
@@ -174,10 +209,24 @@ export async function writeCondaConfig(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
 ): Promise<void> {
-  // Start with an existing config if the user provided a condarc file,
-  // otherwise start fresh
+  // Start with any existing ~/.condarc that the installer may have written
+  // (e.g., Miniforge sets channels: [conda-forge]). This preserves
+  // installer-embedded config that users of custom installer-url may rely on.
   let config: Record<string, unknown> = {};
 
+  if (fs.existsSync(constants.CONDARC_PATH)) {
+    const existingConfig = yaml.load(
+      fs.readFileSync(constants.CONDARC_PATH, "utf8"),
+    ) as Record<string, unknown> | null;
+    if (existingConfig) {
+      config = { ...existingConfig };
+      core.info(
+        `Read existing condarc from ${constants.CONDARC_PATH} as base config`,
+      );
+    }
+  }
+
+  // Overlay the user-provided condarc file on top of the installer's config
   if (inputs.condaConfigFile) {
     const sourcePath = path.join(
       process.env["GITHUB_WORKSPACE"] || "",
@@ -189,7 +238,7 @@ export async function writeCondaConfig(
       unknown
     > | null;
     if (userConfig) {
-      config = { ...userConfig };
+      config = { ...config, ...userConfig };
     }
   }
 
@@ -197,6 +246,10 @@ export async function writeCondaConfig(
   config.notify_outdated_conda = false;
 
   // --- Channels ---
+  // Channels are written in the input order, which gives the first channel
+  // highest priority. This matches the old behavior: the old code called
+  // `conda config --add` (which prepends) in reverse order, so the two
+  // inversions cancelled out and produced the same result as writing in order.
   let channels = inputs.condaConfig.channels
     .trim()
     .split(/,/)
@@ -267,15 +320,15 @@ export async function writeCondaConfig(
     core.info(`pkgs_dir: '${pkgsDir}'`);
   }
 
-  // --- auto_activate_base (universally supported name) ---
-  // The key was renamed to `auto_activate` in conda 25.5.0, but
-  // `auto_activate_base` is still recognized by all versions.
-  config.auto_activate_base = coerceConfigValue(
-    "auto_activate_base",
+  // --- auto_activate (canonical name since conda 25.5.0) ---
+  // `auto_activate_base` was renamed to `auto_activate` in conda 25.5.0
+  // and is deprecated, scheduled for removal in conda 26.3.
+  config.auto_activate = coerceConfigValue(
+    "auto_activate",
     inputs.condaConfig.auto_activate,
   );
-  delete config.auto_activate;
-  core.info(`auto_activate_base: ${config.auto_activate_base}`);
+  delete config.auto_activate_base;
+  core.info(`auto_activate: ${config.auto_activate}`);
 
   // --- All other config entries ---
   const SKIP_KEYS = new Set([
@@ -296,6 +349,54 @@ export async function writeCondaConfig(
     const coerced = coerceConfigValue(key, value);
     config[key] = coerced;
     core.info(`${key}: ${coerced}`);
+  }
+
+  // If removeDefaults is set, also strip 'defaults' from prefix-level condarc
+  // files that the installer or system may have written. The old subprocess-based
+  // approach handled all config sources; we need to replicate that.
+  if (removeDefaults) {
+    const basePath = condaBasePath(inputs, options);
+    const prefixCondarcPaths = [
+      path.join(basePath, ".condarc"),
+      path.join(basePath, "condarc"),
+    ];
+    for (const condarcPath of prefixCondarcPaths) {
+      if (!fs.existsSync(condarcPath)) continue;
+      try {
+        const prefixConfig = yaml.load(
+          fs.readFileSync(condarcPath, "utf8"),
+        ) as Record<string, unknown> | null;
+        if (
+          prefixConfig?.channels &&
+          Array.isArray(prefixConfig.channels) &&
+          prefixConfig.channels.includes("defaults")
+        ) {
+          prefixConfig.channels = prefixConfig.channels.filter(
+            (c: string) => c !== "defaults",
+          );
+          const updatedYaml = yaml.dump(prefixConfig, { lineWidth: -1 });
+          fs.writeFileSync(condarcPath, updatedYaml, "utf8");
+          core.info(
+            `Removed 'defaults' channel from prefix condarc at ${condarcPath}`,
+          );
+        }
+      } catch (err) {
+        core.warning(
+          `Failed to process prefix condarc at ${condarcPath}: ${err}`,
+        );
+      }
+    }
+  }
+
+  // Warn about unrecognized keys (catches typos that the old conda config
+  // subprocess would have warned about)
+  for (const key of Object.keys(config)) {
+    if (!KNOWN_CONDARC_KEYS.has(key)) {
+      core.warning(
+        `Unrecognized condarc key '${key}'. This may be a typo or a ` +
+          `key from a newer conda version. conda will ignore unknown keys.`,
+      );
+    }
   }
 
   // Write the config file
@@ -395,27 +496,16 @@ export async function condaInit(
     if (constants.IS_MAC) {
       core.info("Fixing conda folders ownership");
       const userName: string = process.env.USER as string;
-      const macTargetDirs = [
-        "bin",
-        "condabin",
-        "etc/profile.d",
-        "etc/fish/conf.d",
-        "shell",
-      ];
-      const chownPromises = macTargetDirs
-        .map((dir) => path.join(basePath, dir))
-        .filter((dirPath) => fs.existsSync(dirPath))
-        .map((dirPath) => {
-          core.info(`Fixing ownership of ${dirPath}`);
-          return utils.execute([
-            "sudo",
-            "chown",
-            "-R",
-            `${userName}:staff`,
-            dirPath,
-          ]);
-        });
-      await Promise.all(chownPromises);
+      // chown the entire base path to ensure conda init --all has write
+      // access everywhere it needs (bin, condabin, etc/profile.d, shell,
+      // lib/pythonX.Y/site-packages/xonsh, etc.)
+      await utils.execute([
+        "sudo",
+        "chown",
+        "-R",
+        `${userName}:staff`,
+        basePath,
+      ]);
     } else if (constants.IS_WINDOWS) {
       const takeownPromises = constants.WIN_PERMS_FOLDERS.map((folder) => {
         const ownPath = path.join(basePath, folder);

@@ -75,13 +75,13 @@ const RULES: IRule[] = [
     !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
     `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
   (
-    i, // We only support miniconda 4.6 or later (`conda init` and /condabin were added here, which we need)
+    i, // We require conda >= 25.5.0 for `auto_activate` support
   ) =>
     !!(
       !["latest", ""].includes(i.minicondaVersion) &&
-      semver.lt(normalizeVersion(i.minicondaVersion), "4.6.0")
+      semver.lt(normalizeVersion(i.minicondaVersion), "25.5.0")
     ) &&
-    `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
+    `"miniconda-version" >= 25.5.0 is required but you chose '${i.minicondaVersion}'`,
 ];
 
 /*

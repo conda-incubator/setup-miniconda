@@ -38915,13 +38915,41 @@ const BOOLEAN_CONDARC_KEYS = new Set([
     "add_anaconda_token",
     "add_pip_as_python_dependency",
     "allow_softlinks",
-    "auto_activate_base",
+    "auto_activate",
     "auto_update_conda",
     "show_channel_urls",
     "use_only_tar_bz2",
     "always_yes",
     "changeps1",
     "notify_outdated_conda",
+]);
+/**
+ * Well-known conda configuration keys (from conda's context.py).
+ * Used to warn about possible typos in user-provided config.
+ */
+const KNOWN_CONDARC_KEYS = new Set([
+    ...BOOLEAN_CONDARC_KEYS,
+    "channels",
+    "channel_alias",
+    "channel_priority",
+    "channel_settings",
+    "custom_channels",
+    "custom_multichannels",
+    "default_channels",
+    "default_activation_env",
+    "denylist_channels",
+    "allowlist_channels",
+    "create_default_packages",
+    "envs_dirs",
+    "override_channels_enabled",
+    "pkgs_dirs",
+    "proxy_servers",
+    "repodata_threads",
+    "restore_free_channel",
+    "safety_checks",
+    "solver",
+    "ssl_verify",
+    "auto_activate_base",
 ]);
 /**
  * Provide current location of miniconda or location where it will be installed
@@ -39022,12 +39050,19 @@ function bootstrapConfig() {
     });
 }
 exports.bootstrapConfig = bootstrapConfig;
+const TRUTHY_VALUES = new Set(["true", "yes", "on", "y", "1"]);
+const FALSY_VALUES = new Set(["false", "no", "off", "n", "0"]);
 /**
  * Coerce a string value to its appropriate YAML type for a given condarc key.
+ * Handles all YAML 1.1 boolean literals (true/false/yes/no/on/off/y/n/1/0).
  */
 function coerceConfigValue(key, value) {
     if (BOOLEAN_CONDARC_KEYS.has(key)) {
-        return value.toLowerCase() === "true" || value.toLowerCase() === "yes";
+        const lower = value.toLowerCase();
+        if (TRUTHY_VALUES.has(lower))
+            return true;
+        if (FALSY_VALUES.has(lower))
+            return false;
     }
     return value;
 }
@@ -39040,20 +39075,33 @@ function coerceConfigValue(key, value) {
 function writeCondaConfig(inputs, options) {
     var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
-        // Start with an existing config if the user provided a condarc file,
-        // otherwise start fresh
+        // Start with any existing ~/.condarc that the installer may have written
+        // (e.g., Miniforge sets channels: [conda-forge]). This preserves
+        // installer-embedded config that users of custom installer-url may rely on.
         let config = {};
+        if (fs.existsSync(constants.CONDARC_PATH)) {
+            const existingConfig = yaml.load(fs.readFileSync(constants.CONDARC_PATH, "utf8"));
+            if (existingConfig) {
+                config = Object.assign({}, existingConfig);
+                core.info(`Read existing condarc from ${constants.CONDARC_PATH} as base config`);
+            }
+        }
+        // Overlay the user-provided condarc file on top of the installer's config
         if (inputs.condaConfigFile) {
             const sourcePath = path.join(process.env["GITHUB_WORKSPACE"] || "", inputs.condaConfigFile);
             core.info(`Reading user condarc from "${sourcePath}"...`);
             const userConfig = yaml.load(fs.readFileSync(sourcePath, "utf8"));
             if (userConfig) {
-                config = Object.assign({}, userConfig);
+                config = Object.assign(Object.assign({}, config), userConfig);
             }
         }
         // Always suppress outdated conda notifications
         config.notify_outdated_conda = false;
         // --- Channels ---
+        // Channels are written in the input order, which gives the first channel
+        // highest priority. This matches the old behavior: the old code called
+        // `conda config --add` (which prepends) in reverse order, so the two
+        // inversions cancelled out and produced the same result as writing in order.
         let channels = inputs.condaConfig.channels
             .trim()
             .split(/,/)
@@ -39115,12 +39163,12 @@ function writeCondaConfig(inputs, options) {
         for (const pkgsDir of mergedPkgsDirs) {
             core.info(`pkgs_dir: '${pkgsDir}'`);
         }
-        // --- auto_activate_base (universally supported name) ---
-        // The key was renamed to `auto_activate` in conda 25.5.0, but
-        // `auto_activate_base` is still recognized by all versions.
-        config.auto_activate_base = coerceConfigValue("auto_activate_base", inputs.condaConfig.auto_activate);
-        delete config.auto_activate;
-        core.info(`auto_activate_base: ${config.auto_activate_base}`);
+        // --- auto_activate (canonical name since conda 25.5.0) ---
+        // `auto_activate_base` was renamed to `auto_activate` in conda 25.5.0
+        // and is deprecated, scheduled for removal in conda 26.3.
+        config.auto_activate = coerceConfigValue("auto_activate", inputs.condaConfig.auto_activate);
+        delete config.auto_activate_base;
+        core.info(`auto_activate: ${config.auto_activate}`);
         // --- All other config entries ---
         const SKIP_KEYS = new Set([
             "channels",
@@ -39136,6 +39184,42 @@ function writeCondaConfig(inputs, options) {
             const coerced = coerceConfigValue(key, value);
             config[key] = coerced;
             core.info(`${key}: ${coerced}`);
+        }
+        // If removeDefaults is set, also strip 'defaults' from prefix-level condarc
+        // files that the installer or system may have written. The old subprocess-based
+        // approach handled all config sources; we need to replicate that.
+        if (removeDefaults) {
+            const basePath = condaBasePath(inputs, options);
+            const prefixCondarcPaths = [
+                path.join(basePath, ".condarc"),
+                path.join(basePath, "condarc"),
+            ];
+            for (const condarcPath of prefixCondarcPaths) {
+                if (!fs.existsSync(condarcPath))
+                    continue;
+                try {
+                    const prefixConfig = yaml.load(fs.readFileSync(condarcPath, "utf8"));
+                    if ((prefixConfig === null || prefixConfig === void 0 ? void 0 : prefixConfig.channels) &&
+                        Array.isArray(prefixConfig.channels) &&
+                        prefixConfig.channels.includes("defaults")) {
+                        prefixConfig.channels = prefixConfig.channels.filter((c) => c !== "defaults");
+                        const updatedYaml = yaml.dump(prefixConfig, { lineWidth: -1 });
+                        fs.writeFileSync(condarcPath, updatedYaml, "utf8");
+                        core.info(`Removed 'defaults' channel from prefix condarc at ${condarcPath}`);
+                    }
+                }
+                catch (err) {
+                    core.warning(`Failed to process prefix condarc at ${condarcPath}: ${err}`);
+                }
+            }
+        }
+        // Warn about unrecognized keys (catches typos that the old conda config
+        // subprocess would have warned about)
+        for (const key of Object.keys(config)) {
+            if (!KNOWN_CONDARC_KEYS.has(key)) {
+                core.warning(`Unrecognized condarc key '${key}'. This may be a typo or a ` +
+                    `key from a newer conda version. conda will ignore unknown keys.`);
+            }
         }
         // Write the config file
         const configYaml = yaml.dump(config, { lineWidth: -1 });
@@ -39208,27 +39292,16 @@ function condaInit(inputs, options) {
             if (constants.IS_MAC) {
                 core.info("Fixing conda folders ownership");
                 const userName = process.env.USER;
-                const macTargetDirs = [
-                    "bin",
-                    "condabin",
-                    "etc/profile.d",
-                    "etc/fish/conf.d",
-                    "shell",
-                ];
-                const chownPromises = macTargetDirs
-                    .map((dir) => path.join(basePath, dir))
-                    .filter((dirPath) => fs.existsSync(dirPath))
-                    .map((dirPath) => {
-                    core.info(`Fixing ownership of ${dirPath}`);
-                    return utils.execute([
-                        "sudo",
-                        "chown",
-                        "-R",
-                        `${userName}:staff`,
-                        dirPath,
-                    ]);
-                });
-                yield Promise.all(chownPromises);
+                // chown the entire base path to ensure conda init --all has write
+                // access everywhere it needs (bin, condabin, etc/profile.d, shell,
+                // lib/pythonX.Y/site-packages/xonsh, etc.)
+                yield utils.execute([
+                    "sudo",
+                    "chown",
+                    "-R",
+                    `${userName}:staff`,
+                    basePath,
+                ]);
             }
             else if (constants.IS_WINDOWS) {
                 const takeownPromises = constants.WIN_PERMS_FOLDERS.map((folder) => {
@@ -39463,7 +39536,7 @@ exports.IGNORED_WARNINGS = [
     `moving to the top`,
     // This warning has no consequence for the installation and is noisy
     `cygpath is not available, fallback to manual path conversion`,
-    // Harmless warning for older Conda versions use auto_activate instead of auto_activate_base
+    // Safety net: suppress in case an older conda is somehow used despite version check
     `'auto_activate': unknown parameter`,
 ];
 /**
@@ -40009,8 +40082,8 @@ const RULES = [
     (i) => !!(i.architecture === "x86" && !constants.IS_WINDOWS) &&
         `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
     (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
-        semver.lt(normalizeVersion(i.minicondaVersion), "4.6.0")) &&
-        `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
+        semver.lt(normalizeVersion(i.minicondaVersion), "25.5.0")) &&
+        `"miniconda-version" >= 25.5.0 is required but you chose '${i.minicondaVersion}'`,
 ];
 /*
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
@@ -40317,13 +40390,23 @@ function downloadMiniconda(pythonMajorVersion, inputs) {
         const osName = constants.OS_NAMES[process.platform];
         const minicondaVersion = inputs.minicondaVersion || "latest";
         const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
+        const url = constants.MINICONDA_BASE_URL + minicondaInstallerName;
         core.info(minicondaInstallerName);
-        return yield base.ensureLocalInstaller({
-            url: constants.MINICONDA_BASE_URL + minicondaInstallerName,
-            tool: `Miniconda${pythonMajorVersion}`,
-            version: minicondaVersion,
-            arch: arch,
-        });
+        try {
+            return yield base.ensureLocalInstaller({
+                url,
+                tool: `Miniconda${pythonMajorVersion}`,
+                version: minicondaVersion,
+                arch: arch,
+            });
+        }
+        catch (err) {
+            throw new Error(`Failed to download Miniconda installer from ${url}. ` +
+                `Please verify that miniconda-version '${minicondaVersion}' is valid ` +
+                `for ${osName}-${arch}. Browse available versions at ` +
+                `${constants.MINICONDA_BASE_URL}\n` +
+                `Original error: ${err}`);
+        }
     });
 }
 exports.downloadMiniconda = downloadMiniconda;
