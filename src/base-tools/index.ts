@@ -60,10 +60,6 @@ export async function installBaseTools(
       inputs,
       options,
     );
-
-    // *Now* use the new options, as we may have a new conda/mamba with more supported
-    // options that previously failed
-    await conda.applyCondaConfiguration(inputs, postInstallOptions);
   } else {
     core.info("No tools were installed in 'base' env.");
   }
