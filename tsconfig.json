@@ -19,5 +19,5 @@
     "target": "es6",
     "types": ["node"]
   },
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "vitest.config.ts", "src/__tests__"]
 }
