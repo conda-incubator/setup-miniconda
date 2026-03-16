@@ -17,7 +17,7 @@
     "strict": true,
     "strictNullChecks": true,
     "target": "es6",
-    "types": []
+    "types": ["node"]
   },
   "exclude": ["node_modules"]
 }
