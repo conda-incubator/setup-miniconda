@@ -30452,7 +30452,7 @@ const IGNORED_WARNINGS = (/* unused pure expression or super */ null && ([
     `moving to the top`,
     // This warning has no consequence for the installation and is noisy
     `cygpath is not available, fallback to manual path conversion`,
-    // Harmless warning for older Conda versions use auto_activate instead of auto_activate_base
+    // Safety net: suppress in case an older conda is somehow used despite version check
     `'auto_activate': unknown parameter`,
 ]));
 /**
@@ -30576,8 +30576,8 @@ const RULES = [
     (i) => !!(i.architecture === "x86" && !IS_WINDOWS) &&
         `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
     (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
-        semver.lt(normalizeVersion(i.minicondaVersion), "4.6.0")) &&
-        `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
+        semver.lt(normalizeVersion(i.minicondaVersion), "25.5.0")) &&
+        `"miniconda-version" >= 25.5.0 is required but you chose '${i.minicondaVersion}'`,
 ];
 /*
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`

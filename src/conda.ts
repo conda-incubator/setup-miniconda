@@ -6,12 +6,55 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 
+import * as yaml from "js-yaml";
 import * as core from "@actions/core";
 import * as io from "@actions/io";
 
 import * as types from "./types";
 import * as constants from "./constants";
 import * as utils from "./utils";
+
+const BOOLEAN_CONDARC_KEYS = new Set([
+  "add_anaconda_token",
+  "add_pip_as_python_dependency",
+  "allow_softlinks",
+  "auto_activate",
+  "auto_update_conda",
+  "show_channel_urls",
+  "use_only_tar_bz2",
+  "always_yes",
+  "changeps1",
+  "notify_outdated_conda",
+]);
+
+/**
+ * Well-known conda configuration keys (from conda's context.py).
+ * Used to warn about possible typos in user-provided config.
+ */
+const KNOWN_CONDARC_KEYS = new Set([
+  ...BOOLEAN_CONDARC_KEYS,
+  "channels",
+  "channel_alias",
+  "channel_priority",
+  "channel_settings",
+  "custom_channels",
+  "custom_multichannels",
+  "default_channels",
+  "default_activation_env",
+  "denylist_channels",
+  "allowlist_channels",
+  "create_default_packages",
+  "envs_dirs",
+  "override_channels_enabled",
+  "pkgs_dirs",
+  "proxy_servers",
+  "repodata_threads",
+  "restore_free_channel",
+  "safety_checks",
+  "solver",
+  "ssl_verify",
+  "auto_activate_base",
+]);
 
 /**
  * Provide current location of miniconda or location where it will be installed
@@ -140,32 +183,73 @@ export async function bootstrapConfig(): Promise<void> {
   );
 }
 
+const TRUTHY_VALUES = new Set(["true", "yes", "on", "y", "1"]);
+const FALSY_VALUES = new Set(["false", "no", "off", "n", "0"]);
+
 /**
- * Copy the given condarc file into place
+ * Coerce a string value to its appropriate YAML type for a given condarc key.
+ * Handles all YAML 1.1 boolean literals (true/false/yes/no/on/off/y/n/1/0).
  */
-export async function copyConfig(inputs: types.IActionInputs) {
-  const sourcePath: string = path.join(
-    process.env["GITHUB_WORKSPACE"] || "",
-    inputs.condaConfigFile,
-  );
-  core.info(`Copying "${sourcePath}" to "${constants.CONDARC_PATH}..."`);
-  await io.cp(sourcePath, constants.CONDARC_PATH);
+function coerceConfigValue(key: string, value: string): boolean | string {
+  if (BOOLEAN_CONDARC_KEYS.has(key)) {
+    const lower = value.toLowerCase();
+    if (TRUTHY_VALUES.has(lower)) return true;
+    if (FALSY_VALUES.has(lower)) return false;
+  }
+  return value;
 }
 
 /**
- * Setup Conda configuration
+ * Build the complete conda configuration and write it directly to ~/.condarc.
+ *
+ * This replaces the old approach of spawning N `conda config --set/--add`
+ * subprocesses (each taking 2-5s for Python/conda startup overhead).
  */
-export async function applyCondaConfiguration(
+export async function writeCondaConfig(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
 ): Promise<void> {
-  const configEntries = Object.entries(inputs.condaConfig) as [
-    keyof types.ICondaConfig,
-    string,
-  ][];
+  // Start with any existing ~/.condarc that the installer may have written
+  // (e.g., Miniforge sets channels: [conda-forge]). This preserves
+  // installer-embedded config that users of custom installer-url may rely on.
+  let config: Record<string, unknown> = {};
 
-  // Channels are special: if specified as an action input, these take priority
-  // over what is found in (at present) a YAML-based environment
+  if (fs.existsSync(constants.CONDARC_PATH)) {
+    const existingConfig = yaml.load(
+      fs.readFileSync(constants.CONDARC_PATH, "utf8"),
+    ) as Record<string, unknown> | null;
+    if (existingConfig) {
+      config = { ...existingConfig };
+      core.info(
+        `Read existing condarc from ${constants.CONDARC_PATH} as base config`,
+      );
+    }
+  }
+
+  // Overlay the user-provided condarc file on top of the installer's config
+  if (inputs.condaConfigFile) {
+    const sourcePath = path.join(
+      process.env["GITHUB_WORKSPACE"] || "",
+      inputs.condaConfigFile,
+    );
+    core.info(`Reading user condarc from "${sourcePath}"...`);
+    const userConfig = yaml.load(fs.readFileSync(sourcePath, "utf8")) as Record<
+      string,
+      unknown
+    > | null;
+    if (userConfig) {
+      config = { ...config, ...userConfig };
+    }
+  }
+
+  // Always suppress outdated conda notifications
+  config.notify_outdated_conda = false;
+
+  // --- Channels ---
+  // Channels are written in the input order, which gives the first channel
+  // highest priority. This matches the old behavior: the old code called
+  // `conda config --add` (which prepends) in reverse order, so the two
+  // inversions cancelled out and produced the same result as writing in order.
   let channels = inputs.condaConfig.channels
     .trim()
     .split(/,/)
@@ -176,12 +260,11 @@ export async function applyCondaConfiguration(
     channels = options.envSpec.yaml.channels;
   }
 
-  // This can be enabled via conda-remove-defaults and channels = nodefaults
   let removeDefaults: boolean = inputs.condaRemoveDefaults === "true";
 
-  // LIFO: reverse order to preserve higher priority as listed in the option
-  // .slice ensures working against a copy
-  for (const channel of channels.slice().reverse()) {
+  // Filter out 'nodefaults' pseudo-channel and set the removeDefaults flag
+  const filteredChannels: string[] = [];
+  for (const channel of channels) {
     if (channel === "nodefaults") {
       core.warning(
         "'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
@@ -191,103 +274,144 @@ export async function applyCondaConfiguration(
       removeDefaults = true;
       continue;
     }
-    core.info(`Adding channel '${channel}'`);
-    await condaCommand(
-      ["config", "--add", "channels", channel],
-      inputs,
-      options,
-    );
+    filteredChannels.push(channel);
   }
 
-  if (!channels.includes("defaults")) {
-    if (removeDefaults) {
+  // Merge action-input channels with any existing channels from the user condarc,
+  // with action-input channels taking higher priority (prepended).
+  const existingChannels = (config.channels as string[]) || [];
+  // Only remove implicitly-added 'defaults'; if the user explicitly listed
+  // 'defaults' in their channels input, respect that even when nodefaults
+  // or conda-remove-defaults is set (matches old behavior).
+  const userExplicitlyAddedDefaults = filteredChannels.includes("defaults");
+
+  if (filteredChannels.length) {
+    const merged = [
+      ...filteredChannels,
+      ...existingChannels.filter((c) => !filteredChannels.includes(c)),
+    ];
+    if (removeDefaults && !userExplicitlyAddedDefaults) {
+      config.channels = merged.filter((c) => c !== "defaults");
       core.info("Removing implicitly added 'defaults' channel");
-      const configsOutput = (await condaCommand(
-        ["config", "--show-sources", "--json"],
-        inputs,
-        options,
-        true,
-      )) as string;
-      const configs = JSON.parse(configsOutput) as Record<
-        string,
-        types.ICondaConfig
-      >;
-      for (const fileName in configs) {
-        if (configs[fileName].channels?.includes("defaults")) {
-          await condaCommand(
-            ["config", "--remove", "channels", "defaults", "--file", fileName],
-            inputs,
-            options,
-          );
-        }
-      }
     } else {
-      core.warning(
-        "The 'defaults' channel might have been added implicitly. " +
-          "If this is intentional, add 'defaults' to the 'channels' list. " +
-          "Otherwise, consider setting 'conda-remove-defaults' to 'true'.",
-      );
+      config.channels = merged;
     }
-  }
-
-  // Package directories are also comma-separated, like channels
-  let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
-  for (const pkgsDir of pkgsDirs) {
-    core.info(`Adding pkgs_dir '${pkgsDir}'`);
-    await condaCommand(
-      ["config", "--add", "pkgs_dirs", pkgsDir],
-      inputs,
-      options,
+  } else if (removeDefaults) {
+    config.channels = existingChannels.filter((c) => c !== "defaults");
+    core.info("Removing implicitly added 'defaults' channel");
+  } else if (!existingChannels.length) {
+    core.warning(
+      "The 'defaults' channel might have been added implicitly. " +
+        "If this is intentional, add 'defaults' to the 'channels' list. " +
+        "Otherwise, consider setting 'conda-remove-defaults' to 'true'.",
     );
   }
-  // auto_activate_base was renamed to auto_activate in 25.5.0
-  core.info(`auto_activate: ${inputs.condaConfig.auto_activate}`);
-  try {
-    // 25.5.0+
-    await condaCommand(
-      ["config", "--set", "auto_activate", inputs.condaConfig.auto_activate],
-      inputs,
-      options,
-    );
-  } catch (err) {
-    try {
-      // <25.5.0
-      await condaCommand(
-        [
-          "config",
-          "--set",
-          "auto_activate_base",
-          inputs.condaConfig.auto_activate,
-        ],
-        inputs,
-        options,
-      );
-    } catch (err2) {
-      core.warning(err2 as Error);
-    }
+
+  for (const ch of (config.channels as string[]) || []) {
+    core.info(`Channel: '${ch}'`);
   }
 
-  // All other options are just passed as their string representations
+  // --- Package directories ---
+  // Merge with any existing pkgs_dirs from the user condarc
+  const inputPkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+  const existingPkgsDirs = (config.pkgs_dirs as string[]) || [];
+  const mergedPkgsDirs = [
+    ...inputPkgsDirs,
+    ...existingPkgsDirs.filter((d) => !inputPkgsDirs.includes(d)),
+  ];
+  config.pkgs_dirs = mergedPkgsDirs;
+  for (const pkgsDir of mergedPkgsDirs) {
+    core.info(`pkgs_dir: '${pkgsDir}'`);
+  }
+
+  // --- auto_activate (canonical name since conda 25.5.0) ---
+  // `auto_activate_base` was renamed to `auto_activate` in conda 25.5.0
+  // and is deprecated, scheduled for removal in conda 26.3.
+  config.auto_activate = coerceConfigValue(
+    "auto_activate",
+    inputs.condaConfig.auto_activate,
+  );
+  delete config.auto_activate_base;
+  core.info(`auto_activate: ${config.auto_activate}`);
+
+  // --- All other config entries ---
+  const SKIP_KEYS = new Set([
+    "channels",
+    "pkgs_dirs",
+    "auto_activate",
+    "default_activation_env",
+  ]);
+  const configEntries = Object.entries(inputs.condaConfig) as [
+    keyof types.ICondaConfig,
+    string,
+  ][];
+
   for (const [key, value] of configEntries) {
-    if (
-      value.trim().length === 0 ||
-      key === "channels" ||
-      key === "pkgs_dirs" ||
-      key === "auto_activate"
-    ) {
+    if (SKIP_KEYS.has(key) || value.trim().length === 0) {
       continue;
     }
-    core.info(`${key}: ${value}`);
-    try {
-      await condaCommand(["config", "--set", key, value], inputs, options);
-    } catch (err) {
-      core.warning(err as Error);
+    const coerced = coerceConfigValue(key, value);
+    config[key] = coerced;
+    core.info(`${key}: ${coerced}`);
+  }
+
+  // If removeDefaults is set, also strip 'defaults' from prefix-level condarc
+  // files that the installer or system may have written. The old subprocess-based
+  // approach handled all config sources; we need to replicate that.
+  if (removeDefaults && !userExplicitlyAddedDefaults) {
+    const basePath = condaBasePath(inputs, options);
+    const prefixCondarcPaths = [
+      path.join(basePath, ".condarc"),
+      path.join(basePath, "condarc"),
+    ];
+    for (const condarcPath of prefixCondarcPaths) {
+      if (!fs.existsSync(condarcPath)) continue;
+      try {
+        const prefixConfig = yaml.load(
+          fs.readFileSync(condarcPath, "utf8"),
+        ) as Record<string, unknown> | null;
+        if (
+          prefixConfig?.channels &&
+          Array.isArray(prefixConfig.channels) &&
+          prefixConfig.channels.includes("defaults")
+        ) {
+          prefixConfig.channels = prefixConfig.channels.filter(
+            (c: string) => c !== "defaults",
+          );
+          const updatedYaml = yaml.dump(prefixConfig, { lineWidth: -1 });
+          fs.writeFileSync(condarcPath, updatedYaml, "utf8");
+          core.info(
+            `Removed 'defaults' channel from prefix condarc at ${condarcPath}`,
+          );
+        }
+      } catch (err) {
+        core.warning(
+          `Failed to process prefix condarc at ${condarcPath}: ${err}`,
+        );
+      }
     }
   }
 
-  // Log all configuration information
-  await condaCommand(["config", "--show-sources"], inputs, options);
-  await condaCommand(["config", "--show"], inputs, options);
+  // Warn about unrecognized keys (catches typos that the old conda config
+  // subprocess would have warned about)
+  for (const key of Object.keys(config)) {
+    if (!KNOWN_CONDARC_KEYS.has(key)) {
+      core.warning(
+        `Unrecognized condarc key '${key}'. This may be a typo or a ` +
+          `key from a newer conda version. conda will ignore unknown keys.`,
+      );
+    }
+  }
+
+  // Write the config file
+  const configYaml = yaml.dump(config, { lineWidth: -1 });
+  core.info(`Writing condarc to ${constants.CONDARC_PATH}:\n${configYaml}`);
+  fs.writeFileSync(constants.CONDARC_PATH, configYaml, "utf8");
+
+  // Single diagnostic command for debugging
+  if (core.isDebug()) {
+    await condaCommand(["config", "--show"], inputs, options);
+  }
 }
 
 function _getFullEnvironmentPath(
@@ -309,33 +433,49 @@ function _getFullEnvironmentPath(
   return path.resolve(inputPathOrName);
 }
 
-/*
- * Whether an environment is the default environment
+/**
+ * Whether an environment is the default environment.
+ *
+ * Determined locally from condarc files (user-level and prefix-level),
+ * avoiding a conda subprocess call.
  */
-async function isDefaultEnvironment(
+function isDefaultEnvironment(
   envName: string,
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
-): Promise<boolean> {
+): boolean {
   if (envName === "") {
     return false;
   }
-  const configsOutput = (await condaCommand(
-    ["config", "--show", "--json"],
-    inputs,
-    options,
-    true,
-  )) as string;
-  const config = JSON.parse(configsOutput) as types.ICondaConfig;
-  if (config.default_activation_env) {
-    const defaultEnv = _getFullEnvironmentPath(
-      config.default_activation_env,
-      inputs,
-      options,
-    );
-    const activationEnv = _getFullEnvironmentPath(envName, inputs, options);
-    return defaultEnv === activationEnv;
+
+  const basePath = condaBasePath(inputs, options);
+  const condarcLocations = [
+    constants.CONDARC_PATH,
+    path.join(basePath, ".condarc"),
+    path.join(basePath, "condarc"),
+  ];
+
+  for (const condarcPath of condarcLocations) {
+    if (!fs.existsSync(condarcPath)) continue;
+    try {
+      const config = yaml.load(fs.readFileSync(condarcPath, "utf8")) as Record<
+        string,
+        unknown
+      > | null;
+      if (config?.default_activation_env) {
+        const defaultEnv = _getFullEnvironmentPath(
+          config.default_activation_env as string,
+          inputs,
+          options,
+        );
+        const activationEnv = _getFullEnvironmentPath(envName, inputs, options);
+        return defaultEnv === activationEnv;
+      }
+    } catch {
+      // Continue to next condarc location
+    }
   }
+
   return utils.isBaseEnv(envName);
 }
 
@@ -346,36 +486,40 @@ export async function condaInit(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
 ): Promise<void> {
-  let ownPath: string;
-  const isValidActivate = !(await isDefaultEnvironment(
+  const isValidActivate = !isDefaultEnvironment(
     inputs.activateEnvironment,
     inputs,
     options,
-  ));
+  );
   const autoActivateDefault: boolean =
     options.condaConfig.auto_activate === "true";
-  const installationDirectory = condaBasePath(inputs, options);
+  const basePath = condaBasePath(inputs, options);
 
   // Fix ownership of folders
   if (options.useBundled) {
     if (constants.IS_MAC) {
       core.info("Fixing conda folders ownership");
       const userName: string = process.env.USER as string;
+      // chown the entire base path to ensure conda init --all has write
+      // access everywhere it needs (bin, condabin, etc/profile.d, shell,
+      // lib/pythonX.Y/site-packages/xonsh, etc.)
       await utils.execute([
         "sudo",
         "chown",
         "-R",
         `${userName}:staff`,
-        condaBasePath(inputs, options),
+        basePath,
       ]);
     } else if (constants.IS_WINDOWS) {
-      for (let folder of constants.WIN_PERMS_FOLDERS) {
-        ownPath = path.join(condaBasePath(inputs, options), folder);
+      const takeownPromises = constants.WIN_PERMS_FOLDERS.map((folder) => {
+        const ownPath = path.join(basePath, folder);
         if (fs.existsSync(ownPath)) {
           core.info(`Fixing ${folder} ownership`);
-          await utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
+          return utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
         }
-      }
+        return undefined;
+      }).filter(Boolean) as Promise<void | string>[];
+      await Promise.all(takeownPromises);
     }
   }
 
@@ -506,12 +650,9 @@ export async function condaInit(
     "~/.config/powershell/profile.ps1": powerExtraText,
     "~/Documents/PowerShell/profile.ps1": powerExtraText,
     "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
-    [path.join(installationDirectory, "etc", "profile.d", "conda.sh")]:
-      bashExtraText,
-    [path.join(installationDirectory, "etc", "fish", "conf.d", "conda.fish")]:
-      bashExtraText,
-    [path.join(installationDirectory, "condabin", "conda_hook.bat")]:
-      batchExtraText,
+    [path.join(basePath, "etc", "profile.d", "conda.sh")]: bashExtraText,
+    [path.join(basePath, "etc", "fish", "conf.d", "conda.fish")]: bashExtraText,
+    [path.join(basePath, "condabin", "conda_hook.bat")]: batchExtraText,
   };
   Object.keys(shells).forEach((key) => {
     let filePath: string = key.replace("~", os.homedir());

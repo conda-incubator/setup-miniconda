@@ -1,9 +1,4 @@
-import * as fs from "fs";
-
 import * as core from "@actions/core";
-import * as tc from "@actions/tool-cache";
-
-import getHrefs from "get-hrefs";
 
 import * as types from "../types";
 import * as constants from "../constants";
@@ -11,70 +6,45 @@ import * as constants from "../constants";
 import * as base from "./base";
 
 /**
- * List available Miniconda versions
+ * Download specific version miniconda defined by version, arch and python major version.
  *
- * @param arch
- */
-async function minicondaVersions(arch: string): Promise<string[]> {
-  try {
-    let extension: string = constants.IS_UNIX ? "sh" : "exe";
-    const downloadPath: string = await tc.downloadTool(
-      constants.MINICONDA_BASE_URL,
-    );
-    const content: string = fs.readFileSync(downloadPath, "utf8");
-    let hrefs: string[] = getHrefs(content);
-    hrefs = hrefs.filter((item: string) => item.startsWith("/Miniconda3"));
-    hrefs = hrefs.filter((item: string) =>
-      item.endsWith(`${arch}.${extension}`),
-    );
-    hrefs = hrefs.map((item: string) => item.substring(1));
-    return hrefs;
-  } catch (err) {
-    core.warning(err as Error);
-    return [];
-  }
-}
-
-/**
- * Download specific version miniconda defined by version, arch and python major version
- *
- * @param pythonMajorVersion
- * @param minicondaVersion
- * @param architecture
+ * The download will fail with a clear HTTP error if the version is invalid,
+ * avoiding the previous approach of downloading and parsing the full HTML
+ * index page just for validation.
  */
 export async function downloadMiniconda(
   pythonMajorVersion: number,
   inputs: types.IActionInputs,
 ): Promise<string> {
-  // Check valid arch
-  let arch: string =
+  const arch: string =
     constants.MINICONDA_ARCHITECTURES[inputs.architecture.toLowerCase()];
   if (!arch) {
     throw new Error(`Invalid arch "${inputs.architecture}"!`);
   }
 
-  let extension: string = constants.IS_UNIX ? "sh" : "exe";
-  let osName: string = constants.OS_NAMES[process.platform];
-  let minicondaVersion = inputs.minicondaVersion || "latest";
-  const minicondaInstallerName: string = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
+  const extension: string = constants.IS_UNIX ? "sh" : "exe";
+  const osName: string = constants.OS_NAMES[process.platform];
+  const minicondaVersion = inputs.minicondaVersion || "latest";
+  const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
+  const url = constants.MINICONDA_BASE_URL + minicondaInstallerName;
   core.info(minicondaInstallerName);
 
-  // Check version name
-  let versions: string[] = await minicondaVersions(arch);
-  if (versions) {
-    if (!versions.includes(minicondaInstallerName)) {
-      throw new Error(
-        `Invalid miniconda version!\n\nMust be among ${versions.toString()}`,
-      );
-    }
+  try {
+    return await base.ensureLocalInstaller({
+      url,
+      tool: `Miniconda${pythonMajorVersion}`,
+      version: minicondaVersion,
+      arch: arch,
+    });
+  } catch (err) {
+    throw new Error(
+      `Failed to download Miniconda installer from ${url}. ` +
+        `Please verify that miniconda-version '${minicondaVersion}' is valid ` +
+        `for ${osName}-${arch}. Browse available versions at ` +
+        `${constants.MINICONDA_BASE_URL}\n` +
+        `Original error: ${err}`,
+    );
   }
-
-  return await base.ensureLocalInstaller({
-    url: constants.MINICONDA_BASE_URL + minicondaInstallerName,
-    tool: `Miniconda${pythonMajorVersion}`,
-    version: minicondaVersion,
-    arch: arch,
-  });
 }
 
 /**
