@@ -851,6 +851,63 @@ jobs:
       - run: conda config --show
 ```
 
+### Restricted environments (no profile modifications)
+
+If your environment does not allow modifications to `~/.profile` or `~/.bashrc`
+(e.g. corporate self-hosted runners with restricted home directories), set
+`remove-profiles: "false"` to prevent the action from deleting existing profile
+files. Note that `conda init` will still append conda initialization to your
+shell profiles — if even that is not allowed, you can source conda's shell
+integration manually in each step instead of relying on `shell: bash -el {0}`:
+
+```yaml
+jobs:
+  restricted-env:
+    name: Restricted environment
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: myenv
+          environment-file: environment.yml
+          remove-profiles: "false"
+      - name: Append activation to conda's init script
+        shell: bash
+        run: echo "conda activate myenv" >> $CONDA/etc/profile.d/conda.sh
+      - name: Run with conda
+        shell: bash
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          python my_script.py
+```
+
+To avoid repeating the `source` line in every step, you can point `BASH_ENV` to
+conda's init script so it is sourced automatically:
+
+```yaml
+jobs:
+  restricted-env:
+    name: Restricted environment
+    runs-on: "ubuntu-latest"
+    env:
+      BASH_ENV: ${{ github.workspace }}/_conda_activate.sh
+    steps:
+      - uses: actions/checkout@v5
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: myenv
+          environment-file: environment.yml
+          remove-profiles: "false"
+      - name: Prepare BASH_ENV
+        shell: bash
+        run: |
+          echo "source $CONDA/etc/profile.d/conda.sh" > $BASH_ENV
+          echo "conda activate myenv" >> $BASH_ENV
+      - name: Run with conda (automatic activation)
+        run: python my_script.py
+```
+
 ## IMPORTANT
 
 - Conda activation does not correctly work on `sh`. Please use `bash`.
