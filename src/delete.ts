@@ -2,9 +2,12 @@ import * as fs from "fs";
 import * as path from "path";
 
 import * as core from "@actions/core";
+import * as io from "@actions/io";
 
 import * as input from "./input";
 import * as utils from "./utils";
+
+const STASH_SUFFIX = "_stash_";
 
 /**
  * Clean up extracted packages from the conda packages directory, keeping only
@@ -12,8 +15,8 @@ import * as utils from "./utils";
  *
  * Instead of recursively deleting each extracted folder (extremely slow on
  * Windows due to filesystem overhead), we rename them to a sibling directory
- * on the same filesystem. The renamed directory is left for the ephemeral
- * runner VM to discard.
+ * on the same filesystem. On self-hosted (persistent) runners, stash
+ * directories from previous runs are cleaned up before new ones are created.
  */
 async function run(): Promise<void> {
   try {
@@ -23,14 +26,40 @@ async function run(): Promise<void> {
     core.startGroup(
       "Removing uncompressed packages to trim down packages directory...",
     );
-    for (const pkgsDir of pkgsDirs) {
+    for (const rawPkgsDir of pkgsDirs) {
+      // Normalize to strip trailing separators so the sibling stash
+      // directory is always created next to pkgsDir, not inside it
+      const pkgsDir = path.resolve(rawPkgsDir);
+
       if (!fs.existsSync(pkgsDir) || !fs.lstatSync(pkgsDir).isDirectory()) {
         continue;
       }
 
+      // Clean up stash directories left by previous runs (self-hosted runners)
+      const parentDir = path.dirname(pkgsDir);
+      const baseName = path.basename(pkgsDir);
+      for (const sibling of fs.readdirSync(parentDir)) {
+        if (sibling.startsWith(`${baseName}${STASH_SUFFIX}`)) {
+          const oldStash = path.join(parentDir, sibling);
+          core.info(`Cleaning up old stash directory "${oldStash}"`);
+          try {
+            await io.rmRF(oldStash);
+          } catch (err) {
+            core.warning(
+              `Could not remove old stash "${oldStash}": ${
+                (err as Error).message
+              }`,
+            );
+          }
+        }
+      }
+
       // Stash directory is a sibling to pkgsDir so rename stays on the
       // same filesystem and never fails with EXDEV
-      const stashDir = `${pkgsDir}_stash_${Date.now()}`;
+      const stashDir = path.join(
+        parentDir,
+        `${baseName}${STASH_SUFFIX}${Date.now()}`,
+      );
       fs.mkdirSync(stashDir, { recursive: true });
 
       for (const entry of fs.readdirSync(pkgsDir)) {
@@ -46,14 +75,15 @@ async function run(): Promise<void> {
         try {
           fs.renameSync(fullPath, dest);
         } catch (err) {
-          core.warning(`Could not stash "${fullPath}": ${err}. Skipping.`);
+          core.warning(
+            `Could not stash "${fullPath}": ${
+              (err as Error).message
+            }. Skipping.`,
+          );
         }
       }
 
-      core.info(
-        `Stashed extracted packages to "${stashDir}", ` +
-          "will be discarded with the runner VM.",
-      );
+      core.info(`Stashed extracted packages to "${stashDir}".`);
     }
     core.endGroup();
   } catch (err) {

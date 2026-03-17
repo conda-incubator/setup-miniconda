@@ -32321,7 +32321,7 @@ function mv(source_1, dest_1) {
  */
 function rmRF(inputPath) {
     return io_awaiter(this, void 0, void 0, function* () {
-        if (ioUtil.IS_WINDOWS) {
+        if (IS_WINDOWS) {
             // Check for invalid characters
             // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
             if (/[*"<>|]/.test(inputPath)) {
@@ -32330,7 +32330,7 @@ function rmRF(inputPath) {
         }
         try {
             // note if path does not exist, error is silent
-            yield ioUtil.rm(inputPath, {
+            yield rm(inputPath, {
                 force: true,
                 maxRetries: 3,
                 recursive: true,
@@ -33958,14 +33958,16 @@ var delete_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _a
 
 
 
+
+const STASH_SUFFIX = "_stash_";
 /**
  * Clean up extracted packages from the conda packages directory, keeping only
  * the compressed archive cache and loose archive files.
  *
  * Instead of recursively deleting each extracted folder (extremely slow on
  * Windows due to filesystem overhead), we rename them to a sibling directory
- * on the same filesystem. The renamed directory is left for the ephemeral
- * runner VM to discard.
+ * on the same filesystem. On self-hosted (persistent) runners, stash
+ * directories from previous runs are cleaned up before new ones are created.
  */
 function run() {
     return delete_awaiter(this, void 0, void 0, function* () {
@@ -33975,13 +33977,31 @@ function run() {
             if (!pkgsDirs.length)
                 return;
             startGroup("Removing uncompressed packages to trim down packages directory...");
-            for (const pkgsDir of pkgsDirs) {
+            for (const rawPkgsDir of pkgsDirs) {
+                // Normalize to strip trailing separators so the sibling stash
+                // directory is always created next to pkgsDir, not inside it
+                const pkgsDir = external_path_namespaceObject.resolve(rawPkgsDir);
                 if (!external_fs_namespaceObject.existsSync(pkgsDir) || !external_fs_namespaceObject.lstatSync(pkgsDir).isDirectory()) {
                     continue;
                 }
+                // Clean up stash directories left by previous runs (self-hosted runners)
+                const parentDir = external_path_namespaceObject.dirname(pkgsDir);
+                const baseName = external_path_namespaceObject.basename(pkgsDir);
+                for (const sibling of external_fs_namespaceObject.readdirSync(parentDir)) {
+                    if (sibling.startsWith(`${baseName}${STASH_SUFFIX}`)) {
+                        const oldStash = external_path_namespaceObject.join(parentDir, sibling);
+                        info(`Cleaning up old stash directory "${oldStash}"`);
+                        try {
+                            yield rmRF(oldStash);
+                        }
+                        catch (err) {
+                            warning(`Could not remove old stash "${oldStash}": ${err.message}`);
+                        }
+                    }
+                }
                 // Stash directory is a sibling to pkgsDir so rename stays on the
                 // same filesystem and never fails with EXDEV
-                const stashDir = `${pkgsDir}_stash_${Date.now()}`;
+                const stashDir = external_path_namespaceObject.join(parentDir, `${baseName}${STASH_SUFFIX}${Date.now()}`);
                 external_fs_namespaceObject.mkdirSync(stashDir, { recursive: true });
                 for (const entry of external_fs_namespaceObject.readdirSync(pkgsDir)) {
                     if (entry === "cache")
@@ -33996,11 +34016,10 @@ function run() {
                         external_fs_namespaceObject.renameSync(fullPath, dest);
                     }
                     catch (err) {
-                        warning(`Could not stash "${fullPath}": ${err}. Skipping.`);
+                        warning(`Could not stash "${fullPath}": ${err.message}. Skipping.`);
                     }
                 }
-                info(`Stashed extracted packages to "${stashDir}", ` +
-                    "will be discarded with the runner VM.");
+                info(`Stashed extracted packages to "${stashDir}".`);
             }
             endGroup();
         }
