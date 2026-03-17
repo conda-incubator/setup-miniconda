@@ -1,45 +1,59 @@
 import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
 
 import * as core from "@actions/core";
-import * as io from "@actions/io";
 
 import * as input from "./input";
 import * as utils from "./utils";
 
 /**
- * Clean up the conda cache directory
+ * Clean up extracted packages from the conda packages directory, keeping only
+ * the compressed archive cache and loose archive files.
+ *
+ * Instead of recursively deleting each extracted folder (extremely slow on
+ * Windows due to filesystem overhead), we rename them to a sibling directory
+ * on the same filesystem. The renamed directory is left for the ephemeral
+ * runner VM to discard.
  */
 async function run(): Promise<void> {
   try {
     const inputs = await core.group("Gathering Inputs...", input.parseInputs);
-    let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+    const pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
     if (!pkgsDirs.length) return;
     core.startGroup(
       "Removing uncompressed packages to trim down packages directory...",
     );
     for (const pkgsDir of pkgsDirs) {
-      if (fs.existsSync(pkgsDir) && fs.lstatSync(pkgsDir).isDirectory()) {
-        let fullPath: string;
-        for (let folder_or_file of fs.readdirSync(pkgsDir)) {
-          fullPath = path.join(pkgsDir, folder_or_file);
-          if (
-            fs.existsSync(fullPath) &&
-            fs.lstatSync(fullPath).isDirectory() &&
-            folder_or_file != "cache"
-          ) {
-            core.info(`Removing "${fullPath}"`);
-            try {
-              await io.rmRF(fullPath);
-            } catch (err) {
-              // If file could not be deleted, move to a temp folder
-              core.info(`Remove failed, moving "${fullPath}" to temp folder`);
-              await io.mv(fullPath, path.join(os.tmpdir(), folder_or_file));
-            }
-          }
+      if (!fs.existsSync(pkgsDir) || !fs.lstatSync(pkgsDir).isDirectory()) {
+        continue;
+      }
+
+      // Stash directory is a sibling to pkgsDir so rename stays on the
+      // same filesystem and never fails with EXDEV
+      const stashDir = `${pkgsDir}_stash_${Date.now()}`;
+      fs.mkdirSync(stashDir, { recursive: true });
+
+      for (const entry of fs.readdirSync(pkgsDir)) {
+        if (entry === "cache") continue;
+
+        const fullPath = path.join(pkgsDir, entry);
+        if (!fs.existsSync(fullPath) || !fs.lstatSync(fullPath).isDirectory()) {
+          continue;
+        }
+
+        const dest = path.join(stashDir, entry);
+        core.info(`Stashing "${fullPath}"`);
+        try {
+          fs.renameSync(fullPath, dest);
+        } catch (err) {
+          core.warning(`Could not stash "${fullPath}": ${err}. Skipping.`);
         }
       }
+
+      core.info(
+        `Stashed extracted packages to "${stashDir}", ` +
+          "will be discarded with the runner VM.",
+      );
     }
     core.endGroup();
   } catch (err) {
