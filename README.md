@@ -851,6 +851,32 @@ jobs:
       - run: conda config --show
 ```
 
+### Restricted environments (no profile modifications)
+
+If your environment does not allow modifications to `~/.profile` or `~/.bashrc`
+(e.g. corporate self-hosted runners with restricted home directories), set
+`remove-profiles: "false"` and source conda manually on each step:
+
+```yaml
+jobs:
+  restricted-env:
+    name: Restricted environment
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: myenv
+          environment-file: environment.yml
+          remove-profiles: "false"
+      - name: Run with conda
+        shell: bash
+        run: |
+          source "$CONDA/etc/profile.d/conda.sh"
+          conda activate myenv
+          python my_script.py
+```
+
 ## IMPORTANT
 
 - Conda activation does not correctly work on `sh`. Please use `bash`.
