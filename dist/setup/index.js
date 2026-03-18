@@ -53891,57 +53891,68 @@ function copyConfig(inputs) {
 /**
  * Setup Conda configuration
  */
-function applyCondaConfiguration(inputs, options) {
+function applyCondaConfiguration(inputs, options, reapply = false) {
     var _a, _b, _c, _d;
     return conda_awaiter(this, void 0, void 0, function* () {
         const configEntries = Object.entries(inputs.condaConfig);
-        // Channels are special: if specified as an action input, these take priority
-        // over what is found in (at present) a YAML-based environment
-        let channels = inputs.condaConfig.channels
-            .trim()
-            .split(/,/)
-            .map((c) => c.trim())
-            .filter((c) => c.length);
-        if (!channels.length && ((_c = (_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) === null || _b === void 0 ? void 0 : _b.channels) === null || _c === void 0 ? void 0 : _c.length)) {
-            channels = options.envSpec.yaml.channels;
-        }
-        // This can be enabled via conda-remove-defaults and channels = nodefaults
-        let removeDefaults = inputs.condaRemoveDefaults === "true";
-        // LIFO: reverse order to preserve higher priority as listed in the option
-        // .slice ensures working against a copy
-        for (const channel of channels.slice().reverse()) {
-            if (channel === "nodefaults") {
-                warning("'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
-                    "In the future, 'nodefaults' to remove 'defaults' won't be supported. " +
-                    "Please set 'conda-remove-defaults' = 'true' in setup-miniconda to remove this warning.");
-                removeDefaults = true;
-                continue;
+        // Skip channels and pkgs_dirs on reapply — they persist in .condarc from the
+        // first call and re-adding them produces spurious warnings (see #57)
+        if (!reapply) {
+            // Channels are special: if specified as an action input, these take priority
+            // over what is found in (at present) a YAML-based environment
+            let channels = inputs.condaConfig.channels
+                .trim()
+                .split(/,/)
+                .map((c) => c.trim())
+                .filter((c) => c.length);
+            if (!channels.length && ((_c = (_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) === null || _b === void 0 ? void 0 : _b.channels) === null || _c === void 0 ? void 0 : _c.length)) {
+                channels = options.envSpec.yaml.channels;
             }
-            info(`Adding channel '${channel}'`);
-            yield condaCommand(["config", "--add", "channels", channel], inputs, options);
-        }
-        if (!channels.includes("defaults")) {
-            if (removeDefaults) {
-                info("Removing implicitly added 'defaults' channel");
-                const configsOutput = (yield condaCommand(["config", "--show-sources", "--json"], inputs, options, true));
-                const configs = JSON.parse(configsOutput);
-                for (const fileName in configs) {
-                    if ((_d = configs[fileName].channels) === null || _d === void 0 ? void 0 : _d.includes("defaults")) {
-                        yield condaCommand(["config", "--remove", "channels", "defaults", "--file", fileName], inputs, options);
+            // This can be enabled via conda-remove-defaults and channels = nodefaults
+            let removeDefaults = inputs.condaRemoveDefaults === "true";
+            // LIFO: reverse order to preserve higher priority as listed in the option
+            // .slice ensures working against a copy
+            for (const channel of channels.slice().reverse()) {
+                if (channel === "nodefaults") {
+                    warning("'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
+                        "In the future, 'nodefaults' to remove 'defaults' won't be supported. " +
+                        "Please set 'conda-remove-defaults' = 'true' in setup-miniconda to remove this warning.");
+                    removeDefaults = true;
+                    continue;
+                }
+                info(`Adding channel '${channel}'`);
+                yield condaCommand(["config", "--add", "channels", channel], inputs, options);
+            }
+            if (!channels.includes("defaults")) {
+                if (removeDefaults) {
+                    info("Removing implicitly added 'defaults' channel");
+                    const configsOutput = (yield condaCommand(["config", "--show-sources", "--json"], inputs, options, true));
+                    const configs = JSON.parse(configsOutput);
+                    for (const fileName in configs) {
+                        if ((_d = configs[fileName].channels) === null || _d === void 0 ? void 0 : _d.includes("defaults")) {
+                            yield condaCommand([
+                                "config",
+                                "--remove",
+                                "channels",
+                                "defaults",
+                                "--file",
+                                fileName,
+                            ], inputs, options);
+                        }
                     }
                 }
+                else {
+                    warning("The 'defaults' channel might have been added implicitly. " +
+                        "If this is intentional, add 'defaults' to the 'channels' list. " +
+                        "Otherwise, consider setting 'conda-remove-defaults' to 'true'.");
+                }
             }
-            else {
-                warning("The 'defaults' channel might have been added implicitly. " +
-                    "If this is intentional, add 'defaults' to the 'channels' list. " +
-                    "Otherwise, consider setting 'conda-remove-defaults' to 'true'.");
+            // Package directories are also comma-separated, like channels
+            let pkgsDirs = parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+            for (const pkgsDir of pkgsDirs) {
+                info(`Adding pkgs_dir '${pkgsDir}'`);
+                yield condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], inputs, options);
             }
-        }
-        // Package directories are also comma-separated, like channels
-        let pkgsDirs = parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
-        for (const pkgsDir of pkgsDirs) {
-            info(`Adding pkgs_dir '${pkgsDir}'`);
-            yield condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], inputs, options);
         }
         // auto_activate_base was renamed to auto_activate in 25.5.0
         info(`auto_activate: ${inputs.condaConfig.auto_activate}`);
@@ -59733,8 +59744,9 @@ function installBaseTools(inputs, options) {
         if (tools.length) {
             yield condaCommand(["install", "--name", "base", ...tools], inputs, options);
             // *Now* use the new options, as we may have a new conda/mamba with more supported
-            // options that previously failed
-            yield applyCondaConfiguration(inputs, postInstallOptions);
+            // options that previously failed. Pass reapply=true to skip channels/pkgs_dirs
+            // which already persist in .condarc from the first call (#57)
+            yield applyCondaConfiguration(inputs, postInstallOptions, true);
         }
         else {
             info("No tools were installed in 'base' env.");

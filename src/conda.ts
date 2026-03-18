@@ -158,87 +158,99 @@ export async function copyConfig(inputs: types.IActionInputs) {
 export async function applyCondaConfiguration(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
+  reapply: boolean = false,
 ): Promise<void> {
   const configEntries = Object.entries(inputs.condaConfig) as [
     keyof types.ICondaConfig,
     string,
   ][];
 
-  // Channels are special: if specified as an action input, these take priority
-  // over what is found in (at present) a YAML-based environment
-  let channels = inputs.condaConfig.channels
-    .trim()
-    .split(/,/)
-    .map((c) => c.trim())
-    .filter((c) => c.length);
+  // Skip channels and pkgs_dirs on reapply — they persist in .condarc from the
+  // first call and re-adding them produces spurious warnings (see #57)
+  if (!reapply) {
+    // Channels are special: if specified as an action input, these take priority
+    // over what is found in (at present) a YAML-based environment
+    let channels = inputs.condaConfig.channels
+      .trim()
+      .split(/,/)
+      .map((c) => c.trim())
+      .filter((c) => c.length);
 
-  if (!channels.length && options.envSpec?.yaml?.channels?.length) {
-    channels = options.envSpec.yaml.channels;
-  }
-
-  // This can be enabled via conda-remove-defaults and channels = nodefaults
-  let removeDefaults: boolean = inputs.condaRemoveDefaults === "true";
-
-  // LIFO: reverse order to preserve higher priority as listed in the option
-  // .slice ensures working against a copy
-  for (const channel of channels.slice().reverse()) {
-    if (channel === "nodefaults") {
-      core.warning(
-        "'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
-          "In the future, 'nodefaults' to remove 'defaults' won't be supported. " +
-          "Please set 'conda-remove-defaults' = 'true' in setup-miniconda to remove this warning.",
-      );
-      removeDefaults = true;
-      continue;
+    if (!channels.length && options.envSpec?.yaml?.channels?.length) {
+      channels = options.envSpec.yaml.channels;
     }
-    core.info(`Adding channel '${channel}'`);
-    await condaCommand(
-      ["config", "--add", "channels", channel],
-      inputs,
-      options,
-    );
-  }
 
-  if (!channels.includes("defaults")) {
-    if (removeDefaults) {
-      core.info("Removing implicitly added 'defaults' channel");
-      const configsOutput = (await condaCommand(
-        ["config", "--show-sources", "--json"],
+    // This can be enabled via conda-remove-defaults and channels = nodefaults
+    let removeDefaults: boolean = inputs.condaRemoveDefaults === "true";
+
+    // LIFO: reverse order to preserve higher priority as listed in the option
+    // .slice ensures working against a copy
+    for (const channel of channels.slice().reverse()) {
+      if (channel === "nodefaults") {
+        core.warning(
+          "'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
+            "In the future, 'nodefaults' to remove 'defaults' won't be supported. " +
+            "Please set 'conda-remove-defaults' = 'true' in setup-miniconda to remove this warning.",
+        );
+        removeDefaults = true;
+        continue;
+      }
+      core.info(`Adding channel '${channel}'`);
+      await condaCommand(
+        ["config", "--add", "channels", channel],
         inputs,
         options,
-        true,
-      )) as string;
-      const configs = JSON.parse(configsOutput) as Record<
-        string,
-        types.ICondaConfig
-      >;
-      for (const fileName in configs) {
-        if (configs[fileName].channels?.includes("defaults")) {
-          await condaCommand(
-            ["config", "--remove", "channels", "defaults", "--file", fileName],
-            inputs,
-            options,
-          );
-        }
-      }
-    } else {
-      core.warning(
-        "The 'defaults' channel might have been added implicitly. " +
-          "If this is intentional, add 'defaults' to the 'channels' list. " +
-          "Otherwise, consider setting 'conda-remove-defaults' to 'true'.",
       );
     }
-  }
 
-  // Package directories are also comma-separated, like channels
-  let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
-  for (const pkgsDir of pkgsDirs) {
-    core.info(`Adding pkgs_dir '${pkgsDir}'`);
-    await condaCommand(
-      ["config", "--add", "pkgs_dirs", pkgsDir],
-      inputs,
-      options,
-    );
+    if (!channels.includes("defaults")) {
+      if (removeDefaults) {
+        core.info("Removing implicitly added 'defaults' channel");
+        const configsOutput = (await condaCommand(
+          ["config", "--show-sources", "--json"],
+          inputs,
+          options,
+          true,
+        )) as string;
+        const configs = JSON.parse(configsOutput) as Record<
+          string,
+          types.ICondaConfig
+        >;
+        for (const fileName in configs) {
+          if (configs[fileName].channels?.includes("defaults")) {
+            await condaCommand(
+              [
+                "config",
+                "--remove",
+                "channels",
+                "defaults",
+                "--file",
+                fileName,
+              ],
+              inputs,
+              options,
+            );
+          }
+        }
+      } else {
+        core.warning(
+          "The 'defaults' channel might have been added implicitly. " +
+            "If this is intentional, add 'defaults' to the 'channels' list. " +
+            "Otherwise, consider setting 'conda-remove-defaults' to 'true'.",
+        );
+      }
+    }
+
+    // Package directories are also comma-separated, like channels
+    let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+    for (const pkgsDir of pkgsDirs) {
+      core.info(`Adding pkgs_dir '${pkgsDir}'`);
+      await condaCommand(
+        ["config", "--add", "pkgs_dirs", pkgsDir],
+        inputs,
+        options,
+      );
+    }
   }
   // auto_activate_base was renamed to auto_activate in 25.5.0
   core.info(`auto_activate: ${inputs.condaConfig.auto_activate}`);
