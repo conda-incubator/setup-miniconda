@@ -860,7 +860,8 @@ jobs:
 
 If your environment does not allow modifications to `~/.profile` or `~/.bashrc`
 (e.g. corporate self-hosted runners with restricted home directories), set
-`remove-profiles: "false"` and source conda manually on each step:
+`run-init: "false"` and `remove-profiles: "false"` to prevent any profile
+modifications. You must then manually source conda in each step:
 
 ```yaml
 jobs:
@@ -874,6 +875,7 @@ jobs:
           activate-environment: myenv
           environment-file: environment.yml
           remove-profiles: "false"
+          run-init: "false"
       - name: Run with conda
         shell: bash
         run: |
