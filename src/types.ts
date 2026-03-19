@@ -90,6 +90,7 @@ export interface IActionInputs {
   readonly condaRemoveDefaults: string;
   readonly pythonVersion: string;
   readonly removeProfiles: string;
+  readonly runInit: string;
   readonly useMamba: string;
   readonly cleanPatchedEnvironmentFile: string;
   readonly runPost: string;

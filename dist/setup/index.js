@@ -53618,6 +53618,7 @@ function parseInputs() {
             condaRemoveDefaults: getInput("conda-remove-defaults"),
             pythonVersion: getInput("python-version"),
             removeProfiles: getInput("remove-profiles"),
+            runInit: getInput("run-init"),
             condaConfig: Object.freeze({
                 add_anaconda_token: getInput("add-anaconda-token"),
                 add_pip_as_python_dependency: getInput("add-pip-as-python-dependency"),
@@ -54059,116 +54060,122 @@ function condaInit(inputs, options) {
                 }
             }
         }
-        // Remove profile files
-        if (inputs.removeProfiles == "true") {
-            for (let rc of PROFILES) {
-                try {
-                    let file = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), rc);
-                    if (external_fs_namespaceObject.existsSync(file)) {
-                        info(`Removing "${file}"`);
-                        yield rmRF(file);
+        // Skip conda init and all profile modifications if run-init is false
+        if (inputs.runInit == "false") {
+            info("Skipping conda init and profile modifications (run-init=false)");
+        }
+        else {
+            // Remove profile files
+            if (inputs.removeProfiles == "true") {
+                for (let rc of PROFILES) {
+                    try {
+                        let file = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), rc);
+                        if (external_fs_namespaceObject.existsSync(file)) {
+                            info(`Removing "${file}"`);
+                            yield rmRF(file);
+                        }
+                    }
+                    catch (err) {
+                        warning(err);
                     }
                 }
-                catch (err) {
-                    warning(err);
+            }
+            // Run conda init
+            for (let cmd of ["--all"]) {
+                yield condaCommand(["init", cmd], inputs, options);
+            }
+            if (inputs.removeProfiles == "true") {
+                // Rename files
+                if (IS_LINUX) {
+                    let source = "~/.bashrc".replace("~", external_os_namespaceObject.homedir());
+                    let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
+                    if (external_fs_namespaceObject.existsSync(source)) {
+                        info(`Renaming "${source}" to "${dest}"\n`);
+                        yield mv(source, dest);
+                    }
+                }
+                else if (IS_MAC) {
+                    let source = "~/.bash_profile".replace("~", external_os_namespaceObject.homedir());
+                    let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
+                    if (external_fs_namespaceObject.existsSync(source)) {
+                        info(`Renaming "${source}" to "${dest}"\n`);
+                        yield mv(source, dest);
+                    }
                 }
             }
-        }
-        // Run conda init
-        for (let cmd of ["--all"]) {
-            yield condaCommand(["init", cmd], inputs, options);
-        }
-        if (inputs.removeProfiles == "true") {
-            // Rename files
-            if (IS_LINUX) {
-                let source = "~/.bashrc".replace("~", external_os_namespaceObject.homedir());
-                let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
-                if (external_fs_namespaceObject.existsSync(source)) {
-                    info(`Renaming "${source}" to "${dest}"\n`);
-                    yield mv(source, dest);
+            // PowerShell profiles
+            // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+            const powerLines = [
+                "",
+                "# ----------------------------------------------------------------------------",
+            ];
+            if (isValidActivate) {
+                powerLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`);
+            }
+            powerLines.push("# ----------------------------------------------------------------------------");
+            const powerExtraText = powerLines.join("\n");
+            // Bash profiles
+            // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+            const bashLines = [
+                "",
+                "# ----------------------------------------------------------------------------",
+                "# Conda Setup Action: Basic configuration",
+                "set -eo pipefail",
+            ];
+            if (isValidActivate) {
+                bashLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`, "# ----------------------------------------------------------------------------");
+            }
+            const bashExtraText = bashLines.join("\n");
+            // Xonsh profiles
+            // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+            const xonshLines = [
+                "",
+                "# ----------------------------------------------------------------------------",
+                "# Conda Setup Action: Basic configuration",
+                "$RAISE_SUBPROC_ERROR = True", // equivalent to: set -e
+                "$XONSH_PIPEFAIL = True", // equivalent to: set -o pipefail
+            ];
+            if (isValidActivate) {
+                xonshLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`, "# ----------------------------------------------------------------------------");
+            }
+            const xonshExtraText = xonshLines.join("\n");
+            // Batch profiles
+            // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+            const batchLines = [
+                "",
+                ":: ---------------------------------------------------------------------------",
+            ];
+            if (autoActivateDefault) {
+                batchLines.push(":: Conda Setup Action: Activate default environment", '@CALL "%CONDA_BAT%" activate');
+            }
+            if (isValidActivate) {
+                batchLines.push(":: Conda Setup Action: Custom activation", `@CALL "%CONDA_BAT%" activate "${inputs.activateEnvironment}"`);
+            }
+            batchLines.push(":: Conda Setup Action: Basic configuration", "@SETLOCAL EnableExtensions", "@SETLOCAL DisableDelayedExpansion", ":: ---------------------------------------------------------------------------");
+            const batchExtraText = batchLines.join("\n");
+            const shells = {
+                "~/.bash_profile": bashExtraText,
+                "~/.profile": bashExtraText,
+                "~/.zshrc": bashExtraText,
+                "~/.config/fish/config.fish": bashExtraText,
+                "~/.tcshrc": bashExtraText,
+                "~/.xonshrc": xonshExtraText,
+                "~/.config/powershell/profile.ps1": powerExtraText,
+                "~/Documents/PowerShell/profile.ps1": powerExtraText,
+                "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
+                [external_path_namespaceObject.join(installationDirectory, "etc", "profile.d", "conda.sh")]: bashExtraText,
+                [external_path_namespaceObject.join(installationDirectory, "etc", "fish", "conf.d", "conda.fish")]: bashExtraText,
+                [external_path_namespaceObject.join(installationDirectory, "condabin", "conda_hook.bat")]: batchExtraText,
+            };
+            Object.keys(shells).forEach((key) => {
+                let filePath = key.replace("~", external_os_namespaceObject.homedir());
+                const text = shells[key];
+                if (external_fs_namespaceObject.existsSync(filePath)) {
+                    info(`Append to "${filePath}":\n ${text} \n`);
+                    external_fs_namespaceObject.appendFileSync(filePath, text);
                 }
-            }
-            else if (IS_MAC) {
-                let source = "~/.bash_profile".replace("~", external_os_namespaceObject.homedir());
-                let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
-                if (external_fs_namespaceObject.existsSync(source)) {
-                    info(`Renaming "${source}" to "${dest}"\n`);
-                    yield mv(source, dest);
-                }
-            }
+            });
         }
-        // PowerShell profiles
-        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-        const powerLines = [
-            "",
-            "# ----------------------------------------------------------------------------",
-        ];
-        if (isValidActivate) {
-            powerLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`);
-        }
-        powerLines.push("# ----------------------------------------------------------------------------");
-        const powerExtraText = powerLines.join("\n");
-        // Bash profiles
-        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-        const bashLines = [
-            "",
-            "# ----------------------------------------------------------------------------",
-            "# Conda Setup Action: Basic configuration",
-            "set -eo pipefail",
-        ];
-        if (isValidActivate) {
-            bashLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`, "# ----------------------------------------------------------------------------");
-        }
-        const bashExtraText = bashLines.join("\n");
-        // Xonsh profiles
-        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-        const xonshLines = [
-            "",
-            "# ----------------------------------------------------------------------------",
-            "# Conda Setup Action: Basic configuration",
-            "$RAISE_SUBPROC_ERROR = True", // equivalent to: set -e
-            "$XONSH_PIPEFAIL = True", // equivalent to: set -o pipefail
-        ];
-        if (isValidActivate) {
-            xonshLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`, "# ----------------------------------------------------------------------------");
-        }
-        const xonshExtraText = xonshLines.join("\n");
-        // Batch profiles
-        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-        const batchLines = [
-            "",
-            ":: ---------------------------------------------------------------------------",
-        ];
-        if (autoActivateDefault) {
-            batchLines.push(":: Conda Setup Action: Activate default environment", '@CALL "%CONDA_BAT%" activate');
-        }
-        if (isValidActivate) {
-            batchLines.push(":: Conda Setup Action: Custom activation", `@CALL "%CONDA_BAT%" activate "${inputs.activateEnvironment}"`);
-        }
-        batchLines.push(":: Conda Setup Action: Basic configuration", "@SETLOCAL EnableExtensions", "@SETLOCAL DisableDelayedExpansion", ":: ---------------------------------------------------------------------------");
-        const batchExtraText = batchLines.join("\n");
-        const shells = {
-            "~/.bash_profile": bashExtraText,
-            "~/.profile": bashExtraText,
-            "~/.zshrc": bashExtraText,
-            "~/.config/fish/config.fish": bashExtraText,
-            "~/.tcshrc": bashExtraText,
-            "~/.xonshrc": xonshExtraText,
-            "~/.config/powershell/profile.ps1": powerExtraText,
-            "~/Documents/PowerShell/profile.ps1": powerExtraText,
-            "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
-            [external_path_namespaceObject.join(installationDirectory, "etc", "profile.d", "conda.sh")]: bashExtraText,
-            [external_path_namespaceObject.join(installationDirectory, "etc", "fish", "conf.d", "conda.fish")]: bashExtraText,
-            [external_path_namespaceObject.join(installationDirectory, "condabin", "conda_hook.bat")]: batchExtraText,
-        };
-        Object.keys(shells).forEach((key) => {
-            let filePath = key.replace("~", external_os_namespaceObject.homedir());
-            const text = shells[key];
-            if (external_fs_namespaceObject.existsSync(filePath)) {
-                info(`Append to "${filePath}":\n ${text} \n`);
-                external_fs_namespaceObject.appendFileSync(filePath, text);
-            }
-        });
     });
 }
 

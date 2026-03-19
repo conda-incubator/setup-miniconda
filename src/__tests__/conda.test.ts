@@ -66,6 +66,7 @@ function makeInputs(
     condaRemoveDefaults: overrides.condaRemoveDefaults ?? "false",
     pythonVersion: "",
     removeProfiles: "true",
+    runInit: "true",
     useMamba: "",
     cleanPatchedEnvironmentFile: "true",
     runPost: "true",

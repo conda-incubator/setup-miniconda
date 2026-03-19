@@ -250,6 +250,14 @@ inputs:
       removed from the runner. Default is "true".'
     required: false
     default: "true"
+  run-init:
+    description:
+      'Advanced. Whether to run "conda init" and modify shell profiles. Set to
+      "false" to prevent any modifications to ~/.profile, ~/.bashrc, and other
+      shell profiles. When disabled, you must manually source conda in each
+      step. Default is "true".'
+    required: false
+    default: "true"
   mamba-version:
     description:
       'Use mamba (https://github.com/QuantStack/mamba) as a faster drop-in

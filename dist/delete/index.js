@@ -33795,6 +33795,7 @@ function parseInputs() {
             condaRemoveDefaults: getInput("conda-remove-defaults"),
             pythonVersion: getInput("python-version"),
             removeProfiles: getInput("remove-profiles"),
+            runInit: getInput("run-init"),
             condaConfig: Object.freeze({
                 add_anaconda_token: getInput("add-anaconda-token"),
                 add_pip_as_python_dependency: getInput("add-pip-as-python-dependency"),

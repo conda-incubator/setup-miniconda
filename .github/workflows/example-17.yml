@@ -9,9 +9,6 @@ on:
       - "develop"
       - "main"
       - "master"
-  schedule:
-    # Note that cronjobs run on master/main by default
-    - cron: "0 0 * * *"
 
 concurrency:
   group:
@@ -33,19 +30,98 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6.0.2
+      - name: Save profile checksums (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          md5sum ~/.profile ~/.bashrc 2>/dev/null > /tmp/profile_checksums_before.txt || true
+          cat /tmp/profile_checksums_before.txt
+      - name: Save profile checksums (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $files = @(
+            "$HOME\Documents\PowerShell\profile.ps1",
+            "$HOME\Documents\WindowsPowerShell\profile.ps1"
+          )
+          $hashes = @()
+          foreach ($f in $files) {
+            if (Test-Path $f) {
+              $hashes += Get-FileHash $f -Algorithm MD5 | Select-Object Hash, Path
+            } else {
+              $hashes += [PSCustomObject]@{Hash="MISSING"; Path=$f}
+            }
+          }
+          $hashes | ConvertTo-Json | Out-File "$env:TEMP\profile_checksums_before.json"
+          $hashes | Format-Table -AutoSize
       - uses: ./
         with:
           activate-environment: test
           remove-profiles: "false"
-      - name: Conda info
+          run-init: "false"
+      - name: Verify profiles unchanged (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          md5sum ~/.profile ~/.bashrc 2>/dev/null > /tmp/profile_checksums_after.txt || true
+          cat /tmp/profile_checksums_after.txt
+          diff /tmp/profile_checksums_before.txt /tmp/profile_checksums_after.txt
+          echo "Profiles unchanged - OK (run-init=false)"
+      - name: Verify profiles unchanged (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $files = @(
+            "$HOME\Documents\PowerShell\profile.ps1",
+            "$HOME\Documents\WindowsPowerShell\profile.ps1"
+          )
+          $hashes = @()
+          foreach ($f in $files) {
+            if (Test-Path $f) {
+              $hashes += Get-FileHash $f -Algorithm MD5 | Select-Object Hash, Path
+            } else {
+              $hashes += [PSCustomObject]@{Hash="MISSING"; Path=$f}
+            }
+          }
+          $hashes | Format-Table -AutoSize
+          $before = Get-Content "$env:TEMP\profile_checksums_before.json" | ConvertFrom-Json
+          $after = $hashes
+          for ($i = 0; $i -lt $before.Count; $i++) {
+            if ($before[$i].Hash -ne $after[$i].Hash) {
+              Write-Error "Profile changed: $($before[$i].Path) ($($before[$i].Hash) -> $($after[$i].Hash))"
+              exit 1
+            }
+          }
+          Write-Host "Profiles unchanged - OK (run-init=false)"
+      - name: Conda info (bash)
         shell: bash
         run: |
           source "$CONDA/etc/profile.d/conda.sh"
           conda activate test
           conda info
-      - name: Conda list
+      - name: Conda list (bash)
         shell: bash
         run: |
           source "$CONDA/etc/profile.d/conda.sh"
           conda activate test
           conda list
+      - name: Conda info (pwsh)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          conda info -n test
+      - name: Conda list (pwsh)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          conda list -n test
+      - name: Conda info (cmd)
+        if: runner.os == 'Windows'
+        shell: cmd /C CALL {0}
+        run: |
+          conda.bat info -n test
+      - name: Conda list (cmd)
+        if: runner.os == 'Windows'
+        shell: cmd /C CALL {0}
+        run: |
+          conda.bat list -n test

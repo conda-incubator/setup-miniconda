@@ -121,6 +121,7 @@ export async function parseInputs(): Promise<types.IActionInputs> {
     condaRemoveDefaults: core.getInput("conda-remove-defaults"),
     pythonVersion: core.getInput("python-version"),
     removeProfiles: core.getInput("remove-profiles"),
+    runInit: core.getInput("run-init"),
     condaConfig: Object.freeze({
       add_anaconda_token: core.getInput("add-anaconda-token"),
       add_pip_as_python_dependency: core.getInput(
