@@ -109,17 +109,17 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          conda info -n test
+          conda.bat info
       - name: Conda list (pwsh)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          conda list -n test
+          conda.bat list -n test
       - name: Conda info (cmd)
         if: runner.os == 'Windows'
         shell: cmd /C CALL {0}
         run: |
-          conda.bat info -n test
+          conda.bat info
       - name: Conda list (cmd)
         if: runner.os == 'Windows'
         shell: cmd /C CALL {0}

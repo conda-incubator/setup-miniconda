@@ -11,6 +11,8 @@ vi.mock("@actions/core", () => ({
 // Mock @actions/io
 vi.mock("@actions/io", () => ({
   cp: vi.fn(),
+  rmRF: vi.fn(),
+  mv: vi.fn(),
 }));
 
 // Mock fs so condaExecutable finds a "conda" binary
@@ -19,6 +21,7 @@ vi.mock("fs", async (importOriginal) => {
   return {
     ...actual,
     existsSync: vi.fn(() => true),
+    appendFileSync: vi.fn(),
   };
 });
 
@@ -48,6 +51,8 @@ function makeInputs(
   overrides: Partial<{
     channels: string;
     condaRemoveDefaults: string;
+    runInit: string;
+    removeProfiles: string;
   }> = {},
 ): types.IActionInputs {
   return Object.freeze({
@@ -65,8 +70,8 @@ function makeInputs(
     miniforgeVersion: "",
     condaRemoveDefaults: overrides.condaRemoveDefaults ?? "false",
     pythonVersion: "",
-    removeProfiles: "true",
-    runInit: "true",
+    removeProfiles: overrides.removeProfiles ?? "true",
+    runInit: overrides.runInit ?? "true",
     useMamba: "",
     cleanPatchedEnvironmentFile: "true",
     runPost: "true",
@@ -161,5 +166,31 @@ describe("applyCondaConfiguration", () => {
     const args = getCondaArgs();
     const setCalls = args.filter((a) => a.includes("--set"));
     expect(setCalls.length).toBeGreaterThan(0);
+  });
+});
+
+describe("condaInit", () => {
+  beforeEach(() => {
+    executeCalls.length = 0;
+  });
+
+  it("skips conda init when runInit is false", async () => {
+    const { condaInit } = await import("../conda");
+    const inputs = makeInputs({ runInit: "false" });
+
+    await condaInit(inputs, makeOptions());
+
+    const initCalls = executeCalls.filter((c) => c.command.includes("init"));
+    expect(initCalls).toEqual([]);
+  });
+
+  it("runs conda init when runInit is true", async () => {
+    const { condaInit } = await import("../conda");
+    const inputs = makeInputs({ runInit: "true" });
+
+    await condaInit(inputs, makeOptions());
+
+    const initCalls = executeCalls.filter((c) => c.command.includes("init"));
+    expect(initCalls.length).toBeGreaterThan(0);
   });
 });
