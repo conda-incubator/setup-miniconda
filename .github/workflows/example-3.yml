@@ -45,6 +45,33 @@ jobs:
           conda list
           printenv | sort
 
+  example-3-python-version-override:
+    # Regression test: python-version should override python spec in env file
+    # See https://github.com/conda-incubator/setup-miniconda/issues/286
+    name: Ex3 python-version override (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: ./
+        with:
+          activate-environment: test-python-pinned
+          environment-file: etc/example-environment-python-pinned.yml
+          python-version: "3.12"
+      - name: Verify python version is 3.12
+        run: |
+          python_version=$(python --version 2>&1)
+          echo "Installed: $python_version"
+          echo "$python_version" | grep -q "Python 3.12"
+          echo "Python version matches requested python-version=3.12 - OK"
+
   example-3-no-name:
     name: Ex3-no-name Linux
     runs-on: "ubuntu-latest"

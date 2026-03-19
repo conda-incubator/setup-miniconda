@@ -33690,7 +33690,7 @@ const WIN_PERMS_FOLDERS = (/* unused pure expression or super */ null && ([
  *       probably be a sub-package in its own right.
  * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
  */
-const PYTHON_SPEC = /^(.*::)?python($|\s\=\<\>\!\|)/i;
+const PYTHON_SPEC = /^(.*::)?python($|[\s=<>!|])/i;
 /**
  * Output name for the effective environment-file path used.
  */

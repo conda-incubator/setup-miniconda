@@ -89,7 +89,7 @@ export const ensureYaml: types.IEnvProvider = {
 
       for (const spec of dependencies || []) {
         // Ignore pip deps
-        if (!(spec instanceof String) || !spec.match(constants.PYTHON_SPEC)) {
+        if (typeof spec !== "string" || !spec.match(provider.specMatch)) {
           patchedDeps.push(spec);
           continue;
         }

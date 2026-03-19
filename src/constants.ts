@@ -152,7 +152,7 @@ export const WIN_PERMS_FOLDERS = [
  *       probably be a sub-package in its own right.
  * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
  */
-export const PYTHON_SPEC = /^(.*::)?python($|\s\=\<\>\!\|)/i;
+export const PYTHON_SPEC = /^(.*::)?python($|[\s=<>!|])/i;
 
 /**
  * Output name for the effective environment-file path used.

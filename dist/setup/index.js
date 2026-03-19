@@ -53511,7 +53511,7 @@ const WIN_PERMS_FOLDERS = [
  *       probably be a sub-package in its own right.
  * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
  */
-const PYTHON_SPEC = /^(.*::)?python($|\s\=\<\>\!\|)/i;
+const PYTHON_SPEC = /^(.*::)?python($|[\s=<>!|])/i;
 /**
  * Output name for the effective environment-file path used.
  */
@@ -59372,7 +59372,7 @@ const ensureYaml = {
             let patchedDeps = [];
             for (const spec of dependencies || []) {
                 // Ignore pip deps
-                if (!(spec instanceof String) || !spec.match(PYTHON_SPEC)) {
+                if (typeof spec !== "string" || !spec.match(provider.specMatch)) {
                     patchedDeps.push(spec);
                     continue;
                 }
