@@ -1,3 +1,11 @@
+/**
+ * @module base-tools/update-python
+ * Tool provider for installing or pinning `python` in the `base` environment
+ * when the activation target is `base`.
+ *
+ * @category Base Tools
+ */
+
 import * as types from "../types";
 import * as utils from "../utils";
 

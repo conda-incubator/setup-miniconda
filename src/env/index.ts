@@ -1,3 +1,12 @@
+/**
+ * @module env
+ * Environment provider registry. Iterates through
+ * {@link types.IEnvProvider} strategies to create or update the target
+ * conda environment from explicit lockfiles, YAML specs, or simple specs.
+ *
+ * @category Environments
+ */
+
 import * as path from "path";
 import * as fs from "fs";
 
@@ -35,6 +44,7 @@ const ENV_PROVIDERS: types.IEnvProvider[] = [
  * @param inputs - The parsed action inputs.
  * @param options - The current dynamic options.
  * @returns Resolves when the environment has been created or updated.
+ * @throws {Error} If no {@link types.IEnvProvider} can handle the given inputs.
  */
 export async function ensureEnvironment(
   inputs: types.IActionInputs,

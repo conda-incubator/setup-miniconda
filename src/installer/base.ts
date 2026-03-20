@@ -1,3 +1,11 @@
+/**
+ * @module installer/base
+ * Shared logic for downloading, caching, and locating `constructor`-compatible
+ * installers via the `@actions/tool-cache`.
+ *
+ * @category Installers
+ */
+
 import * as crypto from "crypto";
 import * as path from "path";
 import { URL, fileURLToPath } from "url";
@@ -19,6 +27,17 @@ import * as types from "../types";
  *
  * @param options - Cache and download metadata for the installer.
  * @returns The local path to the installer (with the correct extension).
+ * @throws {Error} If no executable path could be determined after all attempts.
+ *
+ * @example
+ * ```ts
+ * const localPath = await ensureLocalInstaller({
+ *   url: "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh",
+ *   tool: "Miniconda3",
+ *   version: "latest",
+ *   arch: "x86_64",
+ * });
+ * ```
  */
 export async function ensureLocalInstaller(
   options: types.ILocalInstallerOpts,

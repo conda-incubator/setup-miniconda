@@ -1,3 +1,10 @@
+/**
+ * @module base-tools/update-conda
+ * Tool provider for installing or pinning `conda` in the `base` environment.
+ *
+ * @category Base Tools
+ */
+
 import * as types from "../types";
 import * as utils from "../utils";
 

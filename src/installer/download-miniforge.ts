@@ -1,3 +1,11 @@
+/**
+ * @module installer/download-miniforge
+ * Download Miniforge installers from GitHub releases using the well-known
+ * release URL structure of the `conda-forge/miniforge` repository.
+ *
+ * @category Installers
+ */
+
 import * as core from "@actions/core";
 
 import * as types from "../types";
@@ -12,6 +20,7 @@ import * as base from "./base";
  * @param inputs - The parsed action inputs containing variant, version, and architecture.
  * @param options - The current dynamic options.
  * @returns The local path to the downloaded installer.
+ * @throws {Error} If the architecture is not in {@link constants.MINIFORGE_ARCHITECTURES}.
  */
 export async function downloadMiniforge(
   inputs: types.IActionInputs,

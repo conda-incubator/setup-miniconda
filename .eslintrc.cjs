@@ -68,6 +68,7 @@ module.exports = {
     "jsdoc/require-returns-description": "error",
     "jsdoc/no-blank-blocks": "error",
     "jsdoc/require-description-complete-sentence": "error",
+    "jsdoc/require-throws-description": "error",
     "@typescript-eslint/ban-ts-comment": "warn",
     "@typescript-eslint/camelcase": "off",
     "@typescript-eslint/explicit-function-return-type": "off",
