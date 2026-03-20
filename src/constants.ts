@@ -3,15 +3,18 @@ import * as path from "path";
 
 import * as types from "./types";
 
-//-----------------------------------------------------------------------
-// Constants
-//-----------------------------------------------------------------------
+/** Path to an existing conda installation, from the CONDA env variable */
 export const MINICONDA_DIR_PATH: string = process.env["CONDA"] || "";
+/** Whether the current platform is Windows */
 export const IS_WINDOWS: boolean = process.platform === "win32";
+/** Whether the current platform is macOS */
 export const IS_MAC: boolean = process.platform === "darwin";
+/** Whether the current platform is Linux */
 export const IS_LINUX: boolean = process.platform === "linux";
+/** Whether the current platform is Unix-like (macOS or Linux) */
 export const IS_UNIX: boolean = IS_MAC || IS_LINUX;
 
+/** Base URL for downloading Miniconda installers */
 export const MINICONDA_BASE_URL: string =
   "https://repo.anaconda.com/miniconda/";
 
@@ -36,6 +39,7 @@ export const MINIFORGE_ARCHITECTURES: types.IArchitectures = {
   arm64: "arm64",
 };
 
+/** Map from Node.js platform strings to OS names used in installer filenames */
 export const OS_NAMES: types.IOperatingSystems = {
   win32: "Windows",
   darwin: "MacOSX",

@@ -84,7 +84,7 @@ const RULES: IRule[] = [
     `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
 ];
 
-/*
+/**
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
  */
 export async function parseInputs(): Promise<types.IActionInputs> {

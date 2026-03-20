@@ -261,7 +261,7 @@ export async function applyCondaConfiguration(
       inputs,
       options,
     );
-  } catch (err) {
+  } catch {
     try {
       // <25.5.0
       await condaCommand(
@@ -302,6 +302,7 @@ export async function applyCondaConfiguration(
   await condaCommand(["config", "--show"], inputs, options);
 }
 
+/** Resolve an environment name or path to a fully-qualified absolute path */
 function _getFullEnvironmentPath(
   inputPathOrName: string,
   inputs: types.IActionInputs,
@@ -321,7 +322,7 @@ function _getFullEnvironmentPath(
   return path.resolve(inputPathOrName);
 }
 
-/*
+/**
  * Whether an environment is the default environment
  */
 async function isDefaultEnvironment(
