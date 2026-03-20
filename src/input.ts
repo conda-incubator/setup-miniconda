@@ -106,7 +106,7 @@ const RULES: IRule[] = [
       `Only alphanumeric characters, dots, underscores, hyphens, tildes, colons, and path separators are allowed`,
 ];
 
-/*
+/**
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
  */
 export async function parseInputs(): Promise<types.IActionInputs> {

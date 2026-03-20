@@ -37,10 +37,6 @@ async function minicondaVersions(arch: string): Promise<string[]> {
 
 /**
  * Download specific version miniconda defined by version, arch and python major version
- *
- * @param pythonMajorVersion
- * @param minicondaVersion
- * @param architecture
  */
 export async function downloadMiniconda(
   pythonMajorVersion: number,

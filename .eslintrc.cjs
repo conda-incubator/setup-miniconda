@@ -15,8 +15,42 @@ module.exports = {
       "tsconfig.eslint.json"
     ]
   },
-  plugins: ["@typescript-eslint"],
+  plugins: ["@typescript-eslint", "jsdoc"],
+  settings: {
+    jsdoc: {
+      mode: "typescript"
+    }
+  },
   rules: {
+    "jsdoc/require-jsdoc": ["error", {
+      require: {
+        FunctionDeclaration: true,
+        MethodDefinition: true,
+        ClassDeclaration: true,
+        FunctionExpression: true,
+        ArrowFunctionExpression: false
+      },
+      contexts: [
+        "TSInterfaceDeclaration",
+        "TSTypeAliasDeclaration",
+        "TSEnumDeclaration",
+        "ExportNamedDeclaration:has(VariableDeclaration)"
+      ],
+      checkConstructors: false
+    }],
+    "jsdoc/require-description": ["error", {
+      contexts: [
+        "FunctionDeclaration",
+        "MethodDefinition",
+        "ClassDeclaration",
+        "FunctionExpression",
+        "TSInterfaceDeclaration",
+        "TSTypeAliasDeclaration",
+        "TSEnumDeclaration"
+      ]
+    }],
+    "jsdoc/require-param": "off",
+    "jsdoc/require-returns": "off",
     "@typescript-eslint/ban-ts-comment": "warn",
     "@typescript-eslint/camelcase": "off",
     "@typescript-eslint/explicit-function-return-type": "off",
@@ -55,7 +89,9 @@ module.exports = {
       files: ["src/__tests__/**/*.ts"],
       rules: {
         "@typescript-eslint/no-explicit-any": "off",
-        "@typescript-eslint/no-non-null-assertion": "off"
+        "@typescript-eslint/no-non-null-assertion": "off",
+        "jsdoc/require-jsdoc": "off",
+        "jsdoc/require-description": "off"
       }
     }
   ]

@@ -2,14 +2,17 @@
 // Types & Interfaces
 //-----------------------------------------------------------------------
 
+/** Map from runner architecture names to installer architecture suffixes */
 export interface IArchitectures {
   [key: string]: string;
 }
 
+/** Map from Node.js platform names to installer OS name suffixes */
 export interface IOperatingSystems {
   [key: string]: string;
 }
 
+/** Map from shell profile paths to the text appended for conda initialization */
 export interface IShells {
   [key: string]: string;
 }
