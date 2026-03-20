@@ -1,3 +1,12 @@
+/**
+ * @module base-tools/update-mamba
+ * Tool provider for installing or pinning `mamba` in the `base` environment,
+ * including post-install steps to ensure the `mamba` CLI is available in
+ * `condabin` on both Unix and Windows.
+ *
+ * @category Base Tools
+ */
+
 import * as fs from "fs";
 import * as path from "path";
 

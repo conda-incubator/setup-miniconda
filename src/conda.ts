@@ -1,3 +1,11 @@
+/**
+ * @module conda
+ * High-level helpers for locating, running, and configuring a conda or
+ * mamba installation, including shell initialization and `.condarc` management.
+ *
+ * @category Core
+ */
+
 //-----------------------------------------------------------------------
 // Conda helpers
 //-----------------------------------------------------------------------
@@ -100,6 +108,7 @@ export function condaExecutableLocations(
  * @param options - The current dynamic options.
  * @param subcommand - If provided, mamba is only used when it supports this subcommand.
  * @returns The absolute path to the found executable.
+ * @throws {Error} If no conda or mamba executable exists at any candidate location.
  */
 export function condaExecutable(
   inputs: types.IActionInputs,
@@ -146,6 +155,18 @@ export function isMambaInstalled(
  * @param options - The current dynamic options.
  * @param captureOutput - When `true`, returns stdout as a string.
  * @returns The captured stdout if `captureOutput` is `true`, otherwise void.
+ * @throws {Error} If the command exits with a non-zero return code.
+ *
+ * @example
+ * ```ts
+ * // Install numpy into the active env
+ * await condaCommand(["install", "numpy"], inputs, options);
+ *
+ * // Capture JSON config output
+ * const json = await condaCommand(
+ *   ["config", "--show", "--json"], inputs, options, true
+ * );
+ * ```
  */
 export async function condaCommand(
   cmd: string[],

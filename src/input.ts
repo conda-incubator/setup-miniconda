@@ -1,3 +1,11 @@
+/**
+ * @module input
+ * Parsing, validation, and normalization of action inputs from the
+ * workflow `with` block into a frozen {@link types.IActionInputs} object.
+ *
+ * @category Core
+ */
+
 import * as path from "path";
 import * as core from "@actions/core";
 import * as semver from "semver";
@@ -90,7 +98,8 @@ const RULES: IRule[] = [
 /**
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`.
  *
- * @returns The frozen, validated action inputs object.
+ * @returns The frozen, validated {@link types.IActionInputs} object.
+ * @throws {Error} If any validation rule fails.
  */
 export async function parseInputs(): Promise<types.IActionInputs> {
   let arch = core.getInput("architecture") || process.arch;

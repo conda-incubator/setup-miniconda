@@ -1,3 +1,11 @@
+/**
+ * @module utils
+ * Low-level helpers for running shell commands, building conda package
+ * specs, and working with package directories.
+ *
+ * @category Core
+ */
+
 import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
@@ -48,6 +56,17 @@ export function isBaseEnv(envName: string) {
  * @param env - Additional environment variables to merge with `process.env`.
  * @param captureOutput - When `true`, returns stdout as a string instead of void.
  * @returns The captured stdout string if `captureOutput` is `true`, otherwise void.
+ * @throws {Error} If the command exits with a non-zero return code.
+ * @throws {Error} If stdout contains any substring in {@link constants.FORCED_ERRORS}.
+ *
+ * @example
+ * ```ts
+ * // Run conda info
+ * await execute(["conda", "info", "--json"]);
+ *
+ * // Capture output
+ * const output = await execute(["conda", "info", "--json"], {}, true);
+ * ```
  */
 export async function execute(
   command: string[],
@@ -102,6 +121,13 @@ export async function execute(
  * @param pkg - The package name.
  * @param spec - The version spec, optionally prefixed with an operator.
  * @returns A formatted `pkg=spec` or `pkg<operator>spec` string.
+ *
+ * @example
+ * ```ts
+ * makeSpec("python", "3.11");       // "python=3.11"
+ * makeSpec("conda", ">=23.1");      // "conda>=23.1"
+ * makeSpec("numpy", "1.24|1.25");   // "numpy1.24|1.25"
+ * ```
  */
 export function makeSpec(pkg: string, spec: string) {
   if (spec.match(/[=<>!\|]/)) {

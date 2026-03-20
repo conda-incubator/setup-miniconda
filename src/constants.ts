@@ -1,3 +1,11 @@
+/**
+ * @module constants
+ * Platform detection flags, URL prefixes, architecture maps, and other
+ * compile-time values shared across the action.
+ *
+ * @category Core
+ */
+
 import * as os from "os";
 import * as path from "path";
 

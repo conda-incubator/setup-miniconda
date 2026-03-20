@@ -1,3 +1,11 @@
+/**
+ * @module installer/download-miniconda
+ * Download Miniconda installers from `repo.anaconda.com` using the
+ * well-known directory listing to resolve available versions.
+ *
+ * @category Installers
+ */
+
 import * as fs from "fs";
 
 import * as core from "@actions/core";
@@ -43,6 +51,8 @@ async function minicondaVersions(arch: string): Promise<string[]> {
  * @param pythonMajorVersion - The Python major version for the installer (e.g. `3`).
  * @param inputs - The parsed action inputs containing version and architecture.
  * @returns The local path to the downloaded installer.
+ * @throws {Error} If the architecture is not in {@link constants.MINICONDA_ARCHITECTURES}.
+ * @throws {Error} If the requested version is not found in the available versions list.
  */
 export async function downloadMiniconda(
   pythonMajorVersion: number,

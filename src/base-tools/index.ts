@@ -1,3 +1,12 @@
+/**
+ * @module base-tools
+ * Tool provider registry. Collects {@link types.IToolProvider} strategies
+ * for installing or updating conda, mamba, python, and conda-build in the
+ * `base` environment.
+ *
+ * @category Base Tools
+ */
+
 import * as types from "../types";
 
 import * as core from "@actions/core";

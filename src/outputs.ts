@@ -1,5 +1,8 @@
 /**
+ * @module outputs
  * Modify environment variables and action outputs.
+ *
+ * @category Core
  */
 import * as path from "path";
 

@@ -1,3 +1,11 @@
+/**
+ * @module env/yaml
+ * Create or update a conda environment from a YAML `environment.yml` file,
+ * optionally patching dependencies (for example, pinning `python-version`).
+ *
+ * @category Environments
+ */
+
 import * as fs from "fs";
 import * as path from "path";
 

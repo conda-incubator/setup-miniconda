@@ -1,3 +1,12 @@
+/**
+ * @module types
+ * Shared TypeScript interfaces and type aliases used throughout the action,
+ * including action inputs, conda configuration, installer and environment
+ * provider contracts, and GitHub API response shapes.
+ *
+ * @category Types
+ */
+
 //-----------------------------------------------------------------------
 // Types & Interfaces
 //-----------------------------------------------------------------------
@@ -104,6 +113,8 @@ export interface IActionInputs {
 
 /**
  * Options that may change during the course of discovery, installation, and configuration.
+ *
+ * @see {@link IActionInputs} for the static inputs that drive these options.
  */
 export interface IDynamicOptions {
   useBundled: boolean;
@@ -124,7 +135,7 @@ export interface IEnvSpec {
 }
 
 /**
- * The output of an installer, which may update the dynamic options.
+ * The output of an {@link IInstallerProvider}, which may update the {@link IDynamicOptions}.
  */
 export interface IInstallerResult {
   /** Options that may change as a result of selecting the installer. */
@@ -135,6 +146,8 @@ export interface IInstallerResult {
 
 /**
  * A strategy for ensuring a locally-runnable installer (or no-op, if bundled).
+ *
+ * @see {@link IInstallerResult} for the output shape.
  */
 export interface IInstallerProvider {
   /** A human-readable name shown in logs. */
@@ -172,7 +185,7 @@ export interface IEnvProvider {
   ) => Promise<string[]>;
 }
 
-/** The options and package specs to add to the base environment. */
+/** The options and package specs to add to the base environment via {@link IToolProvider}. */
 export interface IToolUpdates {
   options: IDynamicOptions;
   tools: string[];
@@ -180,6 +193,8 @@ export interface IToolUpdates {
 
 /**
  * A strategy for ensuring a tool is available in the conda `base` environment.
+ *
+ * @see {@link IToolUpdates} for the output of {@link IToolProvider.toolPackages}.
  */
 export interface IToolProvider {
   label: string;

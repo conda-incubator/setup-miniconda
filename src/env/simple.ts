@@ -1,3 +1,11 @@
+/**
+ * @module env/simple
+ * Create a conda environment with `conda create` when no environment file
+ * is provided, optionally pinning `python-version`.
+ *
+ * @category Environments
+ */
+
 import * as core from "@actions/core";
 
 import * as types from "../types";

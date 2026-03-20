@@ -9,5 +9,16 @@
   "excludeInternal": true,
   "skipErrorChecking": true,
   "readme": "none",
-  "name": "setup-miniconda"
+  "name": "setup-miniconda",
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Core",
+    "Installers",
+    "Environments",
+    "Base Tools",
+    "Types",
+    "*"
+  ],
+  "plugin": ["typedoc-plugin-coverage"],
+  "coverageLabel": "docs"
 }

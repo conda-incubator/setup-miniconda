@@ -33557,6 +33557,13 @@ function getIDToken(aud) {
 // EXTERNAL MODULE: ./node_modules/semver/index.js
 var semver = __nccwpck_require__(2088);
 ;// CONCATENATED MODULE: ./src/constants.ts
+/**
+ * @module constants
+ * Platform detection flags, URL prefixes, architecture maps, and other
+ * compile-time values shared across the action.
+ *
+ * @category Core
+ */
 
 
 /** Path to an existing conda installation, from the CONDA env variable. */
@@ -33701,6 +33708,13 @@ const OUTPUT_ENV_FILE_CONTENT = "environment-file-content";
 const OUTPUT_ENV_FILE_WAS_PATCHED = "environment-file-was-patched";
 
 ;// CONCATENATED MODULE: ./src/input.ts
+/**
+ * @module input
+ * Parsing, validation, and normalization of action inputs from the
+ * workflow `with` block into a frozen {@link types.IActionInputs} object.
+ *
+ * @category Core
+ */
 var input_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -33760,7 +33774,8 @@ const RULES = [
 /**
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`.
  *
- * @returns The frozen, validated action inputs object.
+ * @returns The frozen, validated {@link types.IActionInputs} object.
+ * @throws {Error} If any validation rule fails.
  */
 function parseInputs() {
     return input_awaiter(this, void 0, void 0, function* () {
@@ -33848,6 +33863,13 @@ function parseInputs() {
 ;// CONCATENATED MODULE: external "stream"
 const external_stream_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("stream");
 ;// CONCATENATED MODULE: ./src/utils.ts
+/**
+ * @module utils
+ * Low-level helpers for running shell commands, building conda package
+ * specs, and working with package directories.
+ *
+ * @category Core
+ */
 var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -33903,6 +33925,17 @@ function isBaseEnv(envName) {
  * @param env - Additional environment variables to merge with `process.env`.
  * @param captureOutput - When `true`, returns stdout as a string instead of void.
  * @returns The captured stdout string if `captureOutput` is `true`, otherwise void.
+ * @throws {Error} If the command exits with a non-zero return code.
+ * @throws {Error} If stdout contains any substring in {@link constants.FORCED_ERRORS}.
+ *
+ * @example
+ * ```ts
+ * // Run conda info
+ * await execute(["conda", "info", "--json"]);
+ *
+ * // Capture output
+ * const output = await execute(["conda", "info", "--json"], {}, true);
+ * ```
  */
 function execute(command_1) {
     return utils_awaiter(this, arguments, void 0, function* (command, env = {}, captureOutput = false) {
@@ -33952,6 +33985,13 @@ function execute(command_1) {
  * @param pkg - The package name.
  * @param spec - The version spec, optionally prefixed with an operator.
  * @returns A formatted `pkg=spec` or `pkg<operator>spec` string.
+ *
+ * @example
+ * ```ts
+ * makeSpec("python", "3.11");       // "python=3.11"
+ * makeSpec("conda", ">=23.1");      // "conda>=23.1"
+ * makeSpec("numpy", "1.24|1.25");   // "numpy1.24|1.25"
+ * ```
  */
 function makeSpec(pkg, spec) {
     if (spec.match(/[=<>!\|]/)) {
@@ -33963,6 +34003,13 @@ function makeSpec(pkg, spec) {
 }
 
 ;// CONCATENATED MODULE: ./src/delete.ts
+/**
+ * @module delete
+ * Post-action cleanup entry point. Removes extracted packages from the
+ * conda cache to reduce artifact size on GitHub Actions runners.
+ *
+ * @category Core
+ */
 var delete_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {

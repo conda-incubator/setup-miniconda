@@ -1,3 +1,12 @@
+/**
+ * @module installer
+ * Installer provider registry and runner. Iterates through
+ * {@link types.IInstallerProvider} strategies to locate or download a
+ * `constructor`-compatible installer, then executes it.
+ *
+ * @category Installers
+ */
+
 import * as path from "path";
 
 import * as core from "@actions/core";
@@ -40,6 +49,7 @@ const INSTALLER_PROVIDERS: types.IInstallerProvider[] = [
  * @param inputs - The parsed action inputs.
  * @param options - The current dynamic options.
  * @returns The installer result with the local path and updated options.
+ * @throws {Error} If no {@link types.IInstallerProvider} matches the given inputs.
  */
 export async function getLocalInstallerPath(
   inputs: types.IActionInputs,
@@ -64,6 +74,7 @@ export async function getLocalInstallerPath(
  * @param inputs - The parsed action inputs.
  * @param options - The current dynamic options.
  * @returns The updated dynamic options reflecting the new installation.
+ * @throws {Error} If the installer has an unknown file extension.
  */
 export async function runInstaller(
   installerPath: string,
