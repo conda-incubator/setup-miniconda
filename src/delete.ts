@@ -9,7 +9,8 @@ import * as input from "./input";
 import * as utils from "./utils";
 
 /**
- * Clean up the conda cache directory
+ * Post-action cleanup that removes extracted packages from the conda cache
+ * to reduce artifact size, moving stubborn directories to a temp folder.
  */
 async function run(): Promise<void> {
   try {

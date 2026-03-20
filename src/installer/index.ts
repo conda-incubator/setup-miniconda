@@ -33,7 +33,14 @@ const INSTALLER_PROVIDERS: types.IInstallerProvider[] = [
   minicondaDownloader,
 ];
 
-/** See if any provider works with the given inputs and options */
+/**
+ * Iterate through installer providers and return the result from the first
+ * one that matches the given inputs, throwing if none match.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The installer result with the local path and updated options.
+ */
 export async function getLocalInstallerPath(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
@@ -49,9 +56,14 @@ export async function getLocalInstallerPath(
 }
 
 /**
- * Run a `constructor`-generated installer, like Miniconda.
+ * Run a `constructor`-generated installer (`.exe` or `.sh`) and detect
+ * whether mamba was provisioned in the resulting base environment.
  *
- * @param installerPath must have an appropriate extension for this platform
+ * @param installerPath - Path to the installer; must have an appropriate extension for this platform.
+ * @param outputPath - The target installation directory.
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The updated dynamic options reflecting the new installation.
  */
 export async function runInstaller(
   installerPath: string,

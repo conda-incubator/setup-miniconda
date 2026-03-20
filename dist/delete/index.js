@@ -33559,19 +33559,19 @@ var semver = __nccwpck_require__(2088);
 ;// CONCATENATED MODULE: ./src/constants.ts
 
 
-/** Path to an existing conda installation, from the CONDA env variable */
+/** Path to an existing conda installation, from the CONDA env variable. */
 const MINICONDA_DIR_PATH = process.env["CONDA"] || "";
-/** Whether the current platform is Windows */
+/** Whether the current platform is Windows. */
 const constants_IS_WINDOWS = process.platform === "win32";
-/** Whether the current platform is macOS */
+/** Whether the current platform is macOS. */
 const IS_MAC = process.platform === "darwin";
-/** Whether the current platform is Linux */
+/** Whether the current platform is Linux. */
 const IS_LINUX = process.platform === "linux";
-/** Whether the current platform is Unix-like (macOS or Linux) */
+/** Whether the current platform is Unix-like (macOS or Linux). */
 const IS_UNIX = (/* unused pure expression or super */ null && (IS_MAC || IS_LINUX));
-/** Base URL for downloading Miniconda installers */
+/** Base URL for downloading Miniconda installers. */
 const MINICONDA_BASE_URL = "https://repo.anaconda.com/miniconda/";
-/** Processor architectures supported by Miniconda */
+/** Processor architectures supported by Miniconda. */
 const MINICONDA_ARCHITECTURES = {
     aarch64: "aarch64",
     arm64: "arm64",
@@ -33582,7 +33582,7 @@ const MINICONDA_ARCHITECTURES = {
     x86: "x86",
     arm32: "armv7l", // To be supported by github runners
 };
-/** Processor architectures supported by Miniforge */
+/** Processor architectures supported by Miniforge. */
 const MINIFORGE_ARCHITECTURES = {
     x64: "x86_64",
     x86_64: "x86_64",
@@ -33590,25 +33590,25 @@ const MINIFORGE_ARCHITECTURES = {
     ppc64le: "ppc64le", // To be supported by github runners
     arm64: "arm64",
 };
-/** Map from Node.js platform strings to OS names used in installer filenames */
+/** Map from Node.js platform strings to OS names used in installer filenames. */
 const OS_NAMES = {
     win32: "Windows",
     darwin: "MacOSX",
     linux: "Linux",
 };
-/** Common download prefix */
+/** Base URL prefix for downloading Miniforge releases from GitHub. */
 const MINIFORGE_URL_PREFIX = "https://github.com/conda-forge/miniforge/releases";
-/** Default miniforge if only miniforge-version is provided */
+/** Default Miniforge variant used when only miniforge-version is provided. */
 const MINIFORGE_DEFAULT_VARIANT = "Miniforge3";
-/** Default miniforge if only miniforge-variant is provided */
+/** Default Miniforge version used when only miniforge-variant is provided. */
 const MINIFORGE_DEFAULT_VERSION = "latest";
-/** Names for a conda `base` env */
+/** Names that identify a conda `base` environment. */
 const BASE_ENV_NAMES = (/* unused pure expression or super */ null && (["root", "base", ""]));
 /**
- * Known extensions for `constructor`-generated installers supported
+ * Known extensions for `constructor`-generated installers supported.
  */
 const KNOWN_EXTENSIONS = [".exe", ".sh"];
-/** As of mamba 0.7.6, only these top-level commands are supported */
+/** As of mamba 0.7.6, only these top-level commands are supported. */
 const MAMBA_SUBCOMMANDS = (/* unused pure expression or super */ null && ([
     "clean",
     "create",
@@ -33620,7 +33620,7 @@ const MAMBA_SUBCOMMANDS = (/* unused pure expression or super */ null && ([
     "search",
 ]));
 /**
- * Errors that are always probably spurious
+ * Warning substrings that are always safe to suppress in conda/mamba output.
  */
 const IGNORED_WARNINGS = (/* unused pure expression or super */ null && ([
     // Appear on win install, we can swallow them
@@ -33639,23 +33639,23 @@ const IGNORED_WARNINGS = (/* unused pure expression or super */ null && ([
     `'auto_activate': unknown parameter`,
 ]));
 /**
- * Warnings that should be errors
+ * Warning substrings that should be promoted to hard errors.
  */
 const FORCED_ERRORS = (/* unused pure expression or super */ null && ([
     // `conda env create` will ignore invalid sections and move on
     `EnvironmentSectionNotValid`,
 ]));
 /**
- * Avoid spurious conda warnings before we have a chance to update them
+ * Bootstrap `.condarc` content to suppress spurious conda warnings during setup.
  */
 const BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
 /**
- * The conda config file
+ * Absolute path to the user-level `.condarc` configuration file.
  */
 const CONDARC_PATH = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), ".condarc");
-/** Where to put files */
+/** Default directory name for the conda package cache under the user home. */
 const DEFAULT_PKGS_DIR = "conda_pkgs_dir";
-/** Shell profiles names to update so `conda` works for *login shells* */
+/** Shell profile names to update so `conda` works for login shells. */
 const PROFILES = (/* unused pure expression or super */ null && ([
     ".bashrc",
     ".bash_profile",
@@ -33668,7 +33668,7 @@ const PROFILES = (/* unused pure expression or super */ null && ([
     "Documents/PowerShell/profile.ps1",
     "Documents/WindowsPowerShell/profile.ps1",
 ]));
-/** Folders that need user ownership on windows */
+/** Folders that need user ownership on Windows. */
 const WIN_PERMS_FOLDERS = (/* unused pure expression or super */ null && ([
     "condabin/",
     "Scripts/",
@@ -33677,32 +33677,26 @@ const WIN_PERMS_FOLDERS = (/* unused pure expression or super */ null && ([
     "/Lib/site-packages/xonsh/",
 ]));
 /**
- * A regular expression for detecting whether a spec is the python package, not
- * all of which are valid in all settings.
+ * A regular expression for detecting whether a spec refers to the python
+ * package, not all forms of which are valid in all settings.
  *
  * ### Note
- * Some examples:
- * - python
- * - python 3
- * - python>3
- * - python!=2
- * - conda-forge::python
+ * Some examples: `python`, `python 3`, `python>3`, `python!=2`,
+ * `conda-forge::python`.
  *
- * TODO: this should be generalized, and, along with roundtrip parsing/generating
- *       probably be a sub-package in its own right.
  * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
  */
 const PYTHON_SPEC = /^(.*::)?python($|[\s=<>!|])/i;
 /**
- * Output name for the effective environment-file path used.
+ * Action output name for the effective environment-file path.
  */
 const OUTPUT_ENV_FILE_PATH = "environment-file";
 /**
- * Output name for the effective environment-file file content used.
+ * Action output name for the effective environment-file content.
  */
 const OUTPUT_ENV_FILE_CONTENT = "environment-file-content";
 /**
- * Output name for whether the effective environment-file file was patched.
+ * Action output name for whether the environment-file was patched.
  */
 const OUTPUT_ENV_FILE_WAS_PATCHED = "environment-file-was-patched";
 
@@ -33722,9 +33716,10 @@ var input_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
 
 const urlExt = (url) => external_path_namespaceObject.posix.extname(new URL(url).pathname);
 /**
- * Normalizes a version string by removing any Python version prefix
- * @param version The version string to normalize
- * @returns The normalized version string
+ * Normalizes a version string by removing any Python version prefix.
+ *
+ * @param version - The version string to normalize.
+ * @returns The normalized version string.
  */
 const normalizeVersion = (version) => {
     return version.replace(/^py\d+_/, "");
@@ -33763,7 +33758,9 @@ const RULES = [
         `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
 ];
 /**
- * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
+ * Parse, validate, and normalize string-ish inputs from a workflow action's `with`.
+ *
+ * @returns The frozen, validated action inputs object.
  */
 function parseInputs() {
     return input_awaiter(this, void 0, void 0, function* () {
@@ -33866,7 +33863,13 @@ var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
 
 
 
-/** The folder to use as the conda package cache */
+/**
+ * Parse the configured `pkgs_dirs` into a list of directories, falling
+ * back to a default under the user home if none are configured.
+ *
+ * @param configuredPkgsDirs - Comma-separated string of package directory paths.
+ * @returns An array of resolved package directory paths.
+ */
 function parsePkgsDirs(configuredPkgsDirs) {
     // Package directories are also comma-separated, like channels
     // We're also setting the appropriate conda config env var, to be safe
@@ -33884,13 +33887,22 @@ function parsePkgsDirs(configuredPkgsDirs) {
     }
 }
 /**
- * Whether the given env is a conda `base` env
+ * Check whether the given environment name refers to a conda `base` environment.
+ *
+ * @param envName - The environment name to check.
+ * @returns `true` if the name is a known base environment alias.
  */
 function isBaseEnv(envName) {
     return constants.BASE_ENV_NAMES.includes(envName);
 }
 /**
- * Run exec.exec with error handling
+ * Execute a shell command with custom environment variables, stdout/stderr
+ * filtering for known warnings and forced errors, and optional output capture.
+ *
+ * @param command - The command and arguments to execute.
+ * @param env - Additional environment variables to merge with `process.env`.
+ * @param captureOutput - When `true`, returns stdout as a string instead of void.
+ * @returns The captured stdout string if `captureOutput` is `true`, otherwise void.
  */
 function execute(command_1) {
     return utils_awaiter(this, arguments, void 0, function* (command, env = {}, captureOutput = false) {
@@ -33935,7 +33947,11 @@ function execute(command_1) {
  * Create a conda version spec string.
  *
  * ### Note
- * Generally favors '=' unless specified more tightly.
+ * Generally favors `=` unless the spec already contains an operator.
+ *
+ * @param pkg - The package name.
+ * @param spec - The version spec, optionally prefixed with an operator.
+ * @returns A formatted `pkg=spec` or `pkg<operator>spec` string.
  */
 function makeSpec(pkg, spec) {
     if (spec.match(/[=<>!\|]/)) {
@@ -33964,7 +33980,8 @@ var delete_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _a
 
 
 /**
- * Clean up the conda cache directory
+ * Post-action cleanup that removes extracted packages from the conda cache
+ * to reduce artifact size, moving stubborn directories to a temp folder.
  */
 function run() {
     return delete_awaiter(this, void 0, void 0, function* () {

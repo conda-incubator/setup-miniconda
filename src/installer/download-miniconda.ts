@@ -11,9 +11,10 @@ import * as constants from "../constants";
 import * as base from "./base";
 
 /**
- * List available Miniconda versions
+ * Fetch and return the list of available Miniconda installer URLs for a given architecture.
  *
- * @param arch
+ * @param arch - The target architecture suffix (e.g. `"x86_64"`, `"arm64"`).
+ * @returns An array of installer path strings relative to the base URL.
  */
 async function minicondaVersions(arch: string): Promise<string[]> {
   try {
@@ -36,7 +37,12 @@ async function minicondaVersions(arch: string): Promise<string[]> {
 }
 
 /**
- * Download specific version miniconda defined by version, arch and python major version
+ * Download a specific Miniconda installer determined by the Python major
+ * version, architecture, and version from the action inputs.
+ *
+ * @param pythonMajorVersion - The Python major version for the installer (e.g. `3`).
+ * @param inputs - The parsed action inputs containing version and architecture.
+ * @returns The local path to the downloaded installer.
  */
 export async function downloadMiniconda(
   pythonMajorVersion: number,

@@ -53380,19 +53380,19 @@ function getIDToken(aud) {
 ;// CONCATENATED MODULE: ./src/constants.ts
 
 
-/** Path to an existing conda installation, from the CONDA env variable */
+/** Path to an existing conda installation, from the CONDA env variable. */
 const MINICONDA_DIR_PATH = process.env["CONDA"] || "";
-/** Whether the current platform is Windows */
+/** Whether the current platform is Windows. */
 const constants_IS_WINDOWS = process.platform === "win32";
-/** Whether the current platform is macOS */
+/** Whether the current platform is macOS. */
 const IS_MAC = process.platform === "darwin";
-/** Whether the current platform is Linux */
+/** Whether the current platform is Linux. */
 const IS_LINUX = process.platform === "linux";
-/** Whether the current platform is Unix-like (macOS or Linux) */
+/** Whether the current platform is Unix-like (macOS or Linux). */
 const IS_UNIX = IS_MAC || IS_LINUX;
-/** Base URL for downloading Miniconda installers */
+/** Base URL for downloading Miniconda installers. */
 const MINICONDA_BASE_URL = "https://repo.anaconda.com/miniconda/";
-/** Processor architectures supported by Miniconda */
+/** Processor architectures supported by Miniconda. */
 const MINICONDA_ARCHITECTURES = {
     aarch64: "aarch64",
     arm64: "arm64",
@@ -53403,7 +53403,7 @@ const MINICONDA_ARCHITECTURES = {
     x86: "x86",
     arm32: "armv7l", // To be supported by github runners
 };
-/** Processor architectures supported by Miniforge */
+/** Processor architectures supported by Miniforge. */
 const MINIFORGE_ARCHITECTURES = {
     x64: "x86_64",
     x86_64: "x86_64",
@@ -53411,25 +53411,25 @@ const MINIFORGE_ARCHITECTURES = {
     ppc64le: "ppc64le", // To be supported by github runners
     arm64: "arm64",
 };
-/** Map from Node.js platform strings to OS names used in installer filenames */
+/** Map from Node.js platform strings to OS names used in installer filenames. */
 const OS_NAMES = {
     win32: "Windows",
     darwin: "MacOSX",
     linux: "Linux",
 };
-/** Common download prefix */
+/** Base URL prefix for downloading Miniforge releases from GitHub. */
 const MINIFORGE_URL_PREFIX = "https://github.com/conda-forge/miniforge/releases";
-/** Default miniforge if only miniforge-version is provided */
+/** Default Miniforge variant used when only miniforge-version is provided. */
 const MINIFORGE_DEFAULT_VARIANT = "Miniforge3";
-/** Default miniforge if only miniforge-variant is provided */
+/** Default Miniforge version used when only miniforge-variant is provided. */
 const MINIFORGE_DEFAULT_VERSION = "latest";
-/** Names for a conda `base` env */
+/** Names that identify a conda `base` environment. */
 const BASE_ENV_NAMES = ["root", "base", ""];
 /**
- * Known extensions for `constructor`-generated installers supported
+ * Known extensions for `constructor`-generated installers supported.
  */
 const KNOWN_EXTENSIONS = [".exe", ".sh"];
-/** As of mamba 0.7.6, only these top-level commands are supported */
+/** As of mamba 0.7.6, only these top-level commands are supported. */
 const MAMBA_SUBCOMMANDS = [
     "clean",
     "create",
@@ -53441,7 +53441,7 @@ const MAMBA_SUBCOMMANDS = [
     "search",
 ];
 /**
- * Errors that are always probably spurious
+ * Warning substrings that are always safe to suppress in conda/mamba output.
  */
 const IGNORED_WARNINGS = [
     // Appear on win install, we can swallow them
@@ -53460,23 +53460,23 @@ const IGNORED_WARNINGS = [
     `'auto_activate': unknown parameter`,
 ];
 /**
- * Warnings that should be errors
+ * Warning substrings that should be promoted to hard errors.
  */
 const FORCED_ERRORS = [
     // `conda env create` will ignore invalid sections and move on
     `EnvironmentSectionNotValid`,
 ];
 /**
- * Avoid spurious conda warnings before we have a chance to update them
+ * Bootstrap `.condarc` content to suppress spurious conda warnings during setup.
  */
 const BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
 /**
- * The conda config file
+ * Absolute path to the user-level `.condarc` configuration file.
  */
 const CONDARC_PATH = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), ".condarc");
-/** Where to put files */
+/** Default directory name for the conda package cache under the user home. */
 const DEFAULT_PKGS_DIR = "conda_pkgs_dir";
-/** Shell profiles names to update so `conda` works for *login shells* */
+/** Shell profile names to update so `conda` works for login shells. */
 const PROFILES = [
     ".bashrc",
     ".bash_profile",
@@ -53489,7 +53489,7 @@ const PROFILES = [
     "Documents/PowerShell/profile.ps1",
     "Documents/WindowsPowerShell/profile.ps1",
 ];
-/** Folders that need user ownership on windows */
+/** Folders that need user ownership on Windows. */
 const WIN_PERMS_FOLDERS = [
     "condabin/",
     "Scripts/",
@@ -53498,32 +53498,26 @@ const WIN_PERMS_FOLDERS = [
     "/Lib/site-packages/xonsh/",
 ];
 /**
- * A regular expression for detecting whether a spec is the python package, not
- * all of which are valid in all settings.
+ * A regular expression for detecting whether a spec refers to the python
+ * package, not all forms of which are valid in all settings.
  *
  * ### Note
- * Some examples:
- * - python
- * - python 3
- * - python>3
- * - python!=2
- * - conda-forge::python
+ * Some examples: `python`, `python 3`, `python>3`, `python!=2`,
+ * `conda-forge::python`.
  *
- * TODO: this should be generalized, and, along with roundtrip parsing/generating
- *       probably be a sub-package in its own right.
  * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
  */
-const PYTHON_SPEC = /^(.*::)?python($|[\s=<>!|])/i;
+const PYTHON_SPEC = /^(.*::)?python($|\s\=\<\>\!\|)/i;
 /**
- * Output name for the effective environment-file path used.
+ * Action output name for the effective environment-file path.
  */
 const OUTPUT_ENV_FILE_PATH = "environment-file";
 /**
- * Output name for the effective environment-file file content used.
+ * Action output name for the effective environment-file content.
  */
 const OUTPUT_ENV_FILE_CONTENT = "environment-file-content";
 /**
- * Output name for whether the effective environment-file file was patched.
+ * Action output name for whether the environment-file was patched.
  */
 const OUTPUT_ENV_FILE_WAS_PATCHED = "environment-file-was-patched";
 
@@ -53545,9 +53539,10 @@ var input_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
 
 const urlExt = (url) => external_path_namespaceObject.posix.extname(new URL(url).pathname);
 /**
- * Normalizes a version string by removing any Python version prefix
- * @param version The version string to normalize
- * @returns The normalized version string
+ * Normalizes a version string by removing any Python version prefix.
+ *
+ * @param version - The version string to normalize.
+ * @returns The normalized version string.
  */
 const normalizeVersion = (version) => {
     return version.replace(/^py\d+_/, "");
@@ -53586,7 +53581,9 @@ const RULES = [
         `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
 ];
 /**
- * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
+ * Parse, validate, and normalize string-ish inputs from a workflow action's `with`.
+ *
+ * @returns The frozen, validated action inputs object.
  */
 function parseInputs() {
     return input_awaiter(this, void 0, void 0, function* () {
@@ -53620,7 +53617,6 @@ function parseInputs() {
             condaRemoveDefaults: getInput("conda-remove-defaults"),
             pythonVersion: getInput("python-version"),
             removeProfiles: getInput("remove-profiles"),
-            runInit: getInput("run-init"),
             condaConfig: Object.freeze({
                 add_anaconda_token: getInput("add-anaconda-token"),
                 add_pip_as_python_dependency: getInput("add-pip-as-python-dependency"),
@@ -53689,7 +53685,13 @@ var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
 
 
 
-/** The folder to use as the conda package cache */
+/**
+ * Parse the configured `pkgs_dirs` into a list of directories, falling
+ * back to a default under the user home if none are configured.
+ *
+ * @param configuredPkgsDirs - Comma-separated string of package directory paths.
+ * @returns An array of resolved package directory paths.
+ */
 function parsePkgsDirs(configuredPkgsDirs) {
     // Package directories are also comma-separated, like channels
     // We're also setting the appropriate conda config env var, to be safe
@@ -53707,13 +53709,22 @@ function parsePkgsDirs(configuredPkgsDirs) {
     }
 }
 /**
- * Whether the given env is a conda `base` env
+ * Check whether the given environment name refers to a conda `base` environment.
+ *
+ * @param envName - The environment name to check.
+ * @returns `true` if the name is a known base environment alias.
  */
 function isBaseEnv(envName) {
     return BASE_ENV_NAMES.includes(envName);
 }
 /**
- * Run exec.exec with error handling
+ * Execute a shell command with custom environment variables, stdout/stderr
+ * filtering for known warnings and forced errors, and optional output capture.
+ *
+ * @param command - The command and arguments to execute.
+ * @param env - Additional environment variables to merge with `process.env`.
+ * @param captureOutput - When `true`, returns stdout as a string instead of void.
+ * @returns The captured stdout string if `captureOutput` is `true`, otherwise void.
  */
 function execute(command_1) {
     return utils_awaiter(this, arguments, void 0, function* (command, env = {}, captureOutput = false) {
@@ -53758,7 +53769,11 @@ function execute(command_1) {
  * Create a conda version spec string.
  *
  * ### Note
- * Generally favors '=' unless specified more tightly.
+ * Generally favors `=` unless the spec already contains an operator.
+ *
+ * @param pkg - The package name.
+ * @param spec - The version spec, optionally prefixed with an operator.
+ * @returns A formatted `pkg=spec` or `pkg<operator>spec` string.
  */
 function makeSpec(pkg, spec) {
     if (spec.match(/[=<>!\|]/)) {
@@ -53790,7 +53805,12 @@ var conda_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
 
 
 /**
- * Provide current location of miniconda or location where it will be installed
+ * Return the base path of the conda installation, determined by whether
+ * the bundled install, a custom directory, or the default `~/miniconda3` is in use.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The absolute path to the conda base directory.
  */
 function condaBasePath(inputs, options) {
     let condaPath;
@@ -53808,10 +53828,13 @@ function condaBasePath(inputs, options) {
     return condaPath;
 }
 /**
- * Provide conda CLI arguments for identifying an env by name or prefix/path
+ * Return the conda CLI flags for identifying an environment by name or prefix.
  *
  * ### Note
- * Only really detects by presence of a path separator, as the path may not yet exist
+ * Only really detects by presence of a path separator, as the path may not yet exist.
+ *
+ * @param inputs - The parsed action inputs.
+ * @returns A two-element array of `["--name"|"--prefix", envName]`.
  */
 function envCommandFlag(inputs) {
     return [
@@ -53820,7 +53843,13 @@ function envCommandFlag(inputs) {
     ];
 }
 /**
- * Provide cross platform location of conda/mamba executable in condabin and bin
+ * Return candidate paths where the conda or mamba executable might exist,
+ * checking both `condabin` and platform-specific binary directories.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @param subcommand - If provided, mamba is only used when it supports this subcommand.
+ * @returns An array of candidate executable paths.
  */
 function condaExecutableLocations(inputs, options, subcommand) {
     const dir = condaBasePath(inputs, options);
@@ -53840,7 +53869,13 @@ function condaExecutableLocations(inputs, options, subcommand) {
     return condaExes;
 }
 /**
- *  Return existing conda or mamba executable
+ * Find and return the first existing conda or mamba executable, throwing
+ * an error if none of the candidate locations exist on disk.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @param subcommand - If provided, mamba is only used when it supports this subcommand.
+ * @returns The absolute path to the found executable.
  */
 function condaExecutable(inputs, options, subcommand) {
     const locations = condaExecutableLocations(inputs, options, subcommand);
@@ -53851,7 +53886,11 @@ function condaExecutable(inputs, options, subcommand) {
     throw Error(`No existing ${options.useMamba ? "mamba" : "conda"} executable found at any of ${locations}`);
 }
 /**
- * Detect the presence of mamba
+ * Check whether a mamba executable exists in the current conda installation.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns `true` if mamba is found at any candidate location.
  */
 function isMambaInstalled(inputs, options) {
     for (const exe of condaExecutableLocations(inputs, Object.assign(Object.assign({}, options), { useMamba: true }))) {
@@ -53861,7 +53900,14 @@ function isMambaInstalled(inputs, options) {
     return false;
 }
 /**
- * Run Conda command
+ * Run a conda or mamba CLI command, resolving the executable and setting
+ * `MAMBA_ROOT_PREFIX` when mamba is in use.
+ *
+ * @param cmd - The conda subcommand and arguments (e.g. `["install", "numpy"]`).
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @param captureOutput - When `true`, returns stdout as a string.
+ * @returns The captured stdout if `captureOutput` is `true`, otherwise void.
  */
 function condaCommand(cmd_1, inputs_1, options_1) {
     return conda_awaiter(this, arguments, void 0, function* (cmd, inputs, options, captureOutput = false) {
@@ -53874,7 +53920,7 @@ function condaCommand(cmd_1, inputs_1, options_1) {
     });
 }
 /**
- * Create a baseline .condarc
+ * Write a minimal bootstrap `.condarc` file to suppress early warnings.
  */
 function bootstrapConfig() {
     return conda_awaiter(this, void 0, void 0, function* () {
@@ -53882,7 +53928,9 @@ function bootstrapConfig() {
     });
 }
 /**
- * Copy the given condarc file into place
+ * Copy a user-provided `.condarc` file from the workspace into `~/.condarc`.
+ *
+ * @param inputs - The parsed action inputs containing the condarc file path.
  */
 function copyConfig(inputs) {
     return conda_awaiter(this, void 0, void 0, function* () {
@@ -53892,7 +53940,12 @@ function copyConfig(inputs) {
     });
 }
 /**
- * Setup Conda configuration
+ * Apply all conda configuration from the action inputs, including channels,
+ * package directories, auto-activation, and arbitrary config keys.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @param reapply - When `true`, skip channels and `pkgs_dirs` that persist from the first call.
  */
 function applyCondaConfiguration(inputs_1, options_1) {
     return conda_awaiter(this, arguments, void 0, function* (inputs, options, reapply = false) {
@@ -53998,7 +54051,14 @@ function applyCondaConfiguration(inputs_1, options_1) {
         yield condaCommand(["config", "--show"], inputs, options);
     });
 }
-/** Resolve an environment name or path to a fully-qualified absolute path */
+/**
+ * Resolve an environment name or path to a fully-qualified absolute path.
+ *
+ * @param inputPathOrName - An environment name or path (e.g. `"myenv"` or `"~/envs/myenv"`).
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The resolved absolute path to the environment directory.
+ */
 function _getFullEnvironmentPath(inputPathOrName, inputs, options) {
     if (!inputPathOrName.includes("/")) {
         // likely an environment name
@@ -54014,7 +54074,13 @@ function _getFullEnvironmentPath(inputPathOrName, inputs, options) {
     return external_path_namespaceObject.resolve(inputPathOrName);
 }
 /**
- * Whether an environment is the default environment
+ * Determine whether the given environment is the default activation target,
+ * either via `default_activation_env` config or by being a base environment alias.
+ *
+ * @param envName - The environment name to check.
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns `true` if the environment is the default activation target.
  */
 function isDefaultEnvironment(envName, inputs, options) {
     return conda_awaiter(this, void 0, void 0, function* () {
@@ -54033,7 +54099,8 @@ function isDefaultEnvironment(envName, inputs, options) {
 }
 /**
  * Initialize conda shell integration for all shells, fix folder ownership
- * on bundled installs, and remove/rename profile files.
+ * on bundled installs, remove/rename profile files, and append activation
+ * commands to shell profiles.
  *
  * @param inputs - The parsed action inputs.
  * @param options - The current dynamic options.
@@ -54041,6 +54108,9 @@ function isDefaultEnvironment(envName, inputs, options) {
 function condaInit(inputs, options) {
     return conda_awaiter(this, void 0, void 0, function* () {
         let ownPath;
+        const isValidActivate = !(yield isDefaultEnvironment(inputs.activateEnvironment, inputs, options));
+        const autoActivateDefault = options.condaConfig.auto_activate === "true";
+        const installationDirectory = condaBasePath(inputs, options);
         // Fix ownership of folders
         if (options.useBundled) {
             if (IS_MAC) {
@@ -54064,75 +54134,44 @@ function condaInit(inputs, options) {
                 }
             }
         }
-        // Skip conda init and all profile modifications if run-init is false
-        if (inputs.runInit == "false") {
-            info("Skipping conda init and profile modifications (run-init=false)");
-        }
-        else {
-            // Remove profile files
-            if (inputs.removeProfiles == "true") {
-                for (let rc of PROFILES) {
-                    try {
-                        let file = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), rc);
-                        if (external_fs_namespaceObject.existsSync(file)) {
-                            info(`Removing "${file}"`);
-                            yield rmRF(file);
-                        }
-                    }
-                    catch (err) {
-                        warning(err);
+        // Remove profile files
+        if (inputs.removeProfiles == "true") {
+            for (let rc of PROFILES) {
+                try {
+                    let file = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), rc);
+                    if (external_fs_namespaceObject.existsSync(file)) {
+                        info(`Removing "${file}"`);
+                        yield rmRF(file);
                     }
                 }
-            }
-            // Run conda init
-            for (let cmd of ["--all"]) {
-                yield condaCommand(["init", cmd], inputs, options);
-            }
-            if (inputs.removeProfiles == "true") {
-                // Rename files
-                if (IS_LINUX) {
-                    let source = "~/.bashrc".replace("~", external_os_namespaceObject.homedir());
-                    let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
-                    if (external_fs_namespaceObject.existsSync(source)) {
-                        info(`Renaming "${source}" to "${dest}"\n`);
-                        yield mv(source, dest);
-                    }
-                }
-                else if (IS_MAC) {
-                    let source = "~/.bash_profile".replace("~", external_os_namespaceObject.homedir());
-                    let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
-                    if (external_fs_namespaceObject.existsSync(source)) {
-                        info(`Renaming "${source}" to "${dest}"\n`);
-                        yield mv(source, dest);
-                    }
+                catch (err) {
+                    warning(err);
                 }
             }
         }
-    });
-}
-/**
- * Append activation commands to all shell profile files so that
- * subsequent workflow steps start with the correct environment active.
- *
- * This must be called AFTER the target environment has been created,
- * otherwise `.bat` wrappers (which source `conda_hook.bat`) would try
- * to activate a non-existent environment during setup and emit false
- * warnings (see #474).
- *
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- */
-function condaInitActivation(inputs, options) {
-    return conda_awaiter(this, void 0, void 0, function* () {
-        // Skip profile modifications when run-init is false (mirrors condaInit guard)
-        if (inputs.runInit == "false") {
-            info("Skipping activation profile modifications (run-init=false)");
-            return;
+        // Run conda init
+        for (let cmd of ["--all"]) {
+            yield condaCommand(["init", cmd], inputs, options);
         }
-        const isValidActivate = !!inputs.activateEnvironment &&
-            !(yield isDefaultEnvironment(inputs.activateEnvironment, inputs, options));
-        const autoActivateDefault = options.condaConfig.auto_activate === "true";
-        const installationDirectory = condaBasePath(inputs, options);
+        if (inputs.removeProfiles == "true") {
+            // Rename files
+            if (IS_LINUX) {
+                let source = "~/.bashrc".replace("~", external_os_namespaceObject.homedir());
+                let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
+                if (external_fs_namespaceObject.existsSync(source)) {
+                    info(`Renaming "${source}" to "${dest}"\n`);
+                    yield mv(source, dest);
+                }
+            }
+            else if (IS_MAC) {
+                let source = "~/.bash_profile".replace("~", external_os_namespaceObject.homedir());
+                let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
+                if (external_fs_namespaceObject.existsSync(source)) {
+                    info(`Renaming "${source}" to "${dest}"\n`);
+                    yield mv(source, dest);
+                }
+            }
+        }
         // PowerShell profiles
         // NOTE: Using array.join() to prevent auto-formatters from adding indentation
         const powerLines = [
@@ -54226,7 +54265,10 @@ var outputs_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _
 
 
 /**
- * Add Conda executable to PATH environment variable
+ * Add the conda `condabin` directory to PATH and export the CONDA env variable.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
  */
 function setPathVariables(inputs, options) {
     return outputs_awaiter(this, void 0, void 0, function* () {
@@ -54239,7 +54281,11 @@ function setPathVariables(inputs, options) {
     });
 }
 /**
- * Export the effective environment-file path
+ * Set the action outputs and state for the effective environment-file.
+ *
+ * @param envFile - The path to the environment file used.
+ * @param envContent - The text content of the environment file.
+ * @param patched - Whether the environment file was patched from the original.
  */
 function setEnvironmentFileOutputs(envFile, envContent, patched = false) {
     setOutput(OUTPUT_ENV_FILE_PATH, external_path_namespaceObject.resolve(envFile));
@@ -55062,16 +55108,17 @@ var base_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arg
 
 
 
-/** Get the path for a locally-executable installer from cache, or as downloaded
- *
- * @returns the local path to the installer (with the correct extension)
+/**
+ * Get the path for a locally-executable installer from cache, or as downloaded.
  *
  * ### Note
- * Assume `url` at least ends with the correct executable extension
- * for this platform, but don't make any other assumptions about `url`'s format:
- * - might include GET params (?&) and hashes (#),
- * - was not built with `constructor` (but still has the same CLI),
- * - or has been renamed during a build process
+ * Assumes `url` at least ends with the correct executable extension
+ * for this platform, but makes no other assumptions about the URL format:
+ * it might include GET params, was not built with `constructor` (but still
+ * has the same CLI), or has been renamed during a build process.
+ *
+ * @param options - Cache and download metadata for the installer.
+ * @returns The local path to the installer (with the correct extension).
  */
 function ensureLocalInstaller(options) {
     return base_awaiter(this, void 0, void 0, function* () {
@@ -55138,7 +55185,12 @@ var download_miniforge_awaiter = (undefined && undefined.__awaiter) || function 
 
 
 /**
- * Download specific Miniforge defined by variant, version and architecture
+ * Download a specific Miniforge installer determined by the variant, version,
+ * and architecture from the action inputs.
+ *
+ * @param inputs - The parsed action inputs containing variant, version, and architecture.
+ * @param options - The current dynamic options.
+ * @returns The local path to the downloaded installer.
  */
 function downloadMiniforge(inputs, options) {
     return download_miniforge_awaiter(this, void 0, void 0, function* () {
@@ -55205,9 +55257,10 @@ var download_miniconda_awaiter = (undefined && undefined.__awaiter) || function 
 
 
 /**
- * List available Miniconda versions
+ * Fetch and return the list of available Miniconda installer URLs for a given architecture.
  *
- * @param arch
+ * @param arch - The target architecture suffix (e.g. `"x86_64"`, `"arm64"`).
+ * @returns An array of installer path strings relative to the base URL.
  */
 function minicondaVersions(arch) {
     return download_miniconda_awaiter(this, void 0, void 0, function* () {
@@ -55228,7 +55281,12 @@ function minicondaVersions(arch) {
     });
 }
 /**
- * Download specific version miniconda defined by version, arch and python major version
+ * Download a specific Miniconda installer determined by the Python major
+ * version, architecture, and version from the action inputs.
+ *
+ * @param pythonMajorVersion - The Python major version for the installer (e.g. `3`).
+ * @param inputs - The parsed action inputs containing version and architecture.
+ * @returns The local path to the downloaded installer.
  */
 function downloadMiniconda(pythonMajorVersion, inputs) {
     return download_miniconda_awaiter(this, void 0, void 0, function* () {
@@ -55383,7 +55441,14 @@ const INSTALLER_PROVIDERS = [
     miniforgeDownloader,
     minicondaDownloader,
 ];
-/** See if any provider works with the given inputs and options */
+/**
+ * Iterate through installer providers and return the result from the first
+ * one that matches the given inputs, throwing if none match.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The installer result with the local path and updated options.
+ */
 function getLocalInstallerPath(inputs, options) {
     return installer_awaiter(this, void 0, void 0, function* () {
         for (const provider of INSTALLER_PROVIDERS) {
@@ -55397,9 +55462,14 @@ function getLocalInstallerPath(inputs, options) {
     });
 }
 /**
- * Run a `constructor`-generated installer, like Miniconda.
+ * Run a `constructor`-generated installer (`.exe` or `.sh`) and detect
+ * whether mamba was provisioned in the resulting base environment.
  *
- * @param installerPath must have an appropriate extension for this platform
+ * @param installerPath - Path to the installer; must have an appropriate extension for this platform.
+ * @param outputPath - The target installation directory.
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The updated dynamic options reflecting the new installation.
  */
 function runInstaller(installerPath, outputPath, inputs, options) {
     return installer_awaiter(this, void 0, void 0, function* () {
@@ -59306,8 +59376,8 @@ var explicit_awaiter = (undefined && undefined.__awaiter) || function (thisArg, 
 
 
 /**
- * Install an environment from an explicit file generated `conda list --explicit`
- * or `conda-lock`
+ * Install an environment from an explicit file generated by
+ * `conda list --explicit` or `conda-lock`.
  */
 const ensureExplicit = {
     label: "conda create (from explicit)",
@@ -59369,9 +59439,8 @@ const PATCH_PROVIDERS = [
  * Install an environment from an `env` file as accepted by `conda env update`.
  *
  * ### Note
- * May apply patches to ensure consistency with `inputs`
- *
- * If patched, a temporary file will be created with the patches
+ * May apply patches to ensure consistency with `inputs`.
+ * If patched, a temporary file will be created with the patches.
  */
 const ensureYaml = {
     label: "conda env update",
@@ -59397,7 +59466,7 @@ const ensureYaml = {
             let patchedDeps = [];
             for (const spec of dependencies || []) {
                 // Ignore pip deps
-                if (typeof spec !== "string" || !spec.match(provider.specMatch)) {
+                if (!(spec instanceof String) || !spec.match(PYTHON_SPEC)) {
                     patchedDeps.push(spec);
                     continue;
                 }
@@ -59513,7 +59582,12 @@ const ENV_PROVIDERS = [
     ensureYaml,
 ];
 /**
- * Create test environment, or update the base environment
+ * Iterate through environment providers and create or update the target
+ * environment using the first one that matches the current inputs and options.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns Resolves when the environment has been created or updated.
  */
 function ensureEnvironment(inputs, options) {
     return env_awaiter(this, void 0, void 0, function* () {
@@ -59529,15 +59603,18 @@ function ensureEnvironment(inputs, options) {
     });
 }
 /**
- * Read and potentially parse the `environment-file`
+ * Read and potentially parse the `environment-file`.
  *
  * ### Notes
  * Currently supports a single:
- * - YAML (as accepted by `conda env update`)
- * - lock (as generated by `conda list --explict` or `conda lock`)
+ * - YAML (as accepted by `conda env update`).
+ * - Lock file (as generated by `conda list --explicit` or `conda lock`).
  *
  * In the future, this could be provided in different ways, including
  * multiple files, alternate inputs, etc.
+ *
+ * @param inputs - The parsed action inputs containing the environment file path.
+ * @returns The parsed environment spec with either YAML or explicit content.
  */
 function getEnvSpec(inputs) {
     return env_awaiter(this, void 0, void 0, function* () {
@@ -59564,7 +59641,7 @@ var update_conda_awaiter = (undefined && undefined.__awaiter) || function (thisA
     });
 };
 
-/** Install `conda` in the `base` env at a specified version */
+/** Install `conda` in the `base` env at a specified version. */
 const updateConda = {
     label: "update conda",
     provides: (inputs, options) => update_conda_awaiter(void 0, void 0, void 0, function* () {
@@ -59600,7 +59677,7 @@ var update_mamba_awaiter = (undefined && undefined.__awaiter) || function (thisA
 
 
 
-/** Install `mamba` in the `base` env at a specified version */
+/** Install `mamba` in the `base` env at a specified version. */
 const updateMamba = {
     label: "update mamba",
     provides: (inputs, options) => update_mamba_awaiter(void 0, void 0, void 0, function* () { return inputs.mambaVersion !== "" || options.mambaInInstaller; }),
@@ -59706,7 +59783,7 @@ var update_conda_build_awaiter = (undefined && undefined.__awaiter) || function 
     });
 };
 
-/** Install `conda-build` in the `base` env at a specified version */
+/** Install `conda-build` in the `base` env at a specified version. */
 const updateCondaBuild = {
     label: "update conda-build",
     provides: (inputs, options) => update_conda_build_awaiter(void 0, void 0, void 0, function* () { return inputs.condaBuildVersion !== ""; }),
@@ -59751,9 +59828,12 @@ const TOOL_PROVIDERS = [
     updateCondaBuild,
 ];
 /**
- * Update the 'base' env with relevant tools
+ * Install all requested tools into the `base` environment in a single solve,
+ * then run any post-install actions and reapply configuration.
  *
- * Do this in one step to avoid multiple solves
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The updated dynamic options after tool installation.
  */
 function installBaseTools(inputs, options) {
     return base_tools_awaiter(this, void 0, void 0, function* () {
@@ -59815,7 +59895,10 @@ var setup_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
 
 
 /**
- * Main conda setup method to handle all configuration options
+ * Orchestrate the full conda setup: install, configure, init shell
+ * integration, install base tools, and create the target environment.
+ *
+ * @param inputs - The parsed action inputs.
  */
 function setupMiniconda(inputs) {
     return setup_awaiter(this, void 0, void 0, function* () {
@@ -59854,10 +59937,6 @@ function setupMiniconda(inputs) {
         if (inputs.activateEnvironment && inputs.activateEnvironment !== "base") {
             yield group("Ensuring environment...", () => ensureEnvironment(inputs, options));
         }
-        // Activation profiles must be written AFTER the environment exists,
-        // otherwise .bat wrappers source conda_hook.bat and try to activate
-        // a non-existent environment, producing false warnings (#474).
-        yield group("Writing activation commands to shell profiles...", () => condaInitActivation(inputs, options));
         if (getState(OUTPUT_ENV_FILE_WAS_PATCHED)) {
             yield group("Maybe cleaning up patched environment-file...", () => setup_awaiter(this, void 0, void 0, function* () {
                 const patchedEnv = getState(OUTPUT_ENV_FILE_PATH);
@@ -59874,7 +59953,8 @@ function setupMiniconda(inputs) {
     });
 }
 /**
- * Main `setup-miniconda` entry point
+ * Top-level entry point that gathers inputs and runs the setup, catching
+ * and reporting any errors as a GitHub Actions failure.
  */
 function run() {
     return setup_awaiter(this, void 0, void 0, function* () {

@@ -3,22 +3,22 @@ import * as path from "path";
 
 import * as types from "./types";
 
-/** Path to an existing conda installation, from the CONDA env variable */
+/** Path to an existing conda installation, from the CONDA env variable. */
 export const MINICONDA_DIR_PATH: string = process.env["CONDA"] || "";
-/** Whether the current platform is Windows */
+/** Whether the current platform is Windows. */
 export const IS_WINDOWS: boolean = process.platform === "win32";
-/** Whether the current platform is macOS */
+/** Whether the current platform is macOS. */
 export const IS_MAC: boolean = process.platform === "darwin";
-/** Whether the current platform is Linux */
+/** Whether the current platform is Linux. */
 export const IS_LINUX: boolean = process.platform === "linux";
-/** Whether the current platform is Unix-like (macOS or Linux) */
+/** Whether the current platform is Unix-like (macOS or Linux). */
 export const IS_UNIX: boolean = IS_MAC || IS_LINUX;
 
-/** Base URL for downloading Miniconda installers */
+/** Base URL for downloading Miniconda installers. */
 export const MINICONDA_BASE_URL: string =
   "https://repo.anaconda.com/miniconda/";
 
-/** Processor architectures supported by Miniconda */
+/** Processor architectures supported by Miniconda. */
 export const MINICONDA_ARCHITECTURES: types.IArchitectures = {
   aarch64: "aarch64",
   arm64: "arm64",
@@ -30,7 +30,7 @@ export const MINICONDA_ARCHITECTURES: types.IArchitectures = {
   arm32: "armv7l", // To be supported by github runners
 };
 
-/** Processor architectures supported by Miniforge */
+/** Processor architectures supported by Miniforge. */
 export const MINIFORGE_ARCHITECTURES: types.IArchitectures = {
   x64: "x86_64",
   x86_64: "x86_64",
@@ -39,32 +39,32 @@ export const MINIFORGE_ARCHITECTURES: types.IArchitectures = {
   arm64: "arm64",
 };
 
-/** Map from Node.js platform strings to OS names used in installer filenames */
+/** Map from Node.js platform strings to OS names used in installer filenames. */
 export const OS_NAMES: types.IOperatingSystems = {
   win32: "Windows",
   darwin: "MacOSX",
   linux: "Linux",
 };
 
-/** Common download prefix */
+/** Base URL prefix for downloading Miniforge releases from GitHub. */
 export const MINIFORGE_URL_PREFIX =
   "https://github.com/conda-forge/miniforge/releases";
 
-/** Default miniforge if only miniforge-version is provided */
+/** Default Miniforge variant used when only miniforge-version is provided. */
 export const MINIFORGE_DEFAULT_VARIANT = "Miniforge3";
 
-/** Default miniforge if only miniforge-variant is provided */
+/** Default Miniforge version used when only miniforge-variant is provided. */
 export const MINIFORGE_DEFAULT_VERSION = "latest";
 
-/** Names for a conda `base` env */
+/** Names that identify a conda `base` environment. */
 export const BASE_ENV_NAMES = ["root", "base", ""];
 
 /**
- * Known extensions for `constructor`-generated installers supported
+ * Known extensions for `constructor`-generated installers supported.
  */
 export const KNOWN_EXTENSIONS = [".exe", ".sh"];
 
-/** As of mamba 0.7.6, only these top-level commands are supported */
+/** As of mamba 0.7.6, only these top-level commands are supported. */
 export const MAMBA_SUBCOMMANDS = [
   "clean",
   "create",
@@ -77,7 +77,7 @@ export const MAMBA_SUBCOMMANDS = [
 ];
 
 /**
- * Errors that are always probably spurious
+ * Warning substrings that are always safe to suppress in conda/mamba output.
  */
 export const IGNORED_WARNINGS = [
   // Appear on win install, we can swallow them
@@ -97,7 +97,7 @@ export const IGNORED_WARNINGS = [
 ];
 
 /**
- * Warnings that should be errors
+ * Warning substrings that should be promoted to hard errors.
  */
 export const FORCED_ERRORS = [
   // `conda env create` will ignore invalid sections and move on
@@ -105,19 +105,19 @@ export const FORCED_ERRORS = [
 ];
 
 /**
- * Avoid spurious conda warnings before we have a chance to update them
+ * Bootstrap `.condarc` content to suppress spurious conda warnings during setup.
  */
 export const BOOTSTRAP_CONDARC = "notify_outdated_conda: false";
 
 /**
- * The conda config file
+ * Absolute path to the user-level `.condarc` configuration file.
  */
 export const CONDARC_PATH = path.join(os.homedir(), ".condarc");
 
-/** Where to put files */
+/** Default directory name for the conda package cache under the user home. */
 export const DEFAULT_PKGS_DIR = "conda_pkgs_dir";
 
-/** Shell profiles names to update so `conda` works for *login shells* */
+/** Shell profile names to update so `conda` works for login shells. */
 export const PROFILES = [
   ".bashrc",
   ".bash_profile",
@@ -131,7 +131,7 @@ export const PROFILES = [
   "Documents/WindowsPowerShell/profile.ps1",
 ];
 
-/** Folders that need user ownership on windows */
+/** Folders that need user ownership on Windows. */
 export const WIN_PERMS_FOLDERS = [
   "condabin/",
   "Scripts/",
@@ -141,34 +141,28 @@ export const WIN_PERMS_FOLDERS = [
 ];
 
 /**
- * A regular expression for detecting whether a spec is the python package, not
- * all of which are valid in all settings.
+ * A regular expression for detecting whether a spec refers to the python
+ * package, not all forms of which are valid in all settings.
  *
  * ### Note
- * Some examples:
- * - python
- * - python 3
- * - python>3
- * - python!=2
- * - conda-forge::python
+ * Some examples: `python`, `python 3`, `python>3`, `python!=2`,
+ * `conda-forge::python`.
  *
- * TODO: this should be generalized, and, along with roundtrip parsing/generating
- *       probably be a sub-package in its own right.
  * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
  */
 export const PYTHON_SPEC = /^(.*::)?python($|[\s=<>!|])/i;
 
 /**
- * Output name for the effective environment-file path used.
+ * Action output name for the effective environment-file path.
  */
 export const OUTPUT_ENV_FILE_PATH = "environment-file";
 
 /**
- * Output name for the effective environment-file file content used.
+ * Action output name for the effective environment-file content.
  */
 export const OUTPUT_ENV_FILE_CONTENT = "environment-file-content";
 
 /**
- * Output name for whether the effective environment-file file was patched.
+ * Action output name for whether the environment-file was patched.
  */
 export const OUTPUT_ENV_FILE_WAS_PATCHED = "environment-file-was-patched";
