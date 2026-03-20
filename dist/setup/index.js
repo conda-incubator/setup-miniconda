@@ -53458,6 +53458,36 @@ const IGNORED_WARNINGS = [
     `'auto_activate': unknown parameter`,
 ];
 /**
+ * Error patterns that indicate transient/retryable failures (HTTP errors,
+ * connection issues, SSL problems). Used by the retry logic to decide whether
+ * to retry a failed conda/mamba command.
+ *
+ * @see https://github.com/conda-incubator/setup-miniconda/issues/129
+ */
+const RETRYABLE_ERROR_PATTERNS = [
+    /CondaHTTPError/i,
+    /ConnectionError/i,
+    /SSLError/i,
+    /HTTP [45]\d{2}/i,
+    /CONNECTION FAILED/i,
+    /timeout/i,
+];
+/** Default number of retries for conda network operations */
+const CONDA_RETRY_MAX = 3;
+/** Default initial delay in milliseconds between retries */
+const CONDA_RETRY_INITIAL_DELAY_MS = 10000;
+/**
+ * Conda subcommands that perform network operations and are worth retrying
+ * on transient HTTP/connection errors.
+ */
+const NETWORK_SUBCOMMANDS = [
+    "create",
+    "install",
+    "update",
+    "search",
+    "env",
+];
+/**
  * Warnings that should be errors
  */
 const FORCED_ERRORS = [
@@ -53766,6 +53796,59 @@ function makeSpec(pkg, spec) {
     }
 }
 
+;// CONCATENATED MODULE: ./src/retry.ts
+var retry_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+/**
+ * Whether an error message matches known transient/retryable patterns
+ */
+function isRetryableError(error) {
+    const message = error.message || "";
+    return RETRYABLE_ERROR_PATTERNS.some((pattern) => message.match(pattern));
+}
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+/**
+ * Execute a function with exponential backoff retry logic.
+ *
+ * Only retries on errors deemed transient (HTTP errors, connection failures,
+ * SSL errors). Non-retryable errors (e.g. PackagesNotFoundError) are thrown
+ * immediately.
+ */
+function retryWithBackoff(fn, options = {}) {
+    return retry_awaiter(this, void 0, void 0, function* () {
+        const { maxRetries = 0, initialDelayMs = 10000, backoffFactor = 2, maxDelayMs = 60000, isRetryable: isRetryableFn = isRetryableError, } = options;
+        let lastError;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return yield fn();
+            }
+            catch (err) {
+                lastError = err instanceof Error ? err : new Error(String(err));
+                const isLastAttempt = attempt === maxRetries;
+                if (isLastAttempt || !isRetryableFn(lastError)) {
+                    throw lastError;
+                }
+                const delay = Math.min(initialDelayMs * Math.pow(backoffFactor, attempt), maxDelayMs);
+                warning(`Attempt ${attempt + 1}/${maxRetries + 1} failed: ${lastError.message}`);
+                info(`Retrying in ${delay / 1000}s...`);
+                yield sleep(delay);
+            }
+        }
+        throw lastError;
+    });
+}
+
 ;// CONCATENATED MODULE: ./src/conda.ts
 //-----------------------------------------------------------------------
 // Conda helpers
@@ -53779,6 +53862,7 @@ var conda_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+
 
 
 
@@ -53859,6 +53943,12 @@ function isMambaInstalled(inputs, options) {
 }
 /**
  * Run Conda command
+ *
+ * Network-prone subcommands (create, install, update, search, env) are
+ * automatically retried with exponential backoff on transient HTTP and
+ * connection errors.
+ *
+ * @see https://github.com/conda-incubator/setup-miniconda/issues/129
  */
 function condaCommand(cmd, inputs, options, captureOutput = false) {
     return conda_awaiter(this, void 0, void 0, function* () {
@@ -53866,6 +53956,13 @@ function condaCommand(cmd, inputs, options, captureOutput = false) {
         let env = {};
         if (options.useMamba) {
             env.MAMBA_ROOT_PREFIX = condaBasePath(inputs, options);
+        }
+        const subcommand = cmd[0];
+        if (NETWORK_SUBCOMMANDS.includes(subcommand)) {
+            return yield retryWithBackoff(() => execute(command, env, captureOutput), {
+                maxRetries: CONDA_RETRY_MAX,
+                initialDelayMs: CONDA_RETRY_INITIAL_DELAY_MS,
+            });
         }
         return yield execute(command, env, captureOutput);
     });
@@ -55026,6 +55123,8 @@ var base_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arg
 
 
 
+
+
 /** Get the path for a locally-executable installer from cache, or as downloaded
  *
  * @returns the local path to the installer (with the correct extension)
@@ -55072,7 +55171,10 @@ function ensureLocalInstaller(options) {
             }
         }
         if (executablePath === "") {
-            const rawDownloadPath = yield downloadTool(options.url);
+            const rawDownloadPath = yield retryWithBackoff(() => downloadTool(options.url), {
+                maxRetries: CONDA_RETRY_MAX,
+                initialDelayMs: CONDA_RETRY_INITIAL_DELAY_MS,
+            });
             info(`Downloaded ${installerName}, ensuring extension ${installerExtension}`);
             // Always ensure the installer ends with a known path
             executablePath = rawDownloadPath + installerExtension;

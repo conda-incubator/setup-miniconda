@@ -33637,6 +33637,36 @@ const IGNORED_WARNINGS = (/* unused pure expression or super */ null && ([
     `'auto_activate': unknown parameter`,
 ]));
 /**
+ * Error patterns that indicate transient/retryable failures (HTTP errors,
+ * connection issues, SSL problems). Used by the retry logic to decide whether
+ * to retry a failed conda/mamba command.
+ *
+ * @see https://github.com/conda-incubator/setup-miniconda/issues/129
+ */
+const RETRYABLE_ERROR_PATTERNS = (/* unused pure expression or super */ null && ([
+    /CondaHTTPError/i,
+    /ConnectionError/i,
+    /SSLError/i,
+    /HTTP [45]\d{2}/i,
+    /CONNECTION FAILED/i,
+    /timeout/i,
+]));
+/** Default number of retries for conda network operations */
+const CONDA_RETRY_MAX = 3;
+/** Default initial delay in milliseconds between retries */
+const CONDA_RETRY_INITIAL_DELAY_MS = 10000;
+/**
+ * Conda subcommands that perform network operations and are worth retrying
+ * on transient HTTP/connection errors.
+ */
+const NETWORK_SUBCOMMANDS = (/* unused pure expression or super */ null && ([
+    "create",
+    "install",
+    "update",
+    "search",
+    "env",
+]));
+/**
  * Warnings that should be errors
  */
 const FORCED_ERRORS = (/* unused pure expression or super */ null && ([

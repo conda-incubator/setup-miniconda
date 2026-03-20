@@ -12,6 +12,7 @@ import * as io from "@actions/io";
 import * as types from "./types";
 import * as constants from "./constants";
 import * as utils from "./utils";
+import { retryWithBackoff } from "./retry";
 
 /**
  * Provide current location of miniconda or location where it will be installed
@@ -115,6 +116,12 @@ export function isMambaInstalled(
 
 /**
  * Run Conda command
+ *
+ * Network-prone subcommands (create, install, update, search, env) are
+ * automatically retried with exponential backoff on transient HTTP and
+ * connection errors.
+ *
+ * @see https://github.com/conda-incubator/setup-miniconda/issues/129
  */
 export async function condaCommand(
   cmd: string[],
@@ -127,6 +134,18 @@ export async function condaCommand(
   if (options.useMamba) {
     env.MAMBA_ROOT_PREFIX = condaBasePath(inputs, options);
   }
+
+  const subcommand = cmd[0];
+  if (constants.NETWORK_SUBCOMMANDS.includes(subcommand)) {
+    return await retryWithBackoff(
+      () => utils.execute(command, env, captureOutput),
+      {
+        maxRetries: constants.CONDA_RETRY_MAX,
+        initialDelayMs: constants.CONDA_RETRY_INITIAL_DELAY_MS,
+      },
+    );
+  }
+
   return await utils.execute(command, env, captureOutput);
 }
 

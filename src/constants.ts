@@ -93,6 +93,40 @@ export const IGNORED_WARNINGS = [
 ];
 
 /**
+ * Error patterns that indicate transient/retryable failures (HTTP errors,
+ * connection issues, SSL problems). Used by the retry logic to decide whether
+ * to retry a failed conda/mamba command.
+ *
+ * @see https://github.com/conda-incubator/setup-miniconda/issues/129
+ */
+export const RETRYABLE_ERROR_PATTERNS: RegExp[] = [
+  /CondaHTTPError/i,
+  /ConnectionError/i,
+  /SSLError/i,
+  /HTTP [45]\d{2}/i,
+  /CONNECTION FAILED/i,
+  /timeout/i,
+];
+
+/** Default number of retries for conda network operations */
+export const CONDA_RETRY_MAX = 3;
+
+/** Default initial delay in milliseconds between retries */
+export const CONDA_RETRY_INITIAL_DELAY_MS = 10_000;
+
+/**
+ * Conda subcommands that perform network operations and are worth retrying
+ * on transient HTTP/connection errors.
+ */
+export const NETWORK_SUBCOMMANDS = [
+  "create",
+  "install",
+  "update",
+  "search",
+  "env",
+];
+
+/**
  * Warnings that should be errors
  */
 export const FORCED_ERRORS = [

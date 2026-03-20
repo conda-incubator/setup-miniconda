@@ -7,6 +7,8 @@ import * as io from "@actions/io";
 import * as tc from "@actions/tool-cache";
 
 import * as types from "../types";
+import * as constants from "../constants";
+import { retryWithBackoff } from "../retry";
 
 /** Get the path for a locally-executable installer from cache, or as downloaded
  *
@@ -66,7 +68,13 @@ export async function ensureLocalInstaller(
   }
 
   if (executablePath === "") {
-    const rawDownloadPath = await tc.downloadTool(options.url);
+    const rawDownloadPath = await retryWithBackoff(
+      () => tc.downloadTool(options.url),
+      {
+        maxRetries: constants.CONDA_RETRY_MAX,
+        initialDelayMs: constants.CONDA_RETRY_INITIAL_DELAY_MS,
+      },
+    );
     core.info(
       `Downloaded ${installerName}, ensuring extension ${installerExtension}`,
     );
