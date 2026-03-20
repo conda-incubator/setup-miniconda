@@ -6,7 +6,12 @@ import * as constants from "../constants";
 import * as base from "./base";
 
 /**
- * Download specific Miniforge defined by variant, version and architecture
+ * Download a specific Miniforge installer determined by the variant, version,
+ * and architecture from the action inputs.
+ *
+ * @param inputs - The parsed action inputs containing variant, version, and architecture.
+ * @param options - The current dynamic options.
+ * @returns The local path to the downloaded installer.
  */
 export async function downloadMiniforge(
   inputs: types.IActionInputs,

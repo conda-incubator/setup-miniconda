@@ -49,8 +49,25 @@ module.exports = {
         "TSEnumDeclaration"
       ]
     }],
-    "jsdoc/require-param": "off",
-    "jsdoc/require-returns": "off",
+    "jsdoc/require-param": ["error", {
+      contexts: [
+        "FunctionDeclaration",
+        "FunctionExpression",
+        "TSInterfaceDeclaration"
+      ]
+    }],
+    "jsdoc/require-param-description": "error",
+    "jsdoc/check-param-names": "error",
+    "jsdoc/require-returns": ["error", {
+      contexts: [
+        "FunctionDeclaration",
+        "FunctionExpression",
+        "TSInterfaceDeclaration"
+      ]
+    }],
+    "jsdoc/require-returns-description": "error",
+    "jsdoc/no-blank-blocks": "error",
+    "jsdoc/require-description-complete-sentence": "error",
     "@typescript-eslint/ban-ts-comment": "warn",
     "@typescript-eslint/camelcase": "off",
     "@typescript-eslint/explicit-function-return-type": "off",
@@ -91,7 +108,14 @@ module.exports = {
         "@typescript-eslint/no-explicit-any": "off",
         "@typescript-eslint/no-non-null-assertion": "off",
         "jsdoc/require-jsdoc": "off",
-        "jsdoc/require-description": "off"
+        "jsdoc/require-description": "off",
+        "jsdoc/require-param": "off",
+        "jsdoc/require-param-description": "off",
+        "jsdoc/check-param-names": "off",
+        "jsdoc/require-returns": "off",
+        "jsdoc/require-returns-description": "off",
+        "jsdoc/no-blank-blocks": "off",
+        "jsdoc/require-description-complete-sentence": "off"
       }
     }
   ]

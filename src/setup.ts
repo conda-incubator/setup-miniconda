@@ -12,7 +12,10 @@ import * as env from "./env";
 import * as baseTools from "./base-tools";
 
 /**
- * Main conda setup method to handle all configuration options
+ * Orchestrate the full conda setup: install, configure, init shell
+ * integration, install base tools, and create the target environment.
+ *
+ * @param inputs - The parsed action inputs.
  */
 async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
   let options: types.IDynamicOptions = {
@@ -116,7 +119,8 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
 }
 
 /**
- * Main `setup-miniconda` entry point
+ * Top-level entry point that gathers inputs and runs the setup, catching
+ * and reporting any errors as a GitHub Actions failure.
  */
 async function run(): Promise<void> {
   try {

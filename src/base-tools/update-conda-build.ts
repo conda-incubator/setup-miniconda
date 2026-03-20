@@ -1,7 +1,7 @@
 import * as types from "../types";
 import * as utils from "../utils";
 
-/** Install `conda-build` in the `base` env at a specified version */
+/** Install `conda-build` in the `base` env at a specified version. */
 export const updateCondaBuild: types.IToolProvider = {
   label: "update conda-build",
   provides: async (inputs, _options) => inputs.condaBuildVersion !== "",

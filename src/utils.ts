@@ -8,9 +8,6 @@ import * as constants from "./constants";
 
 /**
  * Split a comma-separated string into trimmed, non-empty entries.
- */
-/**
- * Split a comma-separated string into trimmed, non-empty entries.
  *
  * @param value - Comma-separated string to split.
  * @returns An array of trimmed, non-empty string entries.
@@ -23,7 +20,6 @@ export function parseCommaSeparated(value: string): string[] {
     .filter((s) => s.length > 0);
 }
 
-/** The folder to use as the conda package cache */
 /**
  * Parse the configured `pkgs_dirs` into a list of directories, falling
  * back to a default under the user home if none are configured.
@@ -43,14 +39,23 @@ export function parsePkgsDirs(configuredPkgsDirs: string) {
 }
 
 /**
- * Whether the given env is a conda `base` env
+ * Check whether the given environment name refers to a conda `base` environment.
+ *
+ * @param envName - The environment name to check.
+ * @returns `true` if the name is a known base environment alias.
  */
 export function isBaseEnv(envName: string) {
   return constants.BASE_ENV_NAMES.includes(envName);
 }
 
 /**
- * Run exec.exec with error handling
+ * Execute a shell command with custom environment variables, stdout/stderr
+ * filtering for known warnings and forced errors, and optional output capture.
+ *
+ * @param command - The command and arguments to execute.
+ * @param env - Additional environment variables to merge with `process.env`.
+ * @param captureOutput - When `true`, returns stdout as a string instead of void.
+ * @returns The captured stdout string if `captureOutput` is `true`, otherwise void.
  */
 export async function execute(
   command: string[],
@@ -104,7 +109,11 @@ export async function execute(
  * Create a conda version spec string.
  *
  * ### Note
- * Generally favors '=' unless specified more tightly.
+ * Generally favors `=` unless the spec already contains an operator.
+ *
+ * @param pkg - The package name.
+ * @param spec - The version spec, optionally prefixed with an operator.
+ * @returns A formatted `pkg=spec` or `pkg<operator>spec` string.
  */
 export function makeSpec(pkg: string, spec: string) {
   if (spec.match(/[=<>!\|]/)) {

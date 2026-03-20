@@ -9,7 +9,7 @@ import * as utils from "../utils";
 
 import * as conda from "../conda";
 
-/** Install `mamba` in the `base` env at a specified version */
+/** Install `mamba` in the `base` env at a specified version. */
 export const updateMamba: types.IToolProvider = {
   label: "update mamba",
   provides: async (inputs, options) =>
