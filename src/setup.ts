@@ -90,6 +90,13 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     );
   }
 
+  // Activation profiles must be written AFTER the environment exists,
+  // otherwise .bat wrappers source conda_hook.bat and try to activate
+  // a non-existent environment, producing false warnings (#474).
+  await core.group("Writing activation commands to shell profiles...", () =>
+    conda.condaInitActivation(inputs, options),
+  );
+
   if (core.getState(constants.OUTPUT_ENV_FILE_WAS_PATCHED)) {
     await core.group(
       "Maybe cleaning up patched environment-file...",
