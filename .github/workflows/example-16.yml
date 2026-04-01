@@ -36,7 +36,7 @@ jobs:
           auto-activate: false
 
       - name: Create installer
-        uses: conda-incubator/installer@2d2df0b03c6795f70e128c56403c7d084cca4fb8 # v0.1.0
+        uses: conda-incubator/installer@fd291852cafc4f4d69b20bd6a676b10edb0896de # v0.1.1
         id: create-installer
         with:
           conda-root: ${{ env.CONDA }}
