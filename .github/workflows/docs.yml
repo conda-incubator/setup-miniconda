@@ -15,11 +15,25 @@ concurrency:
     ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   docs:
-    name: Generate API docs
+    name: Build & Deploy API docs
     runs-on: "ubuntu-latest"
     timeout-minutes: 30
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      pull-requests: write
+    environment:
+      name:
+        ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+        'github-pages' || '' }}
+      url:
+        ${{ steps.pages.outputs.page_url || steps.netlify.outputs.deploy_url }}
     steps:
       - uses: actions/checkout@v6.0.2
       - uses: actions/setup-node@v6
@@ -28,3 +42,42 @@ jobs:
       - run: |
           npm ci
           npm run docs
+
+      # GitHub Pages — only on push to main
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/api
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: pages
+        uses: actions/deploy-pages@v4
+
+      # Netlify preview — only on PRs
+      - if: github.event_name == 'pull_request'
+        name: Deploy to Netlify
+        id: netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          npm install -g netlify-cli
+          netlify deploy \
+            --dir=docs/api \
+            --alias=deploy-preview-${{ github.event.pull_request.number }} \
+            --message="PR #${{ github.event.pull_request.number }}" \
+            --json > deploy_output.json
+          DEPLOY_URL=$(jq -r '.deploy_url' deploy_output.json)
+          echo "deploy_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+
+      - if: github.event_name == 'pull_request'
+        name: Comment on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: netlify-preview
+          message: |
+            ### API Docs Preview
+
+            **Preview URL:** ${{ steps.netlify.outputs.deploy_url }}
+            **Commit:** `${{ github.event.pull_request.head.sha }}`
+
+            _Updated on every push. Powered by Netlify._
