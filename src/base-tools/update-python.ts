@@ -8,10 +8,10 @@ import * as utils from "../utils";
  */
 export const updatePython: types.IToolProvider = {
   label: "update python",
-  provides: async (inputs, options) =>
+  provides: async (inputs, _options) =>
     !!(inputs.pythonVersion && utils.isBaseEnv(inputs.activateEnvironment)),
   toolPackages: async (inputs, options) => {
-    let updates: types.IToolUpdates = {
+    const updates: types.IToolUpdates = {
       tools: [utils.makeSpec("python", inputs.pythonVersion)],
       options,
     };
