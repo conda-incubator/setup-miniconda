@@ -53514,7 +53514,7 @@ const WIN_PERMS_FOLDERS = [
  *
  * @see https://docs.conda.io/projects/conda-build/en/latest/resources/package-spec.html#package-match-specifications
  */
-const PYTHON_SPEC = /^(.*::)?python($|\s\=\<\>\!\|)/i;
+const PYTHON_SPEC = /^(.*::)?python($|[\s=<>!|])/i;
 /**
  * Action output name for the effective environment-file path.
  */
@@ -53632,6 +53632,7 @@ function parseInputs() {
             condaRemoveDefaults: getInput("conda-remove-defaults"),
             pythonVersion: getInput("python-version"),
             removeProfiles: getInput("remove-profiles"),
+            runInit: getInput("run-init"),
             condaConfig: Object.freeze({
                 add_anaconda_token: getInput("add-anaconda-token"),
                 add_pip_as_python_dependency: getInput("add-pip-as-python-dependency"),
@@ -54159,8 +54160,7 @@ function isDefaultEnvironment(envName, inputs, options) {
 }
 /**
  * Initialize conda shell integration for all shells, fix folder ownership
- * on bundled installs, remove/rename profile files, and append activation
- * commands to shell profiles.
+ * on bundled installs, and remove/rename profile files.
  *
  * @param inputs - The parsed action inputs.
  * @param options - The current dynamic options.
@@ -54168,9 +54168,6 @@ function isDefaultEnvironment(envName, inputs, options) {
 function condaInit(inputs, options) {
     return conda_awaiter(this, void 0, void 0, function* () {
         let ownPath;
-        const isValidActivate = !(yield isDefaultEnvironment(inputs.activateEnvironment, inputs, options));
-        const autoActivateDefault = options.condaConfig.auto_activate === "true";
-        const installationDirectory = condaBasePath(inputs, options);
         // Fix ownership of folders
         if (options.useBundled) {
             if (IS_MAC) {
@@ -54194,44 +54191,75 @@ function condaInit(inputs, options) {
                 }
             }
         }
-        // Remove profile files
-        if (inputs.removeProfiles == "true") {
-            for (let rc of PROFILES) {
-                try {
-                    let file = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), rc);
-                    if (external_fs_namespaceObject.existsSync(file)) {
-                        info(`Removing "${file}"`);
-                        yield rmRF(file);
+        // Skip conda init and all profile modifications if run-init is false
+        if (inputs.runInit == "false") {
+            info("Skipping conda init and profile modifications (run-init=false)");
+        }
+        else {
+            // Remove profile files
+            if (inputs.removeProfiles == "true") {
+                for (let rc of PROFILES) {
+                    try {
+                        let file = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), rc);
+                        if (external_fs_namespaceObject.existsSync(file)) {
+                            info(`Removing "${file}"`);
+                            yield rmRF(file);
+                        }
+                    }
+                    catch (err) {
+                        warning(err);
                     }
                 }
-                catch (err) {
-                    warning(err);
+            }
+            // Run conda init
+            for (let cmd of ["--all"]) {
+                yield condaCommand(["init", cmd], inputs, options);
+            }
+            if (inputs.removeProfiles == "true") {
+                // Rename files
+                if (IS_LINUX) {
+                    let source = "~/.bashrc".replace("~", external_os_namespaceObject.homedir());
+                    let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
+                    if (external_fs_namespaceObject.existsSync(source)) {
+                        info(`Renaming "${source}" to "${dest}"\n`);
+                        yield mv(source, dest);
+                    }
+                }
+                else if (IS_MAC) {
+                    let source = "~/.bash_profile".replace("~", external_os_namespaceObject.homedir());
+                    let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
+                    if (external_fs_namespaceObject.existsSync(source)) {
+                        info(`Renaming "${source}" to "${dest}"\n`);
+                        yield mv(source, dest);
+                    }
                 }
             }
         }
-        // Run conda init
-        for (let cmd of ["--all"]) {
-            yield condaCommand(["init", cmd], inputs, options);
+    });
+}
+/**
+ * Append activation commands to all shell profile files so that
+ * subsequent workflow steps start with the correct environment active.
+ *
+ * This must be called AFTER the target environment has been created,
+ * otherwise `.bat` wrappers (which source `conda_hook.bat`) would try
+ * to activate a non-existent environment during setup and emit false
+ * warnings (see #474).
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ */
+function condaInitActivation(inputs, options) {
+    return conda_awaiter(this, void 0, void 0, function* () {
+        // Skip profile modifications when run-init is false (mirrors condaInit guard)
+        if (inputs.runInit == "false") {
+            info("Skipping activation profile modifications (run-init=false)");
+            return;
         }
-        if (inputs.removeProfiles == "true") {
-            // Rename files
-            if (IS_LINUX) {
-                let source = "~/.bashrc".replace("~", external_os_namespaceObject.homedir());
-                let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
-                if (external_fs_namespaceObject.existsSync(source)) {
-                    info(`Renaming "${source}" to "${dest}"\n`);
-                    yield mv(source, dest);
-                }
-            }
-            else if (IS_MAC) {
-                let source = "~/.bash_profile".replace("~", external_os_namespaceObject.homedir());
-                let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
-                if (external_fs_namespaceObject.existsSync(source)) {
-                    info(`Renaming "${source}" to "${dest}"\n`);
-                    yield mv(source, dest);
-                }
-            }
-        }
+        const isValidActivate = !!inputs.activateEnvironment &&
+            !(yield isDefaultEnvironment(inputs.activateEnvironment, inputs, options));
+        const autoActivateDefault = options.condaConfig.auto_activate === "true";
+        const installationDirectory = condaBasePath(inputs, options);
         // PowerShell profiles
         // NOTE: Using array.join() to prevent auto-formatters from adding indentation
         const powerLines = [
@@ -59602,7 +59630,7 @@ const ensureYaml = {
             let patchedDeps = [];
             for (const spec of dependencies || []) {
                 // Ignore pip deps
-                if (!(spec instanceof String) || !spec.match(PYTHON_SPEC)) {
+                if (typeof spec !== "string" || !spec.match(provider.specMatch)) {
                     patchedDeps.push(spec);
                     continue;
                 }
@@ -60134,6 +60162,10 @@ function setupMiniconda(inputs) {
         if (inputs.activateEnvironment && inputs.activateEnvironment !== "base") {
             yield group("Ensuring environment...", () => ensureEnvironment(inputs, options));
         }
+        // Activation profiles must be written AFTER the environment exists,
+        // otherwise .bat wrappers source conda_hook.bat and try to activate
+        // a non-existent environment, producing false warnings (#474).
+        yield group("Writing activation commands to shell profiles...", () => condaInitActivation(inputs, options));
         if (getState(OUTPUT_ENV_FILE_WAS_PATCHED)) {
             yield group("Maybe cleaning up patched environment-file...", () => setup_awaiter(this, void 0, void 0, function* () {
                 const patchedEnv = getState(OUTPUT_ENV_FILE_PATH);
