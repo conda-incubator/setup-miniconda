@@ -14,8 +14,11 @@ export interface IShells {
   [key: string]: string;
 }
 
-export type TCondaConfig = any;
-export type TEnvironment = any;
+/**
+ * Runtime conda configuration — a mutable partial copy of ICondaConfig
+ * used in IDynamicOptions to track config state during setup.
+ */
+export type TCondaConfig = Partial<ICondaConfig>;
 
 /**
  * Metadata needed to attempt retrieving an installer from, or to update, the tool cache

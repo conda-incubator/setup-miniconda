@@ -8,7 +8,7 @@ import * as outputs from "../outputs";
  */
 export const ensureExplicit: types.IEnvProvider = {
   label: "conda create (from explicit)",
-  provides: async (inputs, options) => !!options.envSpec?.explicit?.length,
+  provides: async (_inputs, options) => !!options.envSpec?.explicit?.length,
   condaArgs: async (inputs, options) => {
     if (inputs.pythonVersion) {
       throw Error(

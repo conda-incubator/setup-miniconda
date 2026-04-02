@@ -12,8 +12,7 @@ export const IS_MAC: boolean = process.platform === "darwin";
 export const IS_LINUX: boolean = process.platform === "linux";
 export const IS_UNIX: boolean = IS_MAC || IS_LINUX;
 
-export const MINICONDA_BASE_URL: string =
-  "https://repo.anaconda.com/miniconda/";
+export const MINICONDA_BASE_URL = "https://repo.anaconda.com/miniconda/";
 
 /** Processor architectures supported by Miniconda */
 export const MINICONDA_ARCHITECTURES: types.IArchitectures = {

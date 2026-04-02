@@ -10,7 +10,7 @@ import * as base from "./base";
  */
 export async function downloadMiniforge(
   inputs: types.IActionInputs,
-  options: types.IDynamicOptions,
+  _options: types.IDynamicOptions,
 ): Promise<string> {
   const tool =
     inputs.miniforgeVariant.trim() || constants.MINIFORGE_DEFAULT_VARIANT;
@@ -57,7 +57,7 @@ export async function downloadMiniforge(
  */
 export const miniforgeDownloader: types.IInstallerProvider = {
   label: "download Miniforge",
-  provides: async (inputs, options) =>
+  provides: async (inputs, _options) =>
     inputs.miniforgeVersion !== "" || inputs.miniforgeVariant !== "",
   installerPath: async (inputs, options) => {
     return {

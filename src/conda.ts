@@ -39,7 +39,7 @@ export function condaBasePath(
  * ### Note
  * Only really detects by presence of a path separator, as the path may not yet exist
  */
-export function envCommandFlag(inputs: types.IActionInputs): string[] {
+export function envCommandFlag(inputs: types.IActionInputs): [string, string] {
   return [
     inputs.activateEnvironment.match(/(\\|\/)/) ? "--prefix" : "--name",
     inputs.activateEnvironment,
@@ -55,7 +55,7 @@ export function condaExecutableLocations(
   subcommand?: string,
 ): string[] {
   const dir: string = condaBasePath(inputs, options);
-  let condaExes: string[] = [];
+  const condaExes: string[] = [];
   let commandName = "conda";
   if (
     options.useMamba &&
@@ -123,9 +123,9 @@ export async function condaCommand(
   captureOutput: boolean = false,
 ): Promise<void | string> {
   const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
-  let env: { [key: string]: string } = {};
+  const env: { [key: string]: string } = {};
   if (options.useMamba) {
-    env.MAMBA_ROOT_PREFIX = condaBasePath(inputs, options);
+    env["MAMBA_ROOT_PREFIX"] = condaBasePath(inputs, options);
   }
   return await utils.execute(command, env, captureOutput);
 }
@@ -217,7 +217,8 @@ export async function applyCondaConfiguration(
           types.ICondaConfig
         >;
         for (const fileName in configs) {
-          if (configs[fileName].channels?.includes("defaults")) {
+          const fileConfig = configs[fileName];
+          if (fileConfig?.channels?.includes("defaults")) {
             await condaCommand(
               [
                 "config",
@@ -242,7 +243,7 @@ export async function applyCondaConfiguration(
     }
 
     // Package directories are also comma-separated, like channels
-    let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+    const pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
     for (const pkgsDir of pkgsDirs) {
       core.info(`Adding pkgs_dir '${pkgsDir}'`);
       await condaCommand(
@@ -368,7 +369,7 @@ export async function condaInit(
   if (options.useBundled) {
     if (constants.IS_MAC) {
       core.info("Fixing conda folders ownership");
-      const userName: string = process.env.USER as string;
+      const userName: string = os.userInfo().username;
       await utils.execute([
         "sudo",
         "chown",
@@ -377,7 +378,7 @@ export async function condaInit(
         condaBasePath(inputs, options),
       ]);
     } else if (constants.IS_WINDOWS) {
-      for (let folder of constants.WIN_PERMS_FOLDERS) {
+      for (const folder of constants.WIN_PERMS_FOLDERS) {
         ownPath = path.join(condaBasePath(inputs, options), folder);
         if (fs.existsSync(ownPath)) {
           core.info(`Fixing ${folder} ownership`);
@@ -393,9 +394,9 @@ export async function condaInit(
   } else {
     // Remove profile files
     if (inputs.removeProfiles == "true") {
-      for (let rc of constants.PROFILES) {
+      for (const rc of constants.PROFILES) {
         try {
-          let file: string = path.join(os.homedir(), rc);
+          const file: string = path.join(os.homedir(), rc);
           if (fs.existsSync(file)) {
             core.info(`Removing "${file}"`);
             await io.rmRF(file);
@@ -407,22 +408,22 @@ export async function condaInit(
     }
 
     // Run conda init
-    for (let cmd of ["--all"]) {
+    for (const cmd of ["--all"]) {
       await condaCommand(["init", cmd], inputs, options);
     }
 
     if (inputs.removeProfiles == "true") {
       // Rename files
       if (constants.IS_LINUX) {
-        let source: string = "~/.bashrc".replace("~", os.homedir());
-        let dest: string = "~/.profile".replace("~", os.homedir());
+        const source: string = "~/.bashrc".replace("~", os.homedir());
+        const dest: string = "~/.profile".replace("~", os.homedir());
         if (fs.existsSync(source)) {
           core.info(`Renaming "${source}" to "${dest}"\n`);
           await io.mv(source, dest);
         }
       } else if (constants.IS_MAC) {
-        let source: string = "~/.bash_profile".replace("~", os.homedir());
-        let dest: string = "~/.profile".replace("~", os.homedir());
+        const source: string = "~/.bash_profile".replace("~", os.homedir());
+        const dest: string = "~/.profile".replace("~", os.homedir());
         if (fs.existsSync(source)) {
           core.info(`Renaming "${source}" to "${dest}"\n`);
           await io.mv(source, dest);
@@ -557,9 +558,9 @@ export async function condaInitActivation(
       batchExtraText,
   };
   Object.keys(shells).forEach((key) => {
-    let filePath: string = key.replace("~", os.homedir());
+    const filePath: string = key.replace("~", os.homedir());
     const text = shells[key];
-    if (fs.existsSync(filePath)) {
+    if (text != null && fs.existsSync(filePath)) {
       core.info(`Append to "${filePath}":\n ${text} \n`);
       fs.appendFileSync(filePath, text);
     }
