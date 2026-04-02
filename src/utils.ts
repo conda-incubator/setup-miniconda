@@ -6,15 +6,20 @@ import * as exec from "@actions/exec";
 import * as core from "@actions/core";
 import * as constants from "./constants";
 
-/** The folder to use as the conda package cache */
-export function parsePkgsDirs(configuredPkgsDirs: string) {
-  // Package directories are also comma-separated, like channels
-  // We're also setting the appropriate conda config env var, to be safe
-  let pkgsDirs = configuredPkgsDirs
+/**
+ * Split a comma-separated string into trimmed, non-empty entries.
+ */
+export function parseCommaSeparated(value: string): string[] {
+  return value
     .trim()
     .split(/,/)
-    .map((p) => p.trim())
-    .filter((p) => p.length);
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+/** The folder to use as the conda package cache */
+export function parsePkgsDirs(configuredPkgsDirs: string) {
+  const pkgsDirs = parseCommaSeparated(configuredPkgsDirs);
 
   // Falling back to our default package directories value
   if (pkgsDirs.length) {
