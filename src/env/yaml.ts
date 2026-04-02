@@ -1,3 +1,11 @@
+/**
+ * @module env/yaml
+ * Create or update a conda environment from a YAML `environment.yml` file,
+ * optionally patching dependencies (for example, pinning `python-version`).
+ *
+ * @category Environments
+ */
+
 import * as fs from "fs";
 import * as path from "path";
 
@@ -18,16 +26,16 @@ import * as outputs from "../outputs";
  * configurable for other complex options, e.g. GPU, etc.
  */
 interface IYAMLEnvPatchProvider {
-  /** The human-readable name shown in logs */
+  /** The human-readable name shown in logs. */
   label: string;
-  /** Whether this patch should be applied for the given `inputs` and `options` */
+  /** Whether this patch should be applied for the given `inputs` and `options`. */
   provides: (
     inputs: types.IActionInputs,
     options: types.IDynamicOptions,
   ) => boolean;
-  /** A regular expression for detecting whether a spec will need to be replaced */
+  /** A regular expression for detecting whether a spec will need to be replaced. */
   specMatch: RegExp;
-  /** The new conda version spec that should be added/patched into the environment */
+  /** The new conda version spec that should be added/patched into the environment. */
   spec: (inputs: types.IActionInputs, options: types.IDynamicOptions) => string;
 }
 
@@ -54,9 +62,8 @@ const PATCH_PROVIDERS: IYAMLEnvPatchProvider[] = [
  * Install an environment from an `env` file as accepted by `conda env update`.
  *
  * ### Note
- * May apply patches to ensure consistency with `inputs`
- *
- * If patched, a temporary file will be created with the patches
+ * May apply patches to ensure consistency with `inputs`.
+ * If patched, a temporary file will be created with the patches.
  */
 export const ensureYaml: types.IEnvProvider = {
   label: "conda env update",

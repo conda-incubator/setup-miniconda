@@ -1,6 +1,7 @@
 lib/
 node_modules/
 coverage/
+docs/api/
 .DS_Store
 *.orig
 .claude/

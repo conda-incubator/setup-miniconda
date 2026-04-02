@@ -1,3 +1,11 @@
+/**
+ * @module delete
+ * Post-action cleanup entry point. Removes extracted packages from the
+ * conda cache to reduce artifact size on GitHub Actions runners.
+ *
+ * @category Core
+ */
+
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -9,7 +17,8 @@ import * as input from "./input";
 import * as utils from "./utils";
 
 /**
- * Clean up the conda cache directory
+ * Post-action cleanup that removes extracted packages from the conda cache
+ * to reduce artifact size, moving stubborn directories to a temp folder.
  */
 async function run(): Promise<void> {
   try {
@@ -32,7 +41,7 @@ async function run(): Promise<void> {
             core.info(`Removing "${fullPath}"`);
             try {
               await io.rmRF(fullPath);
-            } catch (err) {
+            } catch {
               // If file could not be deleted, move to a temp folder
               core.info(`Remove failed, moving "${fullPath}" to temp folder`);
               await io.mv(fullPath, path.join(os.tmpdir(), folder_or_file));

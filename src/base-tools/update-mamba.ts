@@ -1,3 +1,12 @@
+/**
+ * @module base-tools/update-mamba
+ * Tool provider for installing or pinning `mamba` in the `base` environment,
+ * including post-install steps to ensure the `mamba` CLI is available in
+ * `condabin` on both Unix and Windows.
+ *
+ * @category Base Tools
+ */
+
 import * as fs from "fs";
 import * as path from "path";
 
@@ -9,7 +18,7 @@ import * as utils from "../utils";
 
 import * as conda from "../conda";
 
-/** Install `mamba` in the `base` env at a specified version */
+/** Install `mamba` in the `base` env at a specified version. */
 export const updateMamba: types.IToolProvider = {
   label: "update mamba",
   provides: async (inputs, options) =>

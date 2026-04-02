@@ -1,3 +1,12 @@
+/**
+ * @module installer
+ * Installer provider registry and runner. Iterates through
+ * {@link types.IInstallerProvider} strategies to locate or download a
+ * `constructor`-compatible installer, then executes it.
+ *
+ * @category Installers
+ */
+
 import * as path from "path";
 
 import * as core from "@actions/core";
@@ -33,7 +42,15 @@ const INSTALLER_PROVIDERS: types.IInstallerProvider[] = [
   minicondaDownloader,
 ];
 
-/** See if any provider works with the given inputs and options */
+/**
+ * Iterate through installer providers and return the result from the first
+ * one that matches the given inputs, throwing if none match.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The installer result with the local path and updated options.
+ * @throws {Error} If no {@link types.IInstallerProvider} matches the given inputs.
+ */
 export async function getLocalInstallerPath(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
@@ -49,9 +66,15 @@ export async function getLocalInstallerPath(
 }
 
 /**
- * Run a `constructor`-generated installer, like Miniconda.
+ * Run a `constructor`-generated installer (`.exe` or `.sh`) and detect
+ * whether mamba was provisioned in the resulting base environment.
  *
- * @param installerPath must have an appropriate extension for this platform
+ * @param installerPath - Path to the installer; must have an appropriate extension for this platform.
+ * @param outputPath - The target installation directory.
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The updated dynamic options reflecting the new installation.
+ * @throws {Error} If the installer has an unknown file extension.
  */
 export async function runInstaller(
   installerPath: string,

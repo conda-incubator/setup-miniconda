@@ -1,0 +1,24 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "out": "docs/api",
+  "tsconfig": "tsconfig.json",
+  "exclude": ["src/__tests__/**", "src/typings.d.ts"],
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "skipErrorChecking": true,
+  "readme": "none",
+  "name": "setup-miniconda",
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Core",
+    "Installers",
+    "Environments",
+    "Base Tools",
+    "Types",
+    "*"
+  ],
+  "plugin": ["typedoc-plugin-coverage"],
+  "coverageLabel": "docs"
+}

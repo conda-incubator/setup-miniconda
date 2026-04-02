@@ -1,3 +1,11 @@
+/**
+ * @module conda
+ * High-level helpers for locating, running, and configuring a conda or
+ * mamba installation, including shell initialization and `.condarc` management.
+ *
+ * @category Core
+ */
+
 //-----------------------------------------------------------------------
 // Conda helpers
 //-----------------------------------------------------------------------
@@ -14,7 +22,12 @@ import * as constants from "./constants";
 import * as utils from "./utils";
 
 /**
- * Provide current location of miniconda or location where it will be installed
+ * Return the base path of the conda installation, determined by whether
+ * the bundled install, a custom directory, or the default `~/miniconda3` is in use.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The absolute path to the conda base directory.
  */
 export function condaBasePath(
   inputs: types.IActionInputs,
@@ -34,10 +47,13 @@ export function condaBasePath(
 }
 
 /**
- * Provide conda CLI arguments for identifying an env by name or prefix/path
+ * Return the conda CLI flags for identifying an environment by name or prefix.
  *
  * ### Note
- * Only really detects by presence of a path separator, as the path may not yet exist
+ * Only really detects by presence of a path separator, as the path may not yet exist.
+ *
+ * @param inputs - The parsed action inputs.
+ * @returns A two-element array of `["--name"|"--prefix", envName]`.
  */
 export function envCommandFlag(inputs: types.IActionInputs): string[] {
   return [
@@ -47,7 +63,13 @@ export function envCommandFlag(inputs: types.IActionInputs): string[] {
 }
 
 /**
- * Provide cross platform location of conda/mamba executable in condabin and bin
+ * Return candidate paths where the conda or mamba executable might exist,
+ * checking both `condabin` and platform-specific binary directories.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @param subcommand - If provided, mamba is only used when it supports this subcommand.
+ * @returns An array of candidate executable paths.
  */
 export function condaExecutableLocations(
   inputs: types.IActionInputs,
@@ -79,7 +101,14 @@ export function condaExecutableLocations(
 }
 
 /**
- *  Return existing conda or mamba executable
+ * Find and return the first existing conda or mamba executable, throwing
+ * an error if none of the candidate locations exist on disk.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @param subcommand - If provided, mamba is only used when it supports this subcommand.
+ * @returns The absolute path to the found executable.
+ * @throws {Error} If no conda or mamba executable exists at any candidate location.
  */
 export function condaExecutable(
   inputs: types.IActionInputs,
@@ -98,7 +127,11 @@ export function condaExecutable(
 }
 
 /**
- * Detect the presence of mamba
+ * Check whether a mamba executable exists in the current conda installation.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns `true` if mamba is found at any candidate location.
  */
 export function isMambaInstalled(
   inputs: types.IActionInputs,
@@ -114,7 +147,26 @@ export function isMambaInstalled(
 }
 
 /**
- * Run Conda command
+ * Run a conda or mamba CLI command, resolving the executable and setting
+ * `MAMBA_ROOT_PREFIX` when mamba is in use.
+ *
+ * @param cmd - The conda subcommand and arguments (e.g. `["install", "numpy"]`).
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @param captureOutput - When `true`, returns stdout as a string.
+ * @returns The captured stdout if `captureOutput` is `true`, otherwise void.
+ * @throws {Error} If the command exits with a non-zero return code.
+ *
+ * @example
+ * ```ts
+ * // Install numpy into the active env
+ * await condaCommand(["install", "numpy"], inputs, options);
+ *
+ * // Capture JSON config output
+ * const json = await condaCommand(
+ *   ["config", "--show", "--json"], inputs, options, true
+ * );
+ * ```
  */
 export async function condaCommand(
   cmd: string[],
@@ -131,7 +183,7 @@ export async function condaCommand(
 }
 
 /**
- * Create a baseline .condarc
+ * Write a minimal bootstrap `.condarc` file to suppress early warnings.
  */
 export async function bootstrapConfig(): Promise<void> {
   await fs.promises.writeFile(
@@ -141,7 +193,9 @@ export async function bootstrapConfig(): Promise<void> {
 }
 
 /**
- * Copy the given condarc file into place
+ * Copy a user-provided `.condarc` file from the workspace into `~/.condarc`.
+ *
+ * @param inputs - The parsed action inputs containing the condarc file path.
  */
 export async function copyConfig(inputs: types.IActionInputs) {
   const sourcePath: string = path.join(
@@ -153,7 +207,12 @@ export async function copyConfig(inputs: types.IActionInputs) {
 }
 
 /**
- * Setup Conda configuration
+ * Apply all conda configuration from the action inputs, including channels,
+ * package directories, auto-activation, and arbitrary config keys.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @param reapply - When `true`, skip channels and `pkgs_dirs` that persist from the first call.
  */
 export async function applyCondaConfiguration(
   inputs: types.IActionInputs,
@@ -261,7 +320,7 @@ export async function applyCondaConfiguration(
       inputs,
       options,
     );
-  } catch (err) {
+  } catch {
     try {
       // <25.5.0
       await condaCommand(
@@ -302,6 +361,14 @@ export async function applyCondaConfiguration(
   await condaCommand(["config", "--show"], inputs, options);
 }
 
+/**
+ * Resolve an environment name or path to a fully-qualified absolute path.
+ *
+ * @param inputPathOrName - An environment name or path (e.g. `"myenv"` or `"~/envs/myenv"`).
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The resolved absolute path to the environment directory.
+ */
 function _getFullEnvironmentPath(
   inputPathOrName: string,
   inputs: types.IActionInputs,
@@ -321,8 +388,14 @@ function _getFullEnvironmentPath(
   return path.resolve(inputPathOrName);
 }
 
-/*
- * Whether an environment is the default environment
+/**
+ * Determine whether the given environment is the default activation target,
+ * either via `default_activation_env` config or by being a base environment alias.
+ *
+ * @param envName - The environment name to check.
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns `true` if the environment is the default activation target.
  */
 async function isDefaultEnvironment(
   envName: string,

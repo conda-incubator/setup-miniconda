@@ -1,3 +1,11 @@
+/**
+ * @module installer/download-url
+ * Download a `constructor`-compatible installer from an arbitrary URL,
+ * including `file://` URLs for locally-available installers.
+ *
+ * @category Installers
+ */
+
 import * as types from "../types";
 
 import * as base from "./base";

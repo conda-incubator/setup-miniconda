@@ -1,3 +1,11 @@
+/**
+ * @module input
+ * Parsing, validation, and normalization of action inputs from the
+ * workflow `with` block into a frozen {@link types.IActionInputs} object.
+ *
+ * @category Core
+ */
+
 import * as path from "path";
 import * as core from "@actions/core";
 import * as semver from "semver";
@@ -5,14 +13,16 @@ import * as constants from "./constants";
 import * as types from "./types";
 
 /**
- * A validator for action inputs: any findings will stop the action.
+ * A validator for action inputs where any findings will stop the action.
  *
  * ### Note
- * Should return `false` if there are no findings,
- * or a string providing an as-informative-as-possible message.
+ * Returns `false` if there are no findings, or returns a string providing
+ * an informative message. All messages should be provided, so no errors
+ * should be thrown (for example, from network calls or subprocesses).
  *
- * All messages should be provided, so no errors should be thrown (e.g. from
- * network calls or subprocesses).
+ * @param inputs - The parsed action inputs to validate.
+ * @param condaConfig - The conda configuration extracted from inputs.
+ * @returns `false` if the rule passes, or a descriptive error string.
  */
 interface IRule {
   (
@@ -24,9 +34,10 @@ interface IRule {
 const urlExt = (url: string) => path.posix.extname(new URL(url).pathname);
 
 /**
- * Normalizes a version string by removing any Python version prefix
- * @param version The version string to normalize
- * @returns The normalized version string
+ * Normalizes a version string by removing any Python version prefix.
+ *
+ * @param version - The version string to normalize.
+ * @returns The normalized version string.
  */
 const normalizeVersion = (version: string): string => {
   return version.replace(/^py\d+_/, "");
@@ -84,8 +95,11 @@ const RULES: IRule[] = [
     `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
 ];
 
-/*
- * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
+/**
+ * Parse, validate, and normalize string-ish inputs from a workflow action's `with`.
+ *
+ * @returns The frozen, validated {@link types.IActionInputs} object.
+ * @throws {Error} If any validation rule fails.
  */
 export async function parseInputs(): Promise<types.IActionInputs> {
   let arch = core.getInput("architecture") || process.arch;

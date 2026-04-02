@@ -1,24 +1,38 @@
+/**
+ * @module types
+ * Shared TypeScript interfaces and type aliases used throughout the action,
+ * including action inputs, conda configuration, installer and environment
+ * provider contracts, and GitHub API response shapes.
+ *
+ * @category Types
+ */
+
 //-----------------------------------------------------------------------
 // Types & Interfaces
 //-----------------------------------------------------------------------
 
+/** Map from runner architecture names to installer architecture suffixes. */
 export interface IArchitectures {
   [key: string]: string;
 }
 
+/** Map from Node.js platform names to installer OS name suffixes. */
 export interface IOperatingSystems {
   [key: string]: string;
 }
 
+/** Map from shell profile paths to the text appended for conda initialization. */
 export interface IShells {
   [key: string]: string;
 }
 
+/** Loosely-typed conda configuration object from `conda config --show --json`. */
 export type TCondaConfig = any;
+/** Loosely-typed conda environment description. */
 export type TEnvironment = any;
 
 /**
- * Metadata needed to attempt retrieving an installer from, or to update, the tool cache
+ * Metadata needed to attempt retrieving an installer from, or to update, the tool cache.
  */
 export interface ILocalInstallerOpts {
   url: string;
@@ -28,7 +42,7 @@ export interface ILocalInstallerOpts {
 }
 
 /**
- * Special case `dependencies` member for pip  in `environment.yml`
+ * Special case `dependencies` member for pip in `environment.yml`.
  */
 export interface IPipSpec {
   pip: string[];
@@ -40,7 +54,7 @@ export interface IPipSpec {
 export type TYamlDependencies = (string | IPipSpec)[];
 
 /**
- * A (partial) `environment.yml`
+ * A (partial) `environment.yml`.
  */
 export interface IEnvironment {
   name?: string;
@@ -49,8 +63,9 @@ export interface IEnvironment {
 }
 
 /**
- * A subset of the .condarc file options available as action inputs
- * https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html
+ * A subset of the `.condarc` file options available as action inputs.
+ *
+ * @see https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html
  */
 export interface ICondaConfig {
   add_anaconda_token: string;
@@ -71,7 +86,7 @@ export interface ICondaConfig {
 }
 
 /**
- * The action inputs, as defined in `action.yml`
+ * The action inputs, as defined in `action.yml`.
  */
 export interface IActionInputs {
   readonly activateEnvironment: string;
@@ -97,7 +112,9 @@ export interface IActionInputs {
 }
 
 /**
- * Options that may change during the course of discovery/installation/configuration
+ * Options that may change during the course of discovery, installation, and configuration.
+ *
+ * @see {@link IActionInputs} for the static inputs that drive these options.
  */
 export interface IDynamicOptions {
   useBundled: boolean;
@@ -108,37 +125,39 @@ export interface IDynamicOptions {
 }
 
 /**
- * File contents describing an environment
+ * File contents describing an environment.
  */
 export interface IEnvSpec {
-  /** A `conda env`-compatible YAML env description */
+  /** A `conda env`-compatible YAML env description. */
   yaml?: IEnvironment;
-  /** A `conda list --explicit`-compatible text env description */
+  /** A `conda list --explicit`-compatible text env description. */
   explicit?: string;
 }
 
 /**
- * The output of an installer: may update the dynamic options
+ * The output of an {@link IInstallerProvider}, which may update the {@link IDynamicOptions}.
  */
 export interface IInstallerResult {
-  /** Options that may change as a result of selecting the installer */
+  /** Options that may change as a result of selecting the installer. */
   options: IDynamicOptions;
-  /** The local path to the installer. May be empty if the bundled installer is used */
+  /** The local path to the installer, or empty if the bundled installer is used. */
   localInstallerPath: string;
 }
 
 /**
- * A strategy for ensuring a locally-runnable provider (or no-op, if bundled)
+ * A strategy for ensuring a locally-runnable installer (or no-op, if bundled).
+ *
+ * @see {@link IInstallerResult} for the output shape.
  */
 export interface IInstallerProvider {
-  /** A human-readable name shown in logs */
+  /** A human-readable name shown in logs. */
   label: string;
-  /** Whether this set of actions and inputs entails using this provider */
+  /** Whether this set of actions and inputs entails using this provider. */
   provides: (
     inputs: IActionInputs,
     options: IDynamicOptions,
   ) => Promise<boolean>;
-  /** Provide the local file path (and any updated options) for the installer */
+  /** Provide the local file path and any updated options for the installer. */
   installerPath: (
     inputs: IActionInputs,
     options: IDynamicOptions,
@@ -146,19 +165,19 @@ export interface IInstallerProvider {
 }
 
 /**
- * A strategy for ensuring a test environment that matches the action inputs
+ * A strategy for ensuring a test environment that matches the action inputs.
  */
 export interface IEnvProvider {
   label: string;
   /**
-   * Whether this provider is requested by action inputs
+   * Whether this provider is requested by the given action inputs.
    */
   provides: (
     inputs: IActionInputs,
     options: IDynamicOptions,
   ) => Promise<boolean>;
   /**
-   * The args to conda/mamba, e.g. create, update
+   * The args to pass to conda/mamba for environment creation or update.
    */
   condaArgs: (
     inputs: IActionInputs,
@@ -166,33 +185,35 @@ export interface IEnvProvider {
   ) => Promise<string[]>;
 }
 
-/** The options and package specs to add to the base environment */
+/** The options and package specs to add to the base environment via {@link IToolProvider}. */
 export interface IToolUpdates {
   options: IDynamicOptions;
   tools: string[];
 }
 
 /**
- * A strategy for ensuring a tool is available in the conda 'base'
+ * A strategy for ensuring a tool is available in the conda `base` environment.
+ *
+ * @see {@link IToolUpdates} for the output of {@link IToolProvider.toolPackages}.
  */
 export interface IToolProvider {
   label: string;
   /**
-   * Whether this provider is requested by action inputs
+   * Whether this provider is requested by the given action inputs.
    */
   provides: (
     inputs: IActionInputs,
     options: IDynamicOptions,
   ) => Promise<boolean>;
   /**
-   * Conda package specs and option updates for tools to install after updating
+   * Conda package specs and option updates for tools to install after updating.
    */
   toolPackages: (
     inputs: IActionInputs,
     options: IDynamicOptions,
   ) => Promise<IToolUpdates>;
   /**
-   * Steps to perform after the env is updated, and potentially reconfigured
+   * Steps to perform after the env is updated, and potentially reconfigured.
    */
   postInstall?: (
     inputs: IActionInputs,
@@ -200,19 +221,19 @@ export interface IToolProvider {
   ) => Promise<void>;
 }
 
-/** A release asset from the GitHub API */
+/** A release asset from the GitHub API. */
 export interface IGithubAsset {
   browser_download_url: string;
   created_at: string;
   name: string;
 }
 
-/** An asset with some extra metadata from the release */
+/** An asset with extra metadata from the parent release. */
 export interface IGithubAssetWithRelease extends IGithubAsset {
   tag_name: string;
 }
 
-/** The body of the API request */
+/** A GitHub release response body from the releases API. */
 export interface IGithubRelease {
   assets: IGithubAsset[];
   tag_name: string;
