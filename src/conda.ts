@@ -261,7 +261,7 @@ export async function applyCondaConfiguration(
       inputs,
       options,
     );
-  } catch (err) {
+  } catch {
     try {
       // <25.5.0
       await condaCommand(
@@ -329,9 +329,6 @@ async function isDefaultEnvironment(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
 ): Promise<boolean> {
-  if (envName === "") {
-    return false;
-  }
   const configsOutput = (await condaCommand(
     ["config", "--show", "--json"],
     inputs,

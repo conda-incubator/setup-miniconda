@@ -32,7 +32,7 @@ async function run(): Promise<void> {
             core.info(`Removing "${fullPath}"`);
             try {
               await io.rmRF(fullPath);
-            } catch (err) {
+            } catch {
               // If file could not be deleted, move to a temp folder
               core.info(`Remove failed, moving "${fullPath}" to temp folder`);
               await io.mv(fullPath, path.join(os.tmpdir(), folder_or_file));
