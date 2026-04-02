@@ -33984,7 +33984,7 @@ function run() {
                             try {
                                 yield rmRF(fullPath);
                             }
-                            catch (err) {
+                            catch (_a) {
                                 // If file could not be deleted, move to a temp folder
                                 info(`Remove failed, moving "${fullPath}" to temp folder`);
                                 yield mv(fullPath, external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), folder_or_file));

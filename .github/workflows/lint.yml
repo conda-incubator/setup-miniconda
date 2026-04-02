@@ -48,12 +48,19 @@ jobs:
 
       - name: Check that all built are committed
         run: |
-          # Check if any changes are to be committed
           if [ -n "$(git status --porcelain)" ]; then
-            echo "There are uncommitted changes, please run:"
+            echo "::error::Uncommitted changes detected after build."
+            echo ""
+            echo "Changed files:"
+            git status --short
+            echo ""
+            echo "Diff:"
+            git diff --stat
+            echo ""
+            echo "Please run locally with the same Node version as CI:"
+            echo "  npm ci"
             echo "  npm run format"
             echo "  npm run build"
             echo "and commit the resulting changes before pushing."
-            echo "See also CONTRIBUTING.md"
             exit 1
           fi

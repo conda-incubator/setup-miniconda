@@ -84,9 +84,5 @@ export async function ensureLocalInstaller(
     core.info(`Cached ${tool}@${version}: ${cacheResult}!`);
   }
 
-  if (executablePath === "") {
-    throw Error("Could not determine an executable path from installer-url");
-  }
-
   return executablePath;
 }

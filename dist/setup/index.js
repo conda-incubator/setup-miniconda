@@ -53961,7 +53961,7 @@ function applyCondaConfiguration(inputs, options, reapply = false) {
             // 25.5.0+
             yield condaCommand(["config", "--set", "auto_activate", inputs.condaConfig.auto_activate], inputs, options);
         }
-        catch (err) {
+        catch (_e) {
             try {
                 // <25.5.0
                 yield condaCommand([
@@ -54015,9 +54015,6 @@ function _getFullEnvironmentPath(inputPathOrName, inputs, options) {
  */
 function isDefaultEnvironment(envName, inputs, options) {
     return conda_awaiter(this, void 0, void 0, function* () {
-        if (envName === "") {
-            return false;
-        }
         const configsOutput = (yield condaCommand(["config", "--show", "--json"], inputs, options, true));
         const config = JSON.parse(configsOutput);
         if (config.default_activation_env) {
@@ -55113,9 +55110,6 @@ function ensureLocalInstaller(options) {
             info(`Caching ${tool}@${version}...`);
             const cacheResult = yield cacheFile(executablePath, installerName, tool, version, ...(options.arch ? [options.arch] : []));
             info(`Cached ${tool}@${version}: ${cacheResult}!`);
-        }
-        if (executablePath === "") {
-            throw Error("Could not determine an executable path from installer-url");
         }
         return executablePath;
     });
