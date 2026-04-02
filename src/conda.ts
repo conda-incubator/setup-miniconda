@@ -352,21 +352,17 @@ async function isDefaultEnvironment(
 }
 
 /**
- * Initialize Conda
+ * Initialize conda shell integration for all shells, fix folder ownership
+ * on bundled installs, and remove/rename profile files.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
  */
 export async function condaInit(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
 ): Promise<void> {
   let ownPath: string;
-  const isValidActivate = !(await isDefaultEnvironment(
-    inputs.activateEnvironment,
-    inputs,
-    options,
-  ));
-  const autoActivateDefault: boolean =
-    options.condaConfig.auto_activate === "true";
-  const installationDirectory = condaBasePath(inputs, options);
 
   // Fix ownership of folders
   if (options.useBundled) {
@@ -433,109 +429,139 @@ export async function condaInit(
         }
       }
     }
-
-    // PowerShell profiles
-    // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-    const powerLines: string[] = [
-      "",
-      "# ----------------------------------------------------------------------------",
-    ];
-    if (isValidActivate) {
-      powerLines.push(
-        "# Conda Setup Action: Custom activation",
-        `conda activate "${inputs.activateEnvironment}"`,
-      );
-    }
-    powerLines.push(
-      "# ----------------------------------------------------------------------------",
-    );
-    const powerExtraText = powerLines.join("\n");
-
-    // Bash profiles
-    // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-    const bashLines: string[] = [
-      "",
-      "# ----------------------------------------------------------------------------",
-      "# Conda Setup Action: Basic configuration",
-      "set -eo pipefail",
-    ];
-    if (isValidActivate) {
-      bashLines.push(
-        "# Conda Setup Action: Custom activation",
-        `conda activate "${inputs.activateEnvironment}"`,
-        "# ----------------------------------------------------------------------------",
-      );
-    }
-    const bashExtraText = bashLines.join("\n");
-
-    // Xonsh profiles
-    // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-    const xonshLines: string[] = [
-      "",
-      "# ----------------------------------------------------------------------------",
-      "# Conda Setup Action: Basic configuration",
-      "$RAISE_SUBPROC_ERROR = True", // equivalent to: set -e
-      "$XONSH_PIPEFAIL = True", // equivalent to: set -o pipefail
-    ];
-    if (isValidActivate) {
-      xonshLines.push(
-        "# Conda Setup Action: Custom activation",
-        `conda activate "${inputs.activateEnvironment}"`,
-        "# ----------------------------------------------------------------------------",
-      );
-    }
-    const xonshExtraText = xonshLines.join("\n");
-
-    // Batch profiles
-    // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-    const batchLines: string[] = [
-      "",
-      ":: ---------------------------------------------------------------------------",
-    ];
-    if (autoActivateDefault) {
-      batchLines.push(
-        ":: Conda Setup Action: Activate default environment",
-        '@CALL "%CONDA_BAT%" activate',
-      );
-    }
-    if (isValidActivate) {
-      batchLines.push(
-        ":: Conda Setup Action: Custom activation",
-        `@CALL "%CONDA_BAT%" activate "${inputs.activateEnvironment}"`,
-      );
-    }
-    batchLines.push(
-      ":: Conda Setup Action: Basic configuration",
-      "@SETLOCAL EnableExtensions",
-      "@SETLOCAL DisableDelayedExpansion",
-      ":: ---------------------------------------------------------------------------",
-    );
-    const batchExtraText = batchLines.join("\n");
-
-    const shells: types.IShells = {
-      "~/.bash_profile": bashExtraText,
-      "~/.profile": bashExtraText,
-      "~/.zshrc": bashExtraText,
-      "~/.config/fish/config.fish": bashExtraText,
-      "~/.tcshrc": bashExtraText,
-      "~/.xonshrc": xonshExtraText,
-      "~/.config/powershell/profile.ps1": powerExtraText,
-      "~/Documents/PowerShell/profile.ps1": powerExtraText,
-      "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
-      [path.join(installationDirectory, "etc", "profile.d", "conda.sh")]:
-        bashExtraText,
-      [path.join(installationDirectory, "etc", "fish", "conf.d", "conda.fish")]:
-        bashExtraText,
-      [path.join(installationDirectory, "condabin", "conda_hook.bat")]:
-        batchExtraText,
-    };
-    Object.keys(shells).forEach((key) => {
-      let filePath: string = key.replace("~", os.homedir());
-      const text = shells[key];
-      if (fs.existsSync(filePath)) {
-        core.info(`Append to "${filePath}":\n ${text} \n`);
-        fs.appendFileSync(filePath, text);
-      }
-    });
   }
+}
+
+/**
+ * Append activation commands to all shell profile files so that
+ * subsequent workflow steps start with the correct environment active.
+ *
+ * This must be called AFTER the target environment has been created,
+ * otherwise `.bat` wrappers (which source `conda_hook.bat`) would try
+ * to activate a non-existent environment during setup and emit false
+ * warnings (see #474).
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ */
+export async function condaInitActivation(
+  inputs: types.IActionInputs,
+  options: types.IDynamicOptions,
+): Promise<void> {
+  // Skip profile modifications when run-init is false (mirrors condaInit guard)
+  if (inputs.runInit == "false") {
+    core.info("Skipping activation profile modifications (run-init=false)");
+    return;
+  }
+
+  const isValidActivate =
+    !!inputs.activateEnvironment &&
+    !(await isDefaultEnvironment(inputs.activateEnvironment, inputs, options));
+  const autoActivateDefault: boolean =
+    options.condaConfig.auto_activate === "true";
+  const installationDirectory = condaBasePath(inputs, options);
+
+  // PowerShell profiles
+  // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+  const powerLines: string[] = [
+    "",
+    "# ----------------------------------------------------------------------------",
+  ];
+  if (isValidActivate) {
+    powerLines.push(
+      "# Conda Setup Action: Custom activation",
+      `conda activate "${inputs.activateEnvironment}"`,
+    );
+  }
+  powerLines.push(
+    "# ----------------------------------------------------------------------------",
+  );
+  const powerExtraText = powerLines.join("\n");
+
+  // Bash profiles
+  // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+  const bashLines: string[] = [
+    "",
+    "# ----------------------------------------------------------------------------",
+    "# Conda Setup Action: Basic configuration",
+    "set -eo pipefail",
+  ];
+  if (isValidActivate) {
+    bashLines.push(
+      "# Conda Setup Action: Custom activation",
+      `conda activate "${inputs.activateEnvironment}"`,
+      "# ----------------------------------------------------------------------------",
+    );
+  }
+  const bashExtraText = bashLines.join("\n");
+
+  // Xonsh profiles
+  // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+  const xonshLines: string[] = [
+    "",
+    "# ----------------------------------------------------------------------------",
+    "# Conda Setup Action: Basic configuration",
+    "$RAISE_SUBPROC_ERROR = True", // equivalent to: set -e
+    "$XONSH_PIPEFAIL = True", // equivalent to: set -o pipefail
+  ];
+  if (isValidActivate) {
+    xonshLines.push(
+      "# Conda Setup Action: Custom activation",
+      `conda activate "${inputs.activateEnvironment}"`,
+      "# ----------------------------------------------------------------------------",
+    );
+  }
+  const xonshExtraText = xonshLines.join("\n");
+
+  // Batch profiles
+  // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+  const batchLines: string[] = [
+    "",
+    ":: ---------------------------------------------------------------------------",
+  ];
+  if (autoActivateDefault) {
+    batchLines.push(
+      ":: Conda Setup Action: Activate default environment",
+      '@CALL "%CONDA_BAT%" activate',
+    );
+  }
+  if (isValidActivate) {
+    batchLines.push(
+      ":: Conda Setup Action: Custom activation",
+      `@CALL "%CONDA_BAT%" activate "${inputs.activateEnvironment}"`,
+    );
+  }
+  batchLines.push(
+    ":: Conda Setup Action: Basic configuration",
+    "@SETLOCAL EnableExtensions",
+    "@SETLOCAL DisableDelayedExpansion",
+    ":: ---------------------------------------------------------------------------",
+  );
+  const batchExtraText = batchLines.join("\n");
+
+  const shells: types.IShells = {
+    "~/.bash_profile": bashExtraText,
+    "~/.profile": bashExtraText,
+    "~/.zshrc": bashExtraText,
+    "~/.config/fish/config.fish": bashExtraText,
+    "~/.tcshrc": bashExtraText,
+    "~/.xonshrc": xonshExtraText,
+    "~/.config/powershell/profile.ps1": powerExtraText,
+    "~/Documents/PowerShell/profile.ps1": powerExtraText,
+    "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
+    [path.join(installationDirectory, "etc", "profile.d", "conda.sh")]:
+      bashExtraText,
+    [path.join(installationDirectory, "etc", "fish", "conf.d", "conda.fish")]:
+      bashExtraText,
+    [path.join(installationDirectory, "condabin", "conda_hook.bat")]:
+      batchExtraText,
+  };
+  Object.keys(shells).forEach((key) => {
+    let filePath: string = key.replace("~", os.homedir());
+    const text = shells[key];
+    if (fs.existsSync(filePath)) {
+      core.info(`Append to "${filePath}":\n ${text} \n`);
+      fs.appendFileSync(filePath, text);
+    }
+  });
 }

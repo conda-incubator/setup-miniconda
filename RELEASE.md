@@ -19,7 +19,6 @@ npm-check-updates
 
 - Create a new release via "Draft a new release" button at the
   [Release page](https://github.com/conda-incubator/setup-miniconda/releases):
-
   - Choose a new tag like `vX.Y.Z` that targets the current main branch and that
     is created on publish of the release
   - Choose the title `Version X.Y.Z`
