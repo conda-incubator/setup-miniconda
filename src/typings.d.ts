@@ -1,9 +1,8 @@
 declare module "get-hrefs" {
-  import type { Options as NormalizeUrlOptions } from "normalize-url";
   export interface IAllowedProtocols {
     [key: string]: boolean;
   }
-  export interface IOptions extends NormalizeUrlOptions {
+  export interface IOptions {
     baseUrl?: string;
     allowedProtocols?: IAllowedProtocols;
   }

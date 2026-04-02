@@ -40,6 +40,13 @@ vi.mock("../utils", () => ({
     }
     return "";
   }),
+  parseCommaSeparated: vi.fn((value: string) =>
+    value
+      .trim()
+      .split(/,/)
+      .map((s: string) => s.trim())
+      .filter((s: string) => s.length > 0),
+  ),
   parsePkgsDirs: vi.fn(() => ["/mock/pkgs"]),
   isBaseEnv: vi.fn(() => false),
 }));
