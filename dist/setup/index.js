@@ -53574,6 +53574,21 @@ const RULES = [
         `only one of 'installer-url: ${i.installerUrl}' or 'miniconda-version: ${i.minicondaVersion}' may be provided`,
     (i) => !!(i.installerUrl && i.miniforgeVersion) &&
         `only one of 'installer-url: ${i.installerUrl}' or 'miniforge-version: ${i.miniforgeVersion}' may be provided`,
+    (i) => {
+        if (!i.installerUrl)
+            return false;
+        const ALLOWED_PROTOCOLS = ["https:", "http:", "file:"];
+        try {
+            const protocol = new URL(i.installerUrl).protocol;
+            if (!ALLOWED_PROTOCOLS.includes(protocol)) {
+                return `'installer-url' protocol '${protocol}' is not allowed. Must be one of: ${ALLOWED_PROTOCOLS.join(", ")}`;
+            }
+        }
+        catch (_a) {
+            return `'installer-url: ${i.installerUrl}' is not a valid URL`;
+        }
+        return false;
+    },
     (i) => !!(i.installerUrl &&
         !KNOWN_EXTENSIONS.includes(urlExt(i.installerUrl))) &&
         `'installer-url' extension '${urlExt(i.installerUrl)}' must be one of: ${KNOWN_EXTENSIONS}`,
@@ -53687,15 +53702,19 @@ var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
 
 
 
-/** The folder to use as the conda package cache */
-function parsePkgsDirs(configuredPkgsDirs) {
-    // Package directories are also comma-separated, like channels
-    // We're also setting the appropriate conda config env var, to be safe
-    let pkgsDirs = configuredPkgsDirs
+/**
+ * Split a comma-separated string into trimmed, non-empty entries.
+ */
+function parseCommaSeparated(value) {
+    return value
         .trim()
         .split(/,/)
-        .map((p) => p.trim())
-        .filter((p) => p.length);
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+}
+/** The folder to use as the conda package cache */
+function parsePkgsDirs(configuredPkgsDirs) {
+    const pkgsDirs = parseCommaSeparated(configuredPkgsDirs);
     // Falling back to our default package directories value
     if (pkgsDirs.length) {
         return pkgsDirs;
@@ -53901,11 +53920,7 @@ function applyCondaConfiguration(inputs, options, reapply = false) {
         if (!reapply) {
             // Channels are special: if specified as an action input, these take priority
             // over what is found in (at present) a YAML-based environment
-            let channels = inputs.condaConfig.channels
-                .trim()
-                .split(/,/)
-                .map((c) => c.trim())
-                .filter((c) => c.length);
+            let channels = parseCommaSeparated(inputs.condaConfig.channels);
             if (!channels.length && ((_c = (_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) === null || _b === void 0 ? void 0 : _b.channels) === null || _c === void 0 ? void 0 : _c.length)) {
                 channels = options.envSpec.yaml.channels;
             }
