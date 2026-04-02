@@ -10,7 +10,7 @@ import { MINICONDA_DIR_PATH } from "../constants";
  */
 export const bundledMinicondaUser: types.IInstallerProvider = {
   label: "use bundled Miniconda",
-  provides: async (inputs, options) => {
+  provides: async (inputs, _options) => {
     return (
       inputs.minicondaVersion === "" &&
       inputs.miniforgeVariant === "" &&
@@ -20,7 +20,7 @@ export const bundledMinicondaUser: types.IInstallerProvider = {
       MINICONDA_DIR_PATH.length > 0
     );
   },
-  installerPath: async (inputs, options) => {
+  installerPath: async (_inputs, options) => {
     // No actions are performed. This is the only place `useBundled` will ever be true.
     return {
       localInstallerPath: "",

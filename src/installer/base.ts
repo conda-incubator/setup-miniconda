@@ -48,7 +48,7 @@ export async function ensureLocalInstaller(
     core.info(`Checking for cached ${tool}@${version}...`);
     // tc.find returns the name of the directory in which
     // the cached file is located.
-    let cacheDirectoryPath = tc.find(
+    const cacheDirectoryPath = tc.find(
       installerName,
       version,
       ...(options.arch ? [options.arch] : []),

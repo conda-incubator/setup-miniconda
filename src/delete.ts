@@ -14,7 +14,7 @@ import * as utils from "./utils";
 async function run(): Promise<void> {
   try {
     const inputs = await core.group("Gathering Inputs...", input.parseInputs);
-    let pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+    const pkgsDirs = utils.parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
     if (!pkgsDirs.length) return;
     core.startGroup(
       "Removing uncompressed packages to trim down packages directory...",
@@ -22,7 +22,7 @@ async function run(): Promise<void> {
     for (const pkgsDir of pkgsDirs) {
       if (fs.existsSync(pkgsDir) && fs.lstatSync(pkgsDir).isDirectory()) {
         let fullPath: string;
-        for (let folder_or_file of fs.readdirSync(pkgsDir)) {
+        for (const folder_or_file of fs.readdirSync(pkgsDir)) {
           fullPath = path.join(pkgsDir, folder_or_file);
           if (
             fs.existsSync(fullPath) &&

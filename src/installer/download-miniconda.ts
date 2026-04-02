@@ -17,7 +17,7 @@ import * as base from "./base";
  */
 async function minicondaVersions(arch: string): Promise<string[]> {
   try {
-    let extension: string = constants.IS_UNIX ? "sh" : "exe";
+    const extension: string = constants.IS_UNIX ? "sh" : "exe";
     const downloadPath: string = await tc.downloadTool(
       constants.MINICONDA_BASE_URL,
     );
@@ -47,20 +47,23 @@ export async function downloadMiniconda(
   inputs: types.IActionInputs,
 ): Promise<string> {
   // Check valid arch
-  let arch: string =
+  const arch: string | undefined =
     constants.MINICONDA_ARCHITECTURES[inputs.architecture.toLowerCase()];
   if (!arch) {
     throw new Error(`Invalid arch "${inputs.architecture}"!`);
   }
 
-  let extension: string = constants.IS_UNIX ? "sh" : "exe";
-  let osName: string = constants.OS_NAMES[process.platform];
-  let minicondaVersion = inputs.minicondaVersion || "latest";
-  const minicondaInstallerName: string = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
+  const extension: string = constants.IS_UNIX ? "sh" : "exe";
+  const osName: string | undefined = constants.OS_NAMES[process.platform];
+  if (!osName) {
+    throw new Error(`Unsupported platform "${process.platform}"!`);
+  }
+  const minicondaVersion = inputs.minicondaVersion || "latest";
+  const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
   core.info(minicondaInstallerName);
 
   // Check version name
-  let versions: string[] = await minicondaVersions(arch);
+  const versions: string[] = await minicondaVersions(arch);
   if (versions) {
     if (!versions.includes(minicondaInstallerName)) {
       throw new Error(
@@ -86,7 +89,7 @@ export async function downloadMiniconda(
  */
 export const minicondaDownloader: types.IInstallerProvider = {
   label: "download Miniconda",
-  provides: async (inputs, options) => {
+  provides: async (inputs, _options) => {
     return inputs.installerUrl === "";
   },
   installerPath: async (inputs, options) => {

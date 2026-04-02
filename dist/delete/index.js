@@ -33759,6 +33759,10 @@ const RULES = [
     (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
         semver.lt(normalizeVersion(i.minicondaVersion), "4.6.0")) &&
         `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
+    (i) => !!(i.activateEnvironment &&
+        !/^[a-zA-Z0-9._/\\\-~:]+$/.test(i.activateEnvironment)) &&
+        `'activate-environment: ${i.activateEnvironment}' contains invalid characters. ` +
+            `Only alphanumeric characters, dots, underscores, hyphens, tildes, colons, and path separators are allowed`,
 ];
 /*
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
@@ -33868,7 +33872,7 @@ var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
 function parsePkgsDirs(configuredPkgsDirs) {
     // Package directories are also comma-separated, like channels
     // We're also setting the appropriate conda config env var, to be safe
-    let pkgsDirs = configuredPkgsDirs
+    const pkgsDirs = configuredPkgsDirs
         .trim()
         .split(/,/)
         .map((p) => p.trim())
@@ -33893,7 +33897,7 @@ function isBaseEnv(envName) {
 function execute(command, env = {}, captureOutput = false) {
     return utils_awaiter(this, void 0, void 0, function* () {
         let capturedOutput = "";
-        let options = {
+        const options = {
             errStream: new stream.Writable(),
             listeners: {
                 stdout: (data) => {
@@ -33920,9 +33924,13 @@ function execute(command, env = {}, captureOutput = false) {
             },
             env: Object.assign(Object.assign({}, process.env), env),
         };
-        const rc = yield exec.exec(command[0], command.slice(1), options);
+        const exe = command[0];
+        if (!exe) {
+            throw new Error("execute() called with empty command array");
+        }
+        const rc = yield exec.exec(exe, command.slice(1), options);
         if (rc !== 0) {
-            throw new Error(`${command[0]} return error code ${rc}`);
+            throw new Error(`${exe} return error code ${rc}`);
         }
         if (captureOutput) {
             return capturedOutput;
@@ -33968,14 +33976,14 @@ function run() {
     return delete_awaiter(this, void 0, void 0, function* () {
         try {
             const inputs = yield group("Gathering Inputs...", parseInputs);
-            let pkgsDirs = parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+            const pkgsDirs = parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
             if (!pkgsDirs.length)
                 return;
             startGroup("Removing uncompressed packages to trim down packages directory...");
             for (const pkgsDir of pkgsDirs) {
                 if (external_fs_namespaceObject.existsSync(pkgsDir) && external_fs_namespaceObject.lstatSync(pkgsDir).isDirectory()) {
                     let fullPath;
-                    for (let folder_or_file of external_fs_namespaceObject.readdirSync(pkgsDir)) {
+                    for (const folder_or_file of external_fs_namespaceObject.readdirSync(pkgsDir)) {
                         fullPath = external_path_namespaceObject.join(pkgsDir, folder_or_file);
                         if (external_fs_namespaceObject.existsSync(fullPath) &&
                             external_fs_namespaceObject.lstatSync(fullPath).isDirectory() &&
