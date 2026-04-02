@@ -1,5 +1,8 @@
 # `conda-incubator/setup-miniconda`
 
+[![Tests](https://github.com/conda-incubator/setup-miniconda/actions/workflows/tests.yml/badge.svg)](https://github.com/conda-incubator/setup-miniconda/actions/workflows/tests.yml)
+[![Codecov](https://codecov.io/gh/conda-incubator/setup-miniconda/graph/badge.svg)](https://codecov.io/gh/conda-incubator/setup-miniconda)
+
 This action sets up a `base`
 [conda](https://docs.conda.io/projects/conda/en/latest/) environment by one of:
 
