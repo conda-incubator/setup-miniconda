@@ -62,6 +62,7 @@ possibility of automatically activating the `test` environment on all shells.
 | [Remove defaults](#example-14-remove-defaults-channel)             | [![Remove defaults][ex14-badge]][ex14]                          |
 | [Linux ARM](#example-15-linux-arm)                                 | [![Linux ARM][ex15-badge]][ex15]                                |
 | Default environments                                               | [![Default environments][ex16-badge]][ex16]                     |
+| [Restricted environments](#example-17-restricted-environments)     | [![Restricted environments][ex17-badge]][ex17]                  |
 
 [ex1]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-1.yml
@@ -127,6 +128,10 @@ possibility of automatically activating the `test` environment on all shells.
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-16.yml
 [ex16-badge]:
   https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-16.yml/badge.svg?branch=main
+[ex17]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-17.yml
+[ex17-badge]:
+  https://github.com/conda-incubator/setup-miniconda/actions/workflows/example-17.yml/badge.svg?branch=main
 
 ## Other Workflows
 
@@ -849,6 +854,34 @@ jobs:
       - run: conda info
       - run: conda list
       - run: conda config --show
+```
+
+### Example 17: Restricted environments
+
+If your environment does not allow modifications to `~/.profile` or `~/.bashrc`
+(e.g. corporate self-hosted runners with restricted home directories), set
+`run-init: "false"` and `remove-profiles: "false"` to prevent any profile
+modifications. You must then manually source conda in each step:
+
+```yaml
+jobs:
+  restricted-env:
+    name: Restricted environment
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: myenv
+          environment-file: environment.yml
+          remove-profiles: "false"
+          run-init: "false"
+      - name: Run with conda
+        shell: bash
+        run: |
+          source "$CONDA/etc/profile.d/conda.sh"
+          conda activate myenv
+          python my_script.py
 ```
 
 ## IMPORTANT
