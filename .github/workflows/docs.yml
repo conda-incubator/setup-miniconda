@@ -15,9 +15,12 @@ concurrency:
     ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   docs:
-    name: Generate API docs
+    name: Build API docs
     runs-on: "ubuntu-latest"
     timeout-minutes: 30
     steps:
@@ -28,3 +31,55 @@ jobs:
       - run: |
           npm ci
           npm run docs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: docs/api
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: docs
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs
+          path: docs/api
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/api
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  deploy-netlify:
+    name: Deploy to Netlify
+    needs: docs
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_MESSAGE: "Deploy from ${{ github.sha }}"
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs
+          path: docs/api
+      - uses: nwtgck/actions-netlify@v3
+        with:
+          publish-dir: docs/api
+          production-deploy:
+            ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'
+            }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: ${{ env.DEPLOY_MESSAGE }}
+          enable-pull-request-comment: true
+          enable-commit-comment: false
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        timeout-minutes: 5
