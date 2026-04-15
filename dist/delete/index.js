@@ -30613,10 +30613,10 @@ __nccwpck_require__.d(__webpack_exports__, {
 
 ;// CONCATENATED MODULE: external "fs"
 const external_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("fs");
-;// CONCATENATED MODULE: external "os"
-const external_os_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("os");
 ;// CONCATENATED MODULE: external "path"
 const external_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("path");
+;// CONCATENATED MODULE: external "os"
+const external_os_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("os");
 ;// CONCATENATED MODULE: ./node_modules/@actions/core/lib/utils.js
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -32294,12 +32294,12 @@ function cp(source_1, dest_1) {
  */
 function mv(source_1, dest_1) {
     return io_awaiter(this, arguments, void 0, function* (source, dest, options = {}) {
-        if (yield exists(dest)) {
+        if (yield ioUtil.exists(dest)) {
             let destExists = true;
-            if (yield isDirectory(dest)) {
+            if (yield ioUtil.isDirectory(dest)) {
                 // If dest is directory copy src into dest
-                dest = external_path_namespaceObject.join(dest, external_path_namespaceObject.basename(source));
-                destExists = yield exists(dest);
+                dest = path.join(dest, path.basename(source));
+                destExists = yield ioUtil.exists(dest);
             }
             if (destExists) {
                 if (options.force == null || options.force) {
@@ -32310,8 +32310,8 @@ function mv(source_1, dest_1) {
                 }
             }
         }
-        yield mkdirP(external_path_namespaceObject.dirname(dest));
-        yield rename(source, dest);
+        yield mkdirP(path.dirname(dest));
+        yield ioUtil.rename(source, dest);
     });
 }
 /**
@@ -32351,8 +32351,8 @@ function rmRF(inputPath) {
  */
 function mkdirP(fsPath) {
     return io_awaiter(this, void 0, void 0, function* () {
-        (0,external_assert_.ok)(fsPath, 'a path argument must be provided');
-        yield mkdir(fsPath, { recursive: true });
+        ok(fsPath, 'a path argument must be provided');
+        yield ioUtil.mkdir(fsPath, { recursive: true });
     });
 }
 /**
@@ -33960,38 +33960,69 @@ var delete_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _a
 
 
 
-
+const STASH_SUFFIX = "_stash_";
 /**
- * Clean up the conda cache directory
+ * Clean up extracted packages from the conda packages directory, keeping only
+ * the compressed archive cache and loose archive files.
+ *
+ * Instead of recursively deleting each extracted folder (extremely slow on
+ * Windows due to filesystem overhead), we rename them to a sibling directory
+ * on the same filesystem. On self-hosted (persistent) runners, stash
+ * directories from previous runs are cleaned up before new ones are created.
  */
 function run() {
     return delete_awaiter(this, void 0, void 0, function* () {
         try {
             const inputs = yield group("Gathering Inputs...", parseInputs);
-            let pkgsDirs = parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+            const pkgsDirs = parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
             if (!pkgsDirs.length)
                 return;
             startGroup("Removing uncompressed packages to trim down packages directory...");
-            for (const pkgsDir of pkgsDirs) {
-                if (external_fs_namespaceObject.existsSync(pkgsDir) && external_fs_namespaceObject.lstatSync(pkgsDir).isDirectory()) {
-                    let fullPath;
-                    for (let folder_or_file of external_fs_namespaceObject.readdirSync(pkgsDir)) {
-                        fullPath = external_path_namespaceObject.join(pkgsDir, folder_or_file);
-                        if (external_fs_namespaceObject.existsSync(fullPath) &&
-                            external_fs_namespaceObject.lstatSync(fullPath).isDirectory() &&
-                            folder_or_file != "cache") {
-                            info(`Removing "${fullPath}"`);
-                            try {
-                                yield rmRF(fullPath);
-                            }
-                            catch (err) {
-                                // If file could not be deleted, move to a temp folder
-                                info(`Remove failed, moving "${fullPath}" to temp folder`);
-                                yield mv(fullPath, external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), folder_or_file));
-                            }
+            for (const rawPkgsDir of pkgsDirs) {
+                // Normalize to strip trailing separators so the sibling stash
+                // directory is always created next to pkgsDir, not inside it
+                const pkgsDir = external_path_namespaceObject.resolve(rawPkgsDir);
+                if (!external_fs_namespaceObject.existsSync(pkgsDir) || !external_fs_namespaceObject.lstatSync(pkgsDir).isDirectory()) {
+                    continue;
+                }
+                // Clean up stash directories left by previous runs (self-hosted runners)
+                const parentDir = external_path_namespaceObject.dirname(pkgsDir);
+                const baseName = external_path_namespaceObject.basename(pkgsDir);
+                for (const sibling of external_fs_namespaceObject.readdirSync(parentDir)) {
+                    if (sibling.startsWith(`${baseName}${STASH_SUFFIX}`)) {
+                        const oldStash = external_path_namespaceObject.join(parentDir, sibling);
+                        info(`Cleaning up old stash directory "${oldStash}"`);
+                        try {
+                            yield rmRF(oldStash);
+                        }
+                        catch (err) {
+                            warning(`Could not remove old stash "${oldStash}": ${err.message}`);
                         }
                     }
                 }
+                // Stash directory is a sibling to pkgsDir so rename stays on the
+                // same filesystem and never triggers EXDEV (the "cross-device link"
+                // error that rename() throws when source and destination live on
+                // different mount points / drives)
+                const stashDir = external_path_namespaceObject.join(parentDir, `${baseName}${STASH_SUFFIX}${Date.now()}`);
+                external_fs_namespaceObject.mkdirSync(stashDir, { recursive: true });
+                for (const entry of external_fs_namespaceObject.readdirSync(pkgsDir)) {
+                    if (entry === "cache")
+                        continue;
+                    const fullPath = external_path_namespaceObject.join(pkgsDir, entry);
+                    if (!external_fs_namespaceObject.existsSync(fullPath) || !external_fs_namespaceObject.lstatSync(fullPath).isDirectory()) {
+                        continue;
+                    }
+                    const dest = external_path_namespaceObject.join(stashDir, entry);
+                    info(`Stashing "${fullPath}"`);
+                    try {
+                        external_fs_namespaceObject.renameSync(fullPath, dest);
+                    }
+                    catch (err) {
+                        warning(`Could not stash "${fullPath}": ${err.message}. Skipping.`);
+                    }
+                }
+                info(`Stashed extracted packages to "${stashDir}".`);
             }
             endGroup();
         }
