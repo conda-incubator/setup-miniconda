@@ -49,5 +49,14 @@ module.exports = {
     "no-unused-vars": "off",
     "no-useless-escape": "off",
     "prefer-const": "error"
-  }
+  },
+  overrides: [
+    {
+      files: ["src/__tests__/**/*.ts"],
+      rules: {
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-non-null-assertion": "off"
+      }
+    }
+  ]
 };

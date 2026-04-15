@@ -5,21 +5,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockExistsSync = vi.fn();
 const mockLstatSync = vi.fn();
 const mockReaddirSync = vi.fn();
+const mockRenameSync = vi.fn();
+const mockMkdirSync = vi.fn();
 
 vi.mock("fs", () => ({
   existsSync: mockExistsSync,
   lstatSync: mockLstatSync,
   readdirSync: mockReaddirSync,
-}));
-
-vi.mock("os", () => ({
-  tmpdir: vi.fn(() => "/tmp"),
+  renameSync: mockRenameSync,
+  mkdirSync: mockMkdirSync,
 }));
 
 const mockGroup = vi.fn();
 const mockStartGroup = vi.fn();
 const mockEndGroup = vi.fn();
 const mockInfo = vi.fn();
+const mockWarning = vi.fn();
 const mockSetFailed = vi.fn();
 
 vi.mock("@actions/core", () => ({
@@ -27,15 +28,14 @@ vi.mock("@actions/core", () => ({
   startGroup: mockStartGroup,
   endGroup: mockEndGroup,
   info: mockInfo,
+  warning: mockWarning,
   setFailed: mockSetFailed,
 }));
 
 const mockRmRF = vi.fn();
-const mockMv = vi.fn();
 
 vi.mock("@actions/io", () => ({
   rmRF: mockRmRF,
-  mv: mockMv,
 }));
 
 const mockParseInputs = vi.fn();
@@ -99,7 +99,6 @@ describe("delete / run", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
-    // Default: core.group invokes the callback and returns its result
     mockGroup.mockImplementation(
       async (_msg: string, fn: () => Promise<unknown>) => fn(),
     );
@@ -110,7 +109,6 @@ describe("delete / run", () => {
     mockParseInputs.mockResolvedValue(inputs);
     mockParsePkgsDirs.mockReturnValue([]);
 
-    // Importing the module triggers `void run()` as a side effect.
     await import("../delete");
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -132,8 +130,7 @@ describe("delete / run", () => {
 
     expect(mockStartGroup).toHaveBeenCalled();
     expect(mockEndGroup).toHaveBeenCalled();
-    expect(mockReaddirSync).not.toHaveBeenCalled();
-    expect(mockRmRF).not.toHaveBeenCalled();
+    expect(mockRenameSync).not.toHaveBeenCalled();
   });
 
   it("skips a pkgsDir whose lstat says it is not a directory", async () => {
@@ -146,13 +143,11 @@ describe("delete / run", () => {
     await import("../delete");
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(mockReaddirSync).not.toHaveBeenCalled();
-    expect(mockRmRF).not.toHaveBeenCalled();
+    expect(mockRenameSync).not.toHaveBeenCalled();
   });
 
-  it("removes directories, skips files, and skips the 'cache' folder", async () => {
+  it("stashes directories, skips files, and skips the 'cache' folder", async () => {
     const pathMod = await import("path");
-    // Use a platform-appropriate mock path to avoid path.join separator issues
     const pkgsDir =
       process.platform === "win32" ? "C:\\mock\\pkgs" : "/mock/pkgs";
     const inputs = makeInputs(pkgsDir);
@@ -163,43 +158,47 @@ describe("delete / run", () => {
 
     mockExistsSync.mockReturnValue(true);
     mockLstatSync.mockImplementation((p: unknown) => {
-      // The .tar.bz2 is a file, everything else is a directory
       if (String(p) === tarFile) return { isDirectory: () => false };
       return { isDirectory: () => true };
     });
-    mockReaddirSync.mockReturnValue([
-      "numpy-1.21",
-      "cache",
-      "some-file.tar.bz2",
-      "scipy-1.7",
-    ]);
-    mockRmRF.mockResolvedValue(undefined);
+    // First readdirSync call is for the parent dir (old stash cleanup),
+    // second is for pkgsDir entries
+    const parentDir = pathMod.dirname(pathMod.resolve(pkgsDir));
+    mockReaddirSync.mockImplementation((p: unknown) => {
+      if (String(p) === parentDir) return [pathMod.basename(pkgsDir)];
+      return ["numpy-1.21", "cache", "some-file.tar.bz2", "scipy-1.7"];
+    });
 
     await import("../delete");
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const numpyPath = pathMod.join(pkgsDir, "numpy-1.21");
-    const scipyPath = pathMod.join(pkgsDir, "scipy-1.7");
-    const cachePath = pathMod.join(pkgsDir, "cache");
-    const filePath = pathMod.join(pkgsDir, "some-file.tar.bz2");
+    // Should have created a stash directory
+    expect(mockMkdirSync).toHaveBeenCalledWith(
+      expect.stringContaining("_stash_"),
+      { recursive: true },
+    );
 
-    // Should remove numpy-1.21 and scipy-1.7
-    expect(mockRmRF).toHaveBeenCalledTimes(2);
-    expect(mockRmRF).toHaveBeenCalledWith(numpyPath);
-    expect(mockRmRF).toHaveBeenCalledWith(scipyPath);
+    // Should rename numpy-1.21 and scipy-1.7 to stash
+    expect(mockRenameSync).toHaveBeenCalledTimes(2);
+    expect(mockRenameSync).toHaveBeenCalledWith(
+      pathMod.join(pathMod.resolve(pkgsDir), "numpy-1.21"),
+      expect.stringContaining("numpy-1.21"),
+    );
+    expect(mockRenameSync).toHaveBeenCalledWith(
+      pathMod.join(pathMod.resolve(pkgsDir), "scipy-1.7"),
+      expect.stringContaining("scipy-1.7"),
+    );
 
-    // Should NOT have tried to remove "cache" or the file
-    expect(mockRmRF).not.toHaveBeenCalledWith(cachePath);
-    expect(mockRmRF).not.toHaveBeenCalledWith(filePath);
-
-    // Should have logged info for the two removed dirs
-    expect(mockInfo).toHaveBeenCalledWith(`Removing "${numpyPath}"`);
-    expect(mockInfo).toHaveBeenCalledWith(`Removing "${scipyPath}"`);
+    // Should have logged stash info for the two dirs
+    expect(mockInfo).toHaveBeenCalledWith(
+      expect.stringContaining("numpy-1.21"),
+    );
+    expect(mockInfo).toHaveBeenCalledWith(expect.stringContaining("scipy-1.7"));
 
     expect(mockEndGroup).toHaveBeenCalled();
   });
 
-  it("falls back to io.mv when rmRF fails", async () => {
+  it("warns when renameSync fails for a package", async () => {
     const pathMod = await import("path");
     const pkgsDir =
       process.platform === "win32" ? "C:\\mock\\pkgs" : "/mock/pkgs";
@@ -208,23 +207,57 @@ describe("delete / run", () => {
     mockParsePkgsDirs.mockReturnValue([pkgsDir]);
 
     mockExistsSync.mockReturnValue(true);
-    mockLstatSync.mockImplementation(() => ({
-      isDirectory: () => true,
-    }));
-    mockReaddirSync.mockReturnValue(["stubborn-pkg"]);
-    mockRmRF.mockRejectedValue(new Error("EBUSY"));
-    mockMv.mockResolvedValue(undefined);
+    mockLstatSync.mockReturnValue({ isDirectory: () => true });
+
+    const parentDir = pathMod.dirname(pathMod.resolve(pkgsDir));
+    mockReaddirSync.mockImplementation((p: unknown) => {
+      if (String(p) === parentDir) return [pathMod.basename(pkgsDir)];
+      return ["stubborn-pkg"];
+    });
+    mockRenameSync.mockImplementation(() => {
+      throw new Error("EBUSY");
+    });
 
     await import("../delete");
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const expectedPath = pathMod.join(pkgsDir, "stubborn-pkg");
-    expect(mockRmRF).toHaveBeenCalledWith(expectedPath);
-    expect(mockInfo).toHaveBeenCalledWith(
-      `Remove failed, moving "${expectedPath}" to temp folder`,
+    expect(mockWarning).toHaveBeenCalledWith(
+      expect.stringContaining("Could not stash"),
     );
-    const expectedDest = pathMod.join("/tmp", "stubborn-pkg");
-    expect(mockMv).toHaveBeenCalledWith(expectedPath, expectedDest);
+    expect(mockWarning).toHaveBeenCalledWith(expect.stringContaining("EBUSY"));
+  });
+
+  it("cleans up old stash directories from previous runs", async () => {
+    const pathMod = await import("path");
+    const pkgsDir =
+      process.platform === "win32" ? "C:\\mock\\pkgs" : "/mock/pkgs";
+    const inputs = makeInputs(pkgsDir);
+    mockParseInputs.mockResolvedValue(inputs);
+    mockParsePkgsDirs.mockReturnValue([pkgsDir]);
+
+    mockExistsSync.mockReturnValue(true);
+    mockLstatSync.mockReturnValue({ isDirectory: () => true });
+
+    const resolvedPkgsDir = pathMod.resolve(pkgsDir);
+    const parentDir = pathMod.dirname(resolvedPkgsDir);
+    const baseName = pathMod.basename(resolvedPkgsDir);
+    const oldStashName = `${baseName}_stash_1234567890`;
+
+    mockReaddirSync.mockImplementation((p: unknown) => {
+      if (String(p) === parentDir) return [baseName, oldStashName];
+      return [];
+    });
+    mockRmRF.mockResolvedValue(undefined);
+
+    await import("../delete");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockRmRF).toHaveBeenCalledWith(
+      pathMod.join(parentDir, oldStashName),
+    );
+    expect(mockInfo).toHaveBeenCalledWith(
+      expect.stringContaining("Cleaning up old stash"),
+    );
   });
 
   it("calls core.setFailed when run encounters an error", async () => {
