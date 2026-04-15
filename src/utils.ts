@@ -10,7 +10,7 @@ import * as constants from "./constants";
 export function parsePkgsDirs(configuredPkgsDirs: string) {
   // Package directories are also comma-separated, like channels
   // We're also setting the appropriate conda config env var, to be safe
-  let pkgsDirs = configuredPkgsDirs
+  const pkgsDirs = configuredPkgsDirs
     .trim()
     .split(/,/)
     .map((p) => p.trim())
@@ -41,7 +41,7 @@ export async function execute(
 ): Promise<void | string> {
   let capturedOutput = "";
 
-  let options: exec.ExecOptions = {
+  const options: exec.ExecOptions = {
     errStream: new stream.Writable(),
     listeners: {
       stdout: (data: Buffer) => {
@@ -69,9 +69,13 @@ export async function execute(
     env: { ...process.env, ...env },
   };
 
-  const rc = await exec.exec(command[0], command.slice(1), options);
+  const exe = command[0];
+  if (!exe) {
+    throw new Error("execute() called with empty command array");
+  }
+  const rc = await exec.exec(exe, command.slice(1), options);
   if (rc !== 0) {
-    throw new Error(`${command[0]} return error code ${rc}`);
+    throw new Error(`${exe} return error code ${rc}`);
   }
   if (captureOutput) {
     return capturedOutput;

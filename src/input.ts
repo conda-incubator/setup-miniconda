@@ -82,6 +82,13 @@ const RULES: IRule[] = [
       semver.lt(normalizeVersion(i.minicondaVersion), "4.6.0")
     ) &&
     `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
+  (i) =>
+    !!(
+      i.activateEnvironment &&
+      !/^[a-zA-Z0-9._/\\\-~:]+$/.test(i.activateEnvironment)
+    ) &&
+    `'activate-environment: ${i.activateEnvironment}' contains invalid characters. ` +
+      `Only alphanumeric characters, dots, underscores, hyphens, tildes, colons, and path separators are allowed`,
 ];
 
 /*

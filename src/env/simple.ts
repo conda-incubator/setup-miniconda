@@ -14,13 +14,13 @@ import * as conda from "../conda";
  */
 export const ensureSimple: types.IEnvProvider = {
   label: "conda create (simple)",
-  provides: async (inputs, options) => {
+  provides: async (_inputs, options) => {
     return !(
       options.envSpec?.explicit?.length ||
       Object.keys(options.envSpec?.yaml || {}).length
     );
   },
-  condaArgs: async (inputs, options) => {
+  condaArgs: async (inputs, _options) => {
     const args = ["create", ...conda.envCommandFlag(inputs)];
 
     if (inputs.pythonVersion) {

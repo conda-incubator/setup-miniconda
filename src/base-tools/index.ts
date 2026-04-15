@@ -35,9 +35,9 @@ export async function installBaseTools(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
 ) {
-  let tools = [];
+  const tools = [];
   let postInstallOptions = { ...options };
-  let postInstallActions = [];
+  const postInstallActions = [];
   for (const provider of TOOL_PROVIDERS) {
     core.info(`Do we need to ${provider.label}?`);
     if (await provider.provides(inputs, options)) {

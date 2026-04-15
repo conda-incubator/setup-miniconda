@@ -53582,6 +53582,10 @@ const RULES = [
     (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
         node_modules_semver.lt(normalizeVersion(i.minicondaVersion), "4.6.0")) &&
         `'architecture: ${i.architecture}' requires "miniconda-version">=4.6 but you chose '${i.minicondaVersion}'`,
+    (i) => !!(i.activateEnvironment &&
+        !/^[a-zA-Z0-9._/\\\-~:]+$/.test(i.activateEnvironment)) &&
+        `'activate-environment: ${i.activateEnvironment}' contains invalid characters. ` +
+            `Only alphanumeric characters, dots, underscores, hyphens, tildes, colons, and path separators are allowed`,
 ];
 /*
  * Parse, validate, and normalize string-ish inputs from a workflow action's `with`
@@ -53691,7 +53695,7 @@ var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
 function parsePkgsDirs(configuredPkgsDirs) {
     // Package directories are also comma-separated, like channels
     // We're also setting the appropriate conda config env var, to be safe
-    let pkgsDirs = configuredPkgsDirs
+    const pkgsDirs = configuredPkgsDirs
         .trim()
         .split(/,/)
         .map((p) => p.trim())
@@ -53716,7 +53720,7 @@ function isBaseEnv(envName) {
 function execute(command, env = {}, captureOutput = false) {
     return utils_awaiter(this, void 0, void 0, function* () {
         let capturedOutput = "";
-        let options = {
+        const options = {
             errStream: new external_stream_namespaceObject.Writable(),
             listeners: {
                 stdout: (data) => {
@@ -53743,9 +53747,13 @@ function execute(command, env = {}, captureOutput = false) {
             },
             env: Object.assign(Object.assign({}, process.env), env),
         };
-        const rc = yield exec_exec(command[0], command.slice(1), options);
+        const exe = command[0];
+        if (!exe) {
+            throw new Error("execute() called with empty command array");
+        }
+        const rc = yield exec_exec(exe, command.slice(1), options);
         if (rc !== 0) {
-            throw new Error(`${command[0]} return error code ${rc}`);
+            throw new Error(`${exe} return error code ${rc}`);
         }
         if (captureOutput) {
             return capturedOutput;
@@ -53822,7 +53830,7 @@ function envCommandFlag(inputs) {
  */
 function condaExecutableLocations(inputs, options, subcommand) {
     const dir = condaBasePath(inputs, options);
-    let condaExes = [];
+    const condaExes = [];
     let commandName = "conda";
     if (options.useMamba &&
         (subcommand == null || MAMBA_SUBCOMMANDS.includes(subcommand))) {
@@ -53864,9 +53872,9 @@ function isMambaInstalled(inputs, options) {
 function condaCommand(cmd, inputs, options, captureOutput = false) {
     return conda_awaiter(this, void 0, void 0, function* () {
         const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
-        let env = {};
+        const env = {};
         if (options.useMamba) {
-            env.MAMBA_ROOT_PREFIX = condaBasePath(inputs, options);
+            env["MAMBA_ROOT_PREFIX"] = condaBasePath(inputs, options);
         }
         return yield execute(command, env, captureOutput);
     });
@@ -53930,7 +53938,8 @@ function applyCondaConfiguration(inputs, options, reapply = false) {
                     const configsOutput = (yield condaCommand(["config", "--show-sources", "--json"], inputs, options, true));
                     const configs = JSON.parse(configsOutput);
                     for (const fileName in configs) {
-                        if ((_d = configs[fileName].channels) === null || _d === void 0 ? void 0 : _d.includes("defaults")) {
+                        const fileConfig = configs[fileName];
+                        if ((_d = fileConfig === null || fileConfig === void 0 ? void 0 : fileConfig.channels) === null || _d === void 0 ? void 0 : _d.includes("defaults")) {
                             yield condaCommand([
                                 "config",
                                 "--remove",
@@ -53949,7 +53958,7 @@ function applyCondaConfiguration(inputs, options, reapply = false) {
                 }
             }
             // Package directories are also comma-separated, like channels
-            let pkgsDirs = parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+            const pkgsDirs = parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
             for (const pkgsDir of pkgsDirs) {
                 info(`Adding pkgs_dir '${pkgsDir}'`);
                 yield condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], inputs, options);
@@ -54042,7 +54051,7 @@ function condaInit(inputs, options) {
         if (options.useBundled) {
             if (IS_MAC) {
                 info("Fixing conda folders ownership");
-                const userName = process.env.USER;
+                const userName = external_os_namespaceObject.userInfo().username;
                 yield execute([
                     "sudo",
                     "chown",
@@ -54052,7 +54061,7 @@ function condaInit(inputs, options) {
                 ]);
             }
             else if (constants_IS_WINDOWS) {
-                for (let folder of WIN_PERMS_FOLDERS) {
+                for (const folder of WIN_PERMS_FOLDERS) {
                     ownPath = external_path_namespaceObject.join(condaBasePath(inputs, options), folder);
                     if (external_fs_namespaceObject.existsSync(ownPath)) {
                         info(`Fixing ${folder} ownership`);
@@ -54068,9 +54077,9 @@ function condaInit(inputs, options) {
         else {
             // Remove profile files
             if (inputs.removeProfiles == "true") {
-                for (let rc of PROFILES) {
+                for (const rc of PROFILES) {
                     try {
-                        let file = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), rc);
+                        const file = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), rc);
                         if (external_fs_namespaceObject.existsSync(file)) {
                             info(`Removing "${file}"`);
                             yield rmRF(file);
@@ -54082,22 +54091,22 @@ function condaInit(inputs, options) {
                 }
             }
             // Run conda init
-            for (let cmd of ["--all"]) {
+            for (const cmd of ["--all"]) {
                 yield condaCommand(["init", cmd], inputs, options);
             }
             if (inputs.removeProfiles == "true") {
                 // Rename files
                 if (IS_LINUX) {
-                    let source = "~/.bashrc".replace("~", external_os_namespaceObject.homedir());
-                    let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
+                    const source = "~/.bashrc".replace("~", external_os_namespaceObject.homedir());
+                    const dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
                     if (external_fs_namespaceObject.existsSync(source)) {
                         info(`Renaming "${source}" to "${dest}"\n`);
                         yield mv(source, dest);
                     }
                 }
                 else if (IS_MAC) {
-                    let source = "~/.bash_profile".replace("~", external_os_namespaceObject.homedir());
-                    let dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
+                    const source = "~/.bash_profile".replace("~", external_os_namespaceObject.homedir());
+                    const dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
                     if (external_fs_namespaceObject.existsSync(source)) {
                         info(`Renaming "${source}" to "${dest}"\n`);
                         yield mv(source, dest);
@@ -54195,9 +54204,9 @@ function condaInitActivation(inputs, options) {
             [external_path_namespaceObject.join(installationDirectory, "condabin", "conda_hook.bat")]: batchExtraText,
         };
         Object.keys(shells).forEach((key) => {
-            let filePath = key.replace("~", external_os_namespaceObject.homedir());
+            const filePath = key.replace("~", external_os_namespaceObject.homedir());
             const text = shells[key];
-            if (external_fs_namespaceObject.existsSync(filePath)) {
+            if (text != null && external_fs_namespaceObject.existsSync(filePath)) {
                 info(`Append to "${filePath}":\n ${text} \n`);
                 external_fs_namespaceObject.appendFileSync(filePath, text);
             }
@@ -55092,7 +55101,7 @@ function ensureLocalInstaller(options) {
             info(`Checking for cached ${tool}@${version}...`);
             // tc.find returns the name of the directory in which
             // the cached file is located.
-            let cacheDirectoryPath = find(installerName, version, ...(options.arch ? [options.arch] : []));
+            const cacheDirectoryPath = find(installerName, version, ...(options.arch ? [options.arch] : []));
             if (cacheDirectoryPath !== "") {
                 info(`Found ${installerName} cache at ${cacheDirectoryPath}!`);
                 // Append the basename of the cached file to the directory
@@ -55137,7 +55146,7 @@ var download_miniforge_awaiter = (undefined && undefined.__awaiter) || function 
 /**
  * Download specific Miniforge defined by variant, version and architecture
  */
-function downloadMiniforge(inputs, options) {
+function downloadMiniforge(inputs, _options) {
     return download_miniforge_awaiter(this, void 0, void 0, function* () {
         const tool = inputs.miniforgeVariant.trim() || MINIFORGE_DEFAULT_VARIANT;
         const version = inputs.miniforgeVersion.trim() || MINIFORGE_DEFAULT_VERSION;
@@ -55173,7 +55182,7 @@ function downloadMiniforge(inputs, options) {
  */
 const miniforgeDownloader = {
     label: "download Miniforge",
-    provides: (inputs, options) => download_miniforge_awaiter(void 0, void 0, void 0, function* () { return inputs.miniforgeVersion !== "" || inputs.miniforgeVariant !== ""; }),
+    provides: (inputs, _options) => download_miniforge_awaiter(void 0, void 0, void 0, function* () { return inputs.miniforgeVersion !== "" || inputs.miniforgeVariant !== ""; }),
     installerPath: (inputs, options) => download_miniforge_awaiter(void 0, void 0, void 0, function* () {
         return {
             localInstallerPath: yield downloadMiniforge(inputs, options),
@@ -55209,7 +55218,7 @@ var download_miniconda_awaiter = (undefined && undefined.__awaiter) || function 
 function minicondaVersions(arch) {
     return download_miniconda_awaiter(this, void 0, void 0, function* () {
         try {
-            let extension = IS_UNIX ? "sh" : "exe";
+            const extension = IS_UNIX ? "sh" : "exe";
             const downloadPath = yield downloadTool(MINICONDA_BASE_URL);
             const content = external_fs_namespaceObject.readFileSync(downloadPath, "utf8");
             let hrefs = src_default()(content);
@@ -55234,17 +55243,20 @@ function minicondaVersions(arch) {
 function downloadMiniconda(pythonMajorVersion, inputs) {
     return download_miniconda_awaiter(this, void 0, void 0, function* () {
         // Check valid arch
-        let arch = MINICONDA_ARCHITECTURES[inputs.architecture.toLowerCase()];
+        const arch = MINICONDA_ARCHITECTURES[inputs.architecture.toLowerCase()];
         if (!arch) {
             throw new Error(`Invalid arch "${inputs.architecture}"!`);
         }
-        let extension = IS_UNIX ? "sh" : "exe";
-        let osName = OS_NAMES[process.platform];
-        let minicondaVersion = inputs.minicondaVersion || "latest";
+        const extension = IS_UNIX ? "sh" : "exe";
+        const osName = OS_NAMES[process.platform];
+        if (!osName) {
+            throw new Error(`Unsupported platform "${process.platform}"!`);
+        }
+        const minicondaVersion = inputs.minicondaVersion || "latest";
         const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
         info(minicondaInstallerName);
         // Check version name
-        let versions = yield minicondaVersions(arch);
+        const versions = yield minicondaVersions(arch);
         if (versions) {
             if (!versions.includes(minicondaInstallerName)) {
                 throw new Error(`Invalid miniconda version!\n\nMust be among ${versions.toString()}`);
@@ -55267,7 +55279,7 @@ function downloadMiniconda(pythonMajorVersion, inputs) {
  */
 const minicondaDownloader = {
     label: "download Miniconda",
-    provides: (inputs, options) => download_miniconda_awaiter(void 0, void 0, void 0, function* () {
+    provides: (inputs, _options) => download_miniconda_awaiter(void 0, void 0, void 0, function* () {
         return inputs.installerUrl === "";
     }),
     installerPath: (inputs, options) => download_miniconda_awaiter(void 0, void 0, void 0, function* () {
@@ -55298,7 +55310,7 @@ var download_url_awaiter = (undefined && undefined.__awaiter) || function (thisA
  */
 const urlDownloader = {
     label: "download a custom installer by URL",
-    provides: (inputs, options) => download_url_awaiter(void 0, void 0, void 0, function* () { return !!inputs.installerUrl; }),
+    provides: (inputs, _options) => download_url_awaiter(void 0, void 0, void 0, function* () { return !!inputs.installerUrl; }),
     installerPath: (inputs, options) => download_url_awaiter(void 0, void 0, void 0, function* () {
         return {
             localInstallerPath: yield ensureLocalInstaller({
@@ -55329,7 +55341,7 @@ var bundled_miniconda_awaiter = (undefined && undefined.__awaiter) || function (
  */
 const bundledMinicondaUser = {
     label: "use bundled Miniconda",
-    provides: (inputs, options) => bundled_miniconda_awaiter(void 0, void 0, void 0, function* () {
+    provides: (inputs, _options) => bundled_miniconda_awaiter(void 0, void 0, void 0, function* () {
         return (inputs.minicondaVersion === "" &&
             inputs.miniforgeVariant === "" &&
             inputs.miniforgeVersion === "" &&
@@ -55337,7 +55349,7 @@ const bundledMinicondaUser = {
             inputs.installerUrl === "" &&
             MINICONDA_DIR_PATH.length > 0);
     }),
-    installerPath: (inputs, options) => bundled_miniconda_awaiter(void 0, void 0, void 0, function* () {
+    installerPath: (_inputs, options) => bundled_miniconda_awaiter(void 0, void 0, void 0, function* () {
         // No actions are performed. This is the only place `useBundled` will ever be true.
         return {
             localInstallerPath: "",
@@ -59312,7 +59324,7 @@ var explicit_awaiter = (undefined && undefined.__awaiter) || function (thisArg, 
  */
 const ensureExplicit = {
     label: "conda create (from explicit)",
-    provides: (inputs, options) => explicit_awaiter(void 0, void 0, void 0, function* () { var _a, _b; return !!((_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.explicit) === null || _b === void 0 ? void 0 : _b.length); }),
+    provides: (_inputs, options) => explicit_awaiter(void 0, void 0, void 0, function* () { var _a, _b; return !!((_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.explicit) === null || _b === void 0 ? void 0 : _b.length); }),
     condaArgs: (inputs, options) => explicit_awaiter(void 0, void 0, void 0, function* () {
         var _c;
         if (inputs.pythonVersion) {
@@ -59376,7 +59388,7 @@ const PATCH_PROVIDERS = [
  */
 const ensureYaml = {
     label: "conda env update",
-    provides: (inputs, options) => yaml_awaiter(void 0, void 0, void 0, function* () { var _a; return !!Object.keys(((_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) || {}).length; }),
+    provides: (_inputs, options) => yaml_awaiter(void 0, void 0, void 0, function* () { var _a; return !!Object.keys(((_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) || {}).length; }),
     condaArgs: (inputs, options) => yaml_awaiter(void 0, void 0, void 0, function* () {
         var _b;
         const yamlData = (_b = options.envSpec) === null || _b === void 0 ? void 0 : _b.yaml;
@@ -59384,7 +59396,7 @@ const ensureYaml = {
             throw Error(`'environment-file: ${inputs.environmentFile}' appears to be malformed`);
         }
         let envFile = inputs.environmentFile;
-        let patchesApplied = [];
+        const patchesApplied = [];
         // Make a copy, update with each patch
         let dependencies = [
             ...(yamlData.dependencies || []),
@@ -59395,7 +59407,7 @@ const ensureYaml = {
             }
             const newSpec = provider.spec(inputs, options);
             let didPatch = false;
-            let patchedDeps = [];
+            const patchedDeps = [];
             for (const spec of dependencies || []) {
                 // Ignore pip deps
                 if (typeof spec !== "string" || !spec.match(provider.specMatch)) {
@@ -59464,12 +59476,12 @@ var simple_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _a
  */
 const ensureSimple = {
     label: "conda create (simple)",
-    provides: (inputs, options) => simple_awaiter(void 0, void 0, void 0, function* () {
+    provides: (_inputs, options) => simple_awaiter(void 0, void 0, void 0, function* () {
         var _a, _b, _c;
         return !(((_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.explicit) === null || _b === void 0 ? void 0 : _b.length) ||
             Object.keys(((_c = options.envSpec) === null || _c === void 0 ? void 0 : _c.yaml) || {}).length);
     }),
-    condaArgs: (inputs, options) => simple_awaiter(void 0, void 0, void 0, function* () {
+    condaArgs: (inputs, _options) => simple_awaiter(void 0, void 0, void 0, function* () {
         const args = ["create", ...envCommandFlag(inputs)];
         if (inputs.pythonVersion) {
             const spec = makeSpec("python", inputs.pythonVersion);
@@ -59568,12 +59580,12 @@ var update_conda_awaiter = (undefined && undefined.__awaiter) || function (thisA
 /** Install `conda` in the `base` env at a specified version */
 const updateConda = {
     label: "update conda",
-    provides: (inputs, options) => update_conda_awaiter(void 0, void 0, void 0, function* () {
+    provides: (inputs, _options) => update_conda_awaiter(void 0, void 0, void 0, function* () {
         return inputs.condaVersion !== "" ||
             inputs.condaConfig.auto_update_conda === "yes";
     }),
     toolPackages: (inputs, options) => update_conda_awaiter(void 0, void 0, void 0, function* () {
-        let updates = {
+        const updates = {
             tools: [
                 inputs.condaVersion !== ""
                     ? makeSpec("conda", inputs.condaVersion)
@@ -59686,9 +59698,9 @@ var update_python_awaiter = (undefined && undefined.__awaiter) || function (this
  */
 const updatePython = {
     label: "update python",
-    provides: (inputs, options) => update_python_awaiter(void 0, void 0, void 0, function* () { return !!(inputs.pythonVersion && isBaseEnv(inputs.activateEnvironment)); }),
+    provides: (inputs, _options) => update_python_awaiter(void 0, void 0, void 0, function* () { return !!(inputs.pythonVersion && isBaseEnv(inputs.activateEnvironment)); }),
     toolPackages: (inputs, options) => update_python_awaiter(void 0, void 0, void 0, function* () {
-        let updates = {
+        const updates = {
             tools: [makeSpec("python", inputs.pythonVersion)],
             options,
         };
@@ -59710,7 +59722,7 @@ var update_conda_build_awaiter = (undefined && undefined.__awaiter) || function 
 /** Install `conda-build` in the `base` env at a specified version */
 const updateCondaBuild = {
     label: "update conda-build",
-    provides: (inputs, options) => update_conda_build_awaiter(void 0, void 0, void 0, function* () { return inputs.condaBuildVersion !== ""; }),
+    provides: (inputs, _options) => update_conda_build_awaiter(void 0, void 0, void 0, function* () { return inputs.condaBuildVersion !== ""; }),
     toolPackages: (inputs, options) => update_conda_build_awaiter(void 0, void 0, void 0, function* () {
         return {
             tools: [makeSpec("conda-build", inputs.condaBuildVersion)],
@@ -59758,9 +59770,9 @@ const TOOL_PROVIDERS = [
  */
 function installBaseTools(inputs, options) {
     return base_tools_awaiter(this, void 0, void 0, function* () {
-        let tools = [];
+        const tools = [];
         let postInstallOptions = Object.assign({}, options);
-        let postInstallActions = [];
+        const postInstallActions = [];
         for (const provider of TOOL_PROVIDERS) {
             info(`Do we need to ${provider.label}?`);
             if (yield provider.provides(inputs, options)) {

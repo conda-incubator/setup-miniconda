@@ -11,7 +11,7 @@ import * as base from "./base";
  */
 export const urlDownloader: types.IInstallerProvider = {
   label: "download a custom installer by URL",
-  provides: async (inputs, options) => !!inputs.installerUrl,
+  provides: async (inputs, _options) => !!inputs.installerUrl,
   installerPath: async (inputs, options) => {
     return {
       localInstallerPath: await base.ensureLocalInstaller({

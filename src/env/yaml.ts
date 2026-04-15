@@ -60,7 +60,7 @@ const PATCH_PROVIDERS: IYAMLEnvPatchProvider[] = [
  */
 export const ensureYaml: types.IEnvProvider = {
   label: "conda env update",
-  provides: async (inputs, options) =>
+  provides: async (_inputs, options) =>
     !!Object.keys(options.envSpec?.yaml || {}).length,
   condaArgs: async (inputs, options) => {
     const yamlData = options.envSpec?.yaml;
@@ -71,7 +71,7 @@ export const ensureYaml: types.IEnvProvider = {
     }
 
     let envFile = inputs.environmentFile;
-    let patchesApplied: string[] = [];
+    const patchesApplied: string[] = [];
 
     // Make a copy, update with each patch
     let dependencies: types.TYamlDependencies = [
@@ -85,7 +85,7 @@ export const ensureYaml: types.IEnvProvider = {
 
       const newSpec = provider.spec(inputs, options);
       let didPatch = false;
-      let patchedDeps = [];
+      const patchedDeps = [];
 
       for (const spec of dependencies || []) {
         // Ignore pip deps
