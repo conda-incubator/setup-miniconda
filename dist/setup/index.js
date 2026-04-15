@@ -54197,7 +54197,6 @@ function isDefaultEnvironment(envName, inputs, options) {
  */
 function condaInit(inputs, options) {
     return conda_awaiter(this, void 0, void 0, function* () {
-        let ownPath;
         // Fix ownership of folders
         if (options.useBundled) {
             if (IS_MAC) {
@@ -54212,13 +54211,16 @@ function condaInit(inputs, options) {
                 ]);
             }
             else if (constants_IS_WINDOWS) {
-                for (const folder of WIN_PERMS_FOLDERS) {
-                    ownPath = external_path_namespaceObject.join(condaBasePath(inputs, options), folder);
+                const basePath = condaBasePath(inputs, options);
+                const takeownPromises = WIN_PERMS_FOLDERS.map((folder) => {
+                    const ownPath = external_path_namespaceObject.join(basePath, folder);
                     if (external_fs_namespaceObject.existsSync(ownPath)) {
                         info(`Fixing ${folder} ownership`);
-                        yield execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
+                        return execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
                     }
-                }
+                    return undefined;
+                }).filter(Boolean);
+                yield Promise.all(takeownPromises);
             }
         }
         // Skip conda init and all profile modifications if run-init is false

@@ -429,8 +429,6 @@ export async function condaInit(
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
 ): Promise<void> {
-  let ownPath: string;
-
   // Fix ownership of folders
   if (options.useBundled) {
     if (constants.IS_MAC) {
@@ -444,13 +442,16 @@ export async function condaInit(
         condaBasePath(inputs, options),
       ]);
     } else if (constants.IS_WINDOWS) {
-      for (const folder of constants.WIN_PERMS_FOLDERS) {
-        ownPath = path.join(condaBasePath(inputs, options), folder);
+      const basePath = condaBasePath(inputs, options);
+      const takeownPromises = constants.WIN_PERMS_FOLDERS.map((folder) => {
+        const ownPath = path.join(basePath, folder);
         if (fs.existsSync(ownPath)) {
           core.info(`Fixing ${folder} ownership`);
-          await utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
+          return utils.execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
         }
-      }
+        return undefined;
+      }).filter(Boolean) as Promise<void | string>[];
+      await Promise.all(takeownPromises);
     }
   }
 
