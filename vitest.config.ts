@@ -11,9 +11,9 @@ export default defineConfig({
         // Some branches are platform-specific (Windows/Linux paths
         // unreachable on macOS) so 100% is only achievable in CI
         // with a multi-OS matrix. These thresholds are the floor.
-        lines: 93,
+        lines: 94,
         branches: 88,
-        functions: 97,
+        functions: 98,
         statements: 93,
       },
     },

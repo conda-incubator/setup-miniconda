@@ -5,13 +5,12 @@ import type * as types from "../../types";
 // Mock @actions/core
 const mockInfo = vi.fn();
 vi.mock("@actions/core", () => ({
-  info: (...args: any[]) => mockInfo(...args),
+  info: (...args: unknown[]) => mockInfo(...args),
   warning: vi.fn(),
 }));
 
 // Mock conda
 const mockCondaCommand = vi.fn(async () => {});
-const mockApplyCondaConfiguration = vi.fn(async () => {});
 
 // Mock utils
 vi.mock("../../utils", () => ({
@@ -46,9 +45,7 @@ vi.mock("../../constants", () => ({
 
 // Mock conda functions used by update-mamba's postInstall
 vi.mock("../../conda", async () => ({
-  condaCommand: (...args: any[]) => mockCondaCommand(...args),
-  applyCondaConfiguration: (...args: any[]) =>
-    mockApplyCondaConfiguration(...args),
+  condaCommand: (...args: unknown[]) => mockCondaCommand(...args),
   condaExecutable: vi.fn(() => "/opt/conda/bin/mamba"),
   condaBasePath: vi.fn(() => "/opt/conda"),
 }));
@@ -118,7 +115,6 @@ describe("installBaseTools", () => {
   beforeEach(async () => {
     vi.resetModules();
     mockCondaCommand.mockReset();
-    mockApplyCondaConfiguration.mockReset();
     mockInfo.mockReset();
     const mod = await import("../../base-tools/index");
     installBaseTools = mod.installBaseTools;
@@ -131,7 +127,6 @@ describe("installBaseTools", () => {
     await installBaseTools(inputs, options);
 
     expect(mockCondaCommand).not.toHaveBeenCalled();
-    expect(mockApplyCondaConfiguration).not.toHaveBeenCalled();
     expect(mockInfo).toHaveBeenCalledWith(
       "No tools were installed in 'base' env.",
     );
@@ -151,18 +146,13 @@ describe("installBaseTools", () => {
     );
   });
 
-  it("calls applyCondaConfiguration with reapply=true after install", async () => {
+  it("does not call applyCondaConfiguration (config is written upfront)", async () => {
     const inputs = makeInputs({ condaVersion: "23.1.0" });
     const options = makeOptions();
 
     await installBaseTools(inputs, options);
 
-    expect(mockApplyCondaConfiguration).toHaveBeenCalledTimes(1);
-    expect(mockApplyCondaConfiguration).toHaveBeenCalledWith(
-      inputs,
-      expect.any(Object),
-      true,
-    );
+    expect(mockCondaCommand).toHaveBeenCalledTimes(1);
   });
 
   it("installs multiple tools in a single conda command", async () => {
