@@ -359,9 +359,8 @@ describe("condaExecutable", () => {
   });
 
   it("returns the first existing executable path", async () => {
-    const { condaExecutable, condaExecutableLocations } = await import(
-      "../conda"
-    );
+    const { condaExecutable, condaExecutableLocations } =
+      await import("../conda");
     const inputs = makeInputs();
     const options = makeOptions();
     const locations = condaExecutableLocations(inputs, options);
@@ -544,9 +543,8 @@ describe("condaInitActivation", () => {
   });
 
   it("does not append to non-existing shell profile files", async () => {
-    const { condaInitActivation, condaExecutableLocations } = await import(
-      "../conda"
-    );
+    const { condaInitActivation, condaExecutableLocations } =
+      await import("../conda");
     const inputs = makeInputs({ runInit: "true" });
     const options = makeOptions();
     const condaLocations = condaExecutableLocations(inputs, options);

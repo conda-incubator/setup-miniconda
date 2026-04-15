@@ -18,7 +18,7 @@ import * as base from "./base";
  * and architecture from the action inputs.
  *
  * @param inputs - The parsed action inputs containing variant, version, and architecture.
- * @param options - The current dynamic options.
+ * @param _options - The current dynamic options (unused).
  * @returns The local path to the downloaded installer.
  * @throws {Error} If the architecture is not in {@link constants.MINIFORGE_ARCHITECTURES}.
  */

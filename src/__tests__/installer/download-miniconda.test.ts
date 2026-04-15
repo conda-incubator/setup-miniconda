@@ -144,18 +144,16 @@ describe("minicondaDownloader", () => {
 
   describe("provides()", () => {
     it("returns true when installerUrl is empty (fallback provider)", async () => {
-      const { minicondaDownloader } = await import(
-        "../../installer/download-miniconda"
-      );
+      const { minicondaDownloader } =
+        await import("../../installer/download-miniconda");
       const inputs = makeInputs({ installerUrl: "" });
       const result = await minicondaDownloader.provides(inputs, makeOptions());
       expect(result).toBe(true);
     });
 
     it("returns false when installerUrl is set", async () => {
-      const { minicondaDownloader } = await import(
-        "../../installer/download-miniconda"
-      );
+      const { minicondaDownloader } =
+        await import("../../installer/download-miniconda");
       const inputs = makeInputs({
         installerUrl: "https://example.com/custom.sh",
       });
@@ -167,9 +165,8 @@ describe("minicondaDownloader", () => {
   describe("installerPath()", () => {
     it("calls downloadMiniconda with pythonMajorVersion=3 and sets useBundled=false", async () => {
       mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniconda.sh");
-      const { minicondaDownloader } = await import(
-        "../../installer/download-miniconda"
-      );
+      const { minicondaDownloader } =
+        await import("../../installer/download-miniconda");
       const inputs = makeInputs({ minicondaVersion: "latest" });
       const result = await minicondaDownloader.installerPath(
         inputs,
@@ -195,9 +192,8 @@ describe("downloadMiniconda", () => {
     );
 
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniconda.sh");
-    const { downloadMiniconda } = await import(
-      "../../installer/download-miniconda"
-    );
+    const { downloadMiniconda } =
+      await import("../../installer/download-miniconda");
     const inputs = makeInputs({
       minicondaVersion: "latest",
       architecture: "x64",
@@ -214,9 +210,8 @@ describe("downloadMiniconda", () => {
   });
 
   it("throws for an invalid architecture", async () => {
-    const { downloadMiniconda } = await import(
-      "../../installer/download-miniconda"
-    );
+    const { downloadMiniconda } =
+      await import("../../installer/download-miniconda");
     const inputs = makeInputs({ architecture: "sparc" });
 
     await expect(downloadMiniconda(3, inputs)).rejects.toThrow(/Invalid arch/i);
@@ -228,9 +223,8 @@ describe("downloadMiniconda", () => {
       `<a href="/Miniconda3-latest-${osName}-x86_64.sh">link</a>`,
     );
 
-    const { downloadMiniconda } = await import(
-      "../../installer/download-miniconda"
-    );
+    const { downloadMiniconda } =
+      await import("../../installer/download-miniconda");
     const inputs = makeInputs({
       minicondaVersion: "nonexistent-version",
       architecture: "x64",
@@ -248,9 +242,8 @@ describe("downloadMiniconda", () => {
     );
 
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniconda.sh");
-    const { downloadMiniconda } = await import(
-      "../../installer/download-miniconda"
-    );
+    const { downloadMiniconda } =
+      await import("../../installer/download-miniconda");
     const inputs = makeInputs({
       minicondaVersion: "latest",
       architecture: "aarch64",
@@ -272,9 +265,8 @@ describe("downloadMiniconda", () => {
     );
 
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniconda.sh");
-    const { downloadMiniconda } = await import(
-      "../../installer/download-miniconda"
-    );
+    const { downloadMiniconda } =
+      await import("../../installer/download-miniconda");
     const inputs = makeInputs({
       minicondaVersion: "",
       architecture: "x64",
@@ -299,9 +291,8 @@ describe("downloadMiniconda", () => {
     const core = await import("@actions/core");
 
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniconda.sh");
-    const { downloadMiniconda } = await import(
-      "../../installer/download-miniconda"
-    );
+    const { downloadMiniconda } =
+      await import("../../installer/download-miniconda");
     const inputs = makeInputs({
       minicondaVersion: "latest",
       architecture: "x64",
