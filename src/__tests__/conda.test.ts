@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import * as yaml from "js-yaml";
 
 import type * as types from "../types";
 
@@ -6,6 +7,7 @@ import type * as types from "../types";
 vi.mock("@actions/core", () => ({
   info: vi.fn(),
   warning: vi.fn(),
+  isDebug: vi.fn(() => false),
 }));
 
 // Mock @actions/io
@@ -22,6 +24,8 @@ vi.mock("fs", async (importOriginal) => {
     ...actual,
     existsSync: vi.fn(() => true),
     appendFileSync: vi.fn(),
+    writeFileSync: vi.fn(),
+    readFileSync: vi.fn(() => ""),
   };
 });
 
@@ -123,74 +127,276 @@ function makeOptions(): types.IDynamicOptions {
   };
 }
 
-/**
- * Extract the conda subcommand args from execute calls.
- * execute() is called with [condaExePath, ...args], so args start at index 1.
- */
-function getCondaArgs(): string[][] {
-  return executeCalls.map((c) => c.command.slice(1));
-}
+describe("writeCondaConfig", () => {
+  let fsMod: typeof import("fs");
 
-describe("applyCondaConfiguration", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     executeCalls.length = 0;
+    fsMod = await import("fs");
+    vi.mocked(fsMod.existsSync).mockReturnValue(true);
+    vi.mocked(fsMod.writeFileSync).mockClear();
+    vi.mocked(fsMod.readFileSync).mockReturnValue("");
   });
 
-  it("adds channels on first call (reapply=false)", async () => {
-    const { applyCondaConfiguration } = await import("../conda");
+  function getWrittenConfig(): Record<string, unknown> {
+    const calls = vi.mocked(fsMod.writeFileSync).mock.calls;
+    const lastCall = calls[calls.length - 1];
+    return yaml.load(lastCall[1] as string) as Record<string, unknown>;
+  }
+
+  it("writes channels from input to condarc", async () => {
+    const { writeCondaConfig } = await import("../conda");
     const inputs = makeInputs({ channels: "conda-forge" });
 
-    await applyCondaConfiguration(inputs, makeOptions(), false);
-
-    const args = getCondaArgs();
-    const addChannelCalls = args.filter(
-      (a) => a.includes("--add") && a.includes("channels"),
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ channels: ["defaults"] }),
     );
-    expect(addChannelCalls.length).toBeGreaterThan(0);
-    expect(addChannelCalls[0]).toContain("conda-forge");
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["channels"]).toContain("conda-forge");
   });
 
-  it("skips channels on reapply=true (#57)", async () => {
-    const { applyCondaConfiguration } = await import("../conda");
-    const inputs = makeInputs({ channels: "conda-forge" });
+  it("uses channels from envSpec.yaml when input channels are empty", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "" });
+    const options: types.IDynamicOptions = {
+      ...makeOptions(),
+      envSpec: {
+        yaml: { channels: ["bioconda", "defaults"] },
+      },
+    };
 
-    await applyCondaConfiguration(inputs, makeOptions(), true);
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
 
-    const args = getCondaArgs();
-    const addChannelCalls = args.filter(
-      (a) => a.includes("--add") && a.includes("channels"),
+    await writeCondaConfig(inputs, options);
+
+    const config = getWrittenConfig();
+    expect(config["channels"]).toContain("bioconda");
+    expect(config["channels"]).toContain("defaults");
+  });
+
+  it("handles nodefaults channel by removing defaults", async () => {
+    const core = await import("@actions/core");
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "nodefaults,conda-forge" });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ channels: ["defaults"] }),
     );
-    expect(addChannelCalls).toEqual([]);
-  });
 
-  it("skips pkgs_dirs on reapply=true (#57)", async () => {
-    const { applyCondaConfiguration } = await import("../conda");
-    const inputs = makeInputs({ channels: "conda-forge" });
+    await writeCondaConfig(inputs, makeOptions());
 
-    await applyCondaConfiguration(inputs, makeOptions(), true);
-
-    const args = getCondaArgs();
-    const addPkgsDirCalls = args.filter(
-      (a) => a.includes("--add") && a.includes("pkgs_dirs"),
+    const config = getWrittenConfig();
+    expect(config["channels"]).not.toContain("defaults");
+    expect(config["channels"]).toContain("conda-forge");
+    expect(vi.mocked(core.warning)).toHaveBeenCalledWith(
+      expect.stringContaining("nodefaults"),
     );
-    expect(addPkgsDirCalls).toEqual([]);
   });
 
-  it("still applies --set options on reapply=true", async () => {
-    const { applyCondaConfiguration } = await import("../conda");
+  it("removes defaults when condaRemoveDefaults is true", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({
+      channels: "conda-forge",
+      condaRemoveDefaults: "true",
+    });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ channels: ["defaults"] }),
+    );
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["channels"]).not.toContain("defaults");
+    expect(config["channels"]).toContain("conda-forge");
+  });
+
+  it("keeps defaults when user explicitly adds it", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({
+      channels: "defaults,conda-forge",
+      condaRemoveDefaults: "true",
+    });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["channels"]).toContain("defaults");
+  });
+
+  it("warns about implicitly added defaults when removeDefaults is false and no channels exist", async () => {
+    const core = await import("@actions/core");
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({
+      channels: "",
+      condaRemoveDefaults: "false",
+    });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, {
+      ...makeOptions(),
+      envSpec: undefined,
+    });
+
+    expect(vi.mocked(core.warning)).toHaveBeenCalledWith(
+      expect.stringContaining("defaults"),
+    );
+  });
+
+  it("merges pkgs_dirs from input", async () => {
+    const { writeCondaConfig } = await import("../conda");
     const inputs = makeInputs({ channels: "conda-forge" });
 
-    await applyCondaConfiguration(inputs, makeOptions(), true);
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
 
-    const args = getCondaArgs();
-    const setCalls = args.filter((a) => a.includes("--set"));
-    expect(setCalls.length).toBeGreaterThan(0);
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["pkgs_dirs"]).toContain("/mock/pkgs");
+  });
+
+  it("sets auto_activate_base from input", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge" });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["auto_activate_base"]).toBe(false);
+  });
+
+  it("sets notify_outdated_conda to false", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge" });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["notify_outdated_conda"]).toBe(false);
+  });
+
+  it("writes config entries and skips empty values", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge" });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["always_yes"]).toBe(true);
+    expect(config["changeps1"]).toBe(false);
+    expect(config).not.toHaveProperty("channel_alias");
+  });
+
+  it("warns on unrecognized condarc keys", async () => {
+    const core = await import("@actions/core");
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge" });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ unknown_key: "value" }),
+    );
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    expect(vi.mocked(core.warning)).toHaveBeenCalledWith(
+      expect.stringContaining("unknown_key"),
+    );
+  });
+
+  it("writes YAML to CONDARC_PATH", async () => {
+    const constants = await import("../constants");
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge" });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    expect(vi.mocked(fsMod.writeFileSync)).toHaveBeenCalledWith(
+      constants.CONDARC_PATH,
+      expect.any(String),
+      "utf8",
+    );
+  });
+
+  it("reads existing condarc and merges it", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge" });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ solver: "libmamba" }),
+    );
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["solver"]).toBe("libmamba");
+    expect(config["channels"]).toContain("conda-forge");
+  });
+
+  it("reads condaConfigFile and merges it over existing condarc", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = {
+      ...makeInputs({ channels: "conda-forge" }),
+      condaConfigFile: "my-condarc.yml",
+    } as types.IActionInputs;
+
+    const originalWorkspace = process.env["GITHUB_WORKSPACE"];
+    process.env["GITHUB_WORKSPACE"] = "/workspace";
+
+    vi.mocked(fsMod.readFileSync).mockImplementation((p: unknown) => {
+      const pStr = p as string;
+      if (pStr.includes("my-condarc.yml")) {
+        return yaml.dump({ solver: "classic", channel_priority: "strict" });
+      }
+      return yaml.dump({ solver: "libmamba" });
+    });
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["solver"]).toBe("classic");
+    expect(config["channel_priority"]).toBe("strict");
+
+    if (originalWorkspace !== undefined) {
+      process.env["GITHUB_WORKSPACE"] = originalWorkspace;
+    } else {
+      delete process.env["GITHUB_WORKSPACE"];
+    }
+  });
+
+  it("handles missing existing condarc gracefully", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge" });
+
+    vi.mocked(fsMod.existsSync).mockReturnValue(false);
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["channels"]).toContain("conda-forge");
   });
 });
 
 describe("condaInit", () => {
-  beforeEach(() => {
+  let fsMod: typeof import("fs");
+
+  beforeEach(async () => {
     executeCalls.length = 0;
+    fsMod = await import("fs");
+    vi.mocked(fsMod.existsSync).mockReturnValue(true);
   });
 
   it("skips conda init when runInit is false", async () => {
@@ -470,12 +676,18 @@ describe("bootstrapConfig", () => {
   });
 });
 
-describe("copyConfig", () => {
-  it("copies the condaConfigFile to CONDARC_PATH when set", async () => {
-    const io = await import("@actions/io");
-    const path = await import("path");
-    const constants = await import("../constants");
-    const { copyConfig } = await import("../conda");
+describe("writeCondaConfig with condaConfigFile", () => {
+  let fsMod: typeof import("fs");
+
+  beforeEach(async () => {
+    fsMod = await import("fs");
+    vi.mocked(fsMod.existsSync).mockReturnValue(true);
+    vi.mocked(fsMod.writeFileSync).mockClear();
+  });
+
+  it("reads the condaConfigFile from GITHUB_WORKSPACE and merges it", async () => {
+    const pathMod = await import("path");
+    const { writeCondaConfig } = await import("../conda");
 
     const inputs = {
       ...makeInputs(),
@@ -485,14 +697,27 @@ describe("copyConfig", () => {
     const originalWorkspace = process.env["GITHUB_WORKSPACE"];
     process.env["GITHUB_WORKSPACE"] = "/workspace";
 
-    await copyConfig(inputs);
+    vi.mocked(fsMod.readFileSync).mockImplementation((p: unknown) => {
+      const pStr = p as string;
+      if (pStr === pathMod.join("/workspace", "my-condarc.yml")) {
+        return yaml.dump({ solver: "libmamba" });
+      }
+      return yaml.dump({});
+    });
 
-    expect(vi.mocked(io.cp)).toHaveBeenCalledWith(
-      path.join("/workspace", "my-condarc.yml"),
-      constants.CONDARC_PATH,
-    );
+    await writeCondaConfig(inputs, makeOptions());
 
-    // Restore
+    const calls = vi.mocked(fsMod.readFileSync).mock.calls;
+    const readPaths = calls.map((c) => c[0] as string);
+    expect(readPaths).toContain(pathMod.join("/workspace", "my-condarc.yml"));
+
+    const lastWriteCall = vi.mocked(fsMod.writeFileSync).mock.calls.at(-1);
+    const config = yaml.load(lastWriteCall![1] as string) as Record<
+      string,
+      unknown
+    >;
+    expect(config["solver"]).toBe("libmamba");
+
     if (originalWorkspace !== undefined) {
       process.env["GITHUB_WORKSPACE"] = originalWorkspace;
     } else {
@@ -684,6 +909,7 @@ describe("condaInitActivation", () => {
 
 // ---------------------------------------------------------------------------
 // _getFullEnvironmentPath (exercised via condaInitActivation → isDefaultEnvironment)
+// isDefaultEnvironment now reads condarc files directly via fs.readFileSync
 // ---------------------------------------------------------------------------
 describe("_getFullEnvironmentPath coverage", () => {
   let fsMod: typeof import("fs");
@@ -693,53 +919,26 @@ describe("_getFullEnvironmentPath coverage", () => {
     fsMod = await import("fs");
     vi.mocked(fsMod.existsSync).mockReturnValue(true);
     vi.mocked(fsMod.appendFileSync).mockClear();
+    vi.mocked(fsMod.readFileSync).mockReturnValue("");
   });
-
-  /**
-   * Override the execute mock to return a specific default_activation_env
-   * for --show --json calls. Uses vi.mocked to override the existing mock.
-   */
-  async function mockDefaultActivationEnv(envValue: string) {
-    const utils = await import("../utils");
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show") && command.includes("--json")) {
-        return JSON.stringify({ default_activation_env: envValue });
-      }
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return "{}";
-      }
-      return "";
-    });
-  }
 
   afterEach(async () => {
-    // Restore the default execute mock behavior
-    const utils = await import("../utils");
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show") && command.includes("--json")) {
-        return '{"default_activation_env": ""}';
-      }
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return "{}";
-      }
-      return "";
-    });
+    vi.mocked(fsMod.readFileSync).mockReturnValue("");
   });
 
+  function mockCondarcWithDefaultEnv(envValue: string) {
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ default_activation_env: envValue }),
+    );
+  }
+
   it("resolves a simple env name to installDir/envs/name when default_activation_env is set", async () => {
-    // default_activation_env = "mydefault" (a simple name, not base)
-    // activateEnvironment = "test" (also a simple name, not base)
-    // Both go through the name branch: installDir/envs/<name>
-    // They differ, so isValidActivate = true, profiles get activate commands
-    await mockDefaultActivationEnv("mydefault");
+    mockCondarcWithDefaultEnv("mydefault");
     const { condaInitActivation } = await import("../conda");
     const inputs = makeInputs({ runInit: "true" });
 
     await condaInitActivation(inputs, makeOptions());
 
-    // activateEnvironment="test" != "mydefault", so conda activate should appear
     const appendCalls = vi.mocked(fsMod.appendFileSync).mock.calls;
     const hasActivate = appendCalls.some(
       (call) =>
@@ -750,15 +949,11 @@ describe("_getFullEnvironmentPath coverage", () => {
   });
 
   it("resolves base env name to installDir when default_activation_env is base", async () => {
-    // default_activation_env = "base"
-    // activateEnvironment = "base"
-    // Both resolve via isBaseEnv to path.resolve(installDir)
-    // They match, so isValidActivate = false, no activate commands
     const utils = await import("../utils");
     vi.mocked(utils.isBaseEnv).mockImplementation(
       (name) => name === "base" || name === "root" || name === "",
     );
-    await mockDefaultActivationEnv("base");
+    mockCondarcWithDefaultEnv("base");
     const { condaInitActivation } = await import("../conda");
     const inputs = {
       ...makeInputs({ runInit: "true" }),
@@ -767,7 +962,6 @@ describe("_getFullEnvironmentPath coverage", () => {
 
     await condaInitActivation(inputs, makeOptions());
 
-    // Both resolve to the same path → isValidActivate = false → no activate
     const appendCalls = vi.mocked(fsMod.appendFileSync).mock.calls;
     const hasActivate = appendCalls.some(
       (call) =>
@@ -775,15 +969,11 @@ describe("_getFullEnvironmentPath coverage", () => {
         call[1].includes('conda activate "base"'),
     );
     expect(hasActivate).toBe(false);
-    // Restore isBaseEnv default
     vi.mocked(utils.isBaseEnv).mockImplementation(() => false);
   });
 
   it("resolves ~/ paths via os.homedir when default_activation_env starts with ~/", async () => {
-    // default_activation_env = "~/myenvs/default" → homedir path
-    // activateEnvironment = "test" → installDir/envs/test
-    // Different paths → isValidActivate = true
-    await mockDefaultActivationEnv("~/myenvs/default");
+    mockCondarcWithDefaultEnv("~/myenvs/default");
     const { condaInitActivation } = await import("../conda");
     const inputs = makeInputs({ runInit: "true" });
 
@@ -799,10 +989,7 @@ describe("_getFullEnvironmentPath coverage", () => {
   });
 
   it("resolves absolute paths directly when default_activation_env is absolute", async () => {
-    // default_activation_env = "/opt/envs/production" → absolute path
-    // activateEnvironment = "test" → installDir/envs/test
-    // Different → isValidActivate = true
-    await mockDefaultActivationEnv("/opt/envs/production");
+    mockCondarcWithDefaultEnv("/opt/envs/production");
     const { condaInitActivation } = await import("../conda");
     const inputs = makeInputs({ runInit: "true" });
 
@@ -818,9 +1005,7 @@ describe("_getFullEnvironmentPath coverage", () => {
   });
 
   it("treats activateEnvironment with / as an absolute path", async () => {
-    // activateEnvironment = "/custom/path/myenv" (contains /)
-    // Goes through the absolute path branch of _getFullEnvironmentPath
-    await mockDefaultActivationEnv("someother");
+    mockCondarcWithDefaultEnv("someother");
     const { condaInitActivation } = await import("../conda");
     const inputs = {
       ...makeInputs({ runInit: "true" }),
@@ -914,284 +1099,136 @@ describe("condaCommand captureOutput", () => {
 });
 
 // ---------------------------------------------------------------------------
-// applyCondaConfiguration — additional branches
+// writeCondaConfig — additional branches
 // ---------------------------------------------------------------------------
-describe("applyCondaConfiguration additional branches", () => {
+describe("writeCondaConfig additional branches", () => {
   let fsMod: typeof import("fs");
 
   beforeEach(async () => {
     executeCalls.length = 0;
     fsMod = await import("fs");
     vi.mocked(fsMod.existsSync).mockReturnValue(true);
+    vi.mocked(fsMod.writeFileSync).mockClear();
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
   });
 
-  it("uses channels from envSpec.yaml when input channels are empty", async () => {
-    const { applyCondaConfiguration } = await import("../conda");
-    const inputs = makeInputs({ channels: "" });
-    const options: types.IDynamicOptions = {
-      ...makeOptions(),
-      envSpec: {
-        yaml: { channels: ["bioconda", "defaults"] },
-      },
-    };
+  function getWrittenConfig(): Record<string, unknown> {
+    const calls = vi.mocked(fsMod.writeFileSync).mock.calls;
+    const lastCall = calls[calls.length - 1];
+    return yaml.load(lastCall[1] as string) as Record<string, unknown>;
+  }
 
-    await applyCondaConfiguration(inputs, options, false);
-
-    const args = getCondaArgs();
-    const addChannelCalls = args.filter(
-      (a) => a.includes("--add") && a.includes("channels"),
-    );
-    // Should have added bioconda and defaults from envSpec
-    expect(addChannelCalls.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it("handles nodefaults channel by setting removeDefaults", async () => {
+  it("strips defaults from prefix-level condarc when removeDefaults is set", async () => {
     const core = await import("@actions/core");
-    const utils = await import("../utils");
-    const { applyCondaConfiguration } = await import("../conda");
-
-    // Return a config where "defaults" is present in a file's channels
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return JSON.stringify({
-          "/home/.condarc": { channels: ["defaults", "conda-forge"] },
-        });
-      }
-      if (command.includes("--show") && command.includes("--json")) {
-        return '{"default_activation_env": ""}';
-      }
-      return "";
-    });
-
-    const inputs = makeInputs({ channels: "nodefaults,conda-forge" });
-    await applyCondaConfiguration(inputs, makeOptions(), false);
-
-    // Should have warned about nodefaults
-    expect(vi.mocked(core.warning)).toHaveBeenCalledWith(
-      expect.stringContaining("nodefaults"),
-    );
-
-    // Should have called --remove channels defaults
-    const args = getCondaArgs();
-    const removeCalls = args.filter(
-      (a) =>
-        a.includes("--remove") &&
-        a.includes("channels") &&
-        a.includes("defaults"),
-    );
-    expect(removeCalls.length).toBeGreaterThan(0);
-
-    // Restore the mock
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return "{}";
-      }
-      if (command.includes("--show") && command.includes("--json")) {
-        return '{"default_activation_env": ""}';
-      }
-      return "";
-    });
-  });
-
-  it("removes defaults when condaRemoveDefaults is true and defaults not in channels", async () => {
-    const utils = await import("../utils");
-    const { applyCondaConfiguration } = await import("../conda");
-
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return JSON.stringify({
-          "/home/.condarc": { channels: ["defaults", "conda-forge"] },
-        });
-      }
-      if (command.includes("--show") && command.includes("--json")) {
-        return '{"default_activation_env": ""}';
-      }
-      return "";
-    });
-
+    const { writeCondaConfig } = await import("../conda");
     const inputs = makeInputs({
       channels: "conda-forge",
       condaRemoveDefaults: "true",
     });
-    await applyCondaConfiguration(inputs, makeOptions(), false);
 
-    const args = getCondaArgs();
-    const removeCalls = args.filter(
-      (a) =>
-        a.includes("--remove") &&
-        a.includes("channels") &&
-        a.includes("defaults"),
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ channels: ["defaults", "conda-forge"] }),
     );
-    expect(removeCalls.length).toBeGreaterThan(0);
 
-    // Restore mock
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return "{}";
-      }
-      if (command.includes("--show") && command.includes("--json")) {
-        return '{"default_activation_env": ""}';
-      }
-      return "";
-    });
-  });
+    await writeCondaConfig(inputs, makeOptions());
 
-  it("warns about implicitly added defaults when removeDefaults is false", async () => {
-    const core = await import("@actions/core");
-    const { applyCondaConfiguration } = await import("../conda");
-    // channels does NOT include "defaults" and condaRemoveDefaults is false
-    const inputs = makeInputs({
-      channels: "conda-forge",
-      condaRemoveDefaults: "false",
-    });
-
-    await applyCondaConfiguration(inputs, makeOptions(), false);
-
-    expect(vi.mocked(core.warning)).toHaveBeenCalledWith(
-      expect.stringContaining("defaults"),
+    const writeCalls = vi.mocked(fsMod.writeFileSync).mock.calls;
+    expect(writeCalls.length).toBeGreaterThan(0);
+    expect(vi.mocked(core.info)).toHaveBeenCalledWith(
+      expect.stringContaining("Removing implicitly added 'defaults' channel"),
     );
   });
 
-  it("adds pkgs_dirs on first call", async () => {
-    const { applyCondaConfiguration } = await import("../conda");
+  it("coerces boolean config values correctly", async () => {
+    const { writeCondaConfig } = await import("../conda");
     const inputs = makeInputs({ channels: "conda-forge" });
 
-    await applyCondaConfiguration(inputs, makeOptions(), false);
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
 
-    const args = getCondaArgs();
-    const pkgsDirCalls = args.filter(
-      (a) => a.includes("--add") && a.includes("pkgs_dirs"),
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["auto_update_conda"]).toBe(false);
+    expect(config["always_yes"]).toBe(true);
+    expect(config["changeps1"]).toBe(false);
+  });
+
+  it("preserves existing pkgs_dirs while merging input", async () => {
+    const utils = await import("../utils");
+    const { writeCondaConfig } = await import("../conda");
+
+    vi.mocked(utils.parsePkgsDirs).mockReturnValue(["/custom/pkgs"]);
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ pkgs_dirs: ["/existing/pkgs"] }),
     );
-    // parsePkgsDirs mock returns ["/mock/pkgs"]
-    expect(pkgsDirCalls.length).toBe(1);
-    expect(pkgsDirCalls[0]).toContain("/mock/pkgs");
+
+    const inputs = makeInputs({ channels: "conda-forge" });
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    const pkgsDirs = config["pkgs_dirs"] as string[];
+    expect(pkgsDirs).toContain("/custom/pkgs");
+    expect(pkgsDirs).toContain("/existing/pkgs");
+
+    vi.mocked(utils.parsePkgsDirs).mockReturnValue(["/mock/pkgs"]);
   });
 
-  it("falls back to auto_activate_base when auto_activate config --set fails", async () => {
-    const utils = await import("../utils");
-    const { applyCondaConfiguration } = await import("../conda");
+  it("merges channels preserving order (user channels first)", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge,bioconda" });
 
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return "{}";
-      }
-      if (command.includes("--show") && command.includes("--json")) {
-        return '{"default_activation_env": ""}';
-      }
-      // Make --set auto_activate fail to trigger fallback
-      if (command.includes("--set") && command.includes("auto_activate")) {
-        throw new Error("Unknown config key: auto_activate");
-      }
-      return "";
-    });
-
-    const inputs = makeInputs({ channels: "defaults" });
-    await applyCondaConfiguration(inputs, makeOptions(), false);
-
-    const args = getCondaArgs();
-    const autoActivateBaseCalls = args.filter(
-      (a) => a.includes("--set") && a.includes("auto_activate_base"),
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ channels: ["defaults"] }),
     );
-    expect(autoActivateBaseCalls.length).toBe(1);
 
-    // Restore mock
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return "{}";
-      }
-      if (command.includes("--show") && command.includes("--json")) {
-        return '{"default_activation_env": ""}';
-      }
-      return "";
-    });
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    const channels = config["channels"] as string[];
+    expect(channels.indexOf("conda-forge")).toBeLessThan(
+      channels.indexOf("bioconda"),
+    );
+    expect(channels.indexOf("bioconda")).toBeLessThan(
+      channels.indexOf("defaults"),
+    );
   });
 
-  it("warns and continues when a generic --set config option fails", async () => {
-    const core = await import("@actions/core");
-    const utils = await import("../utils");
-    const { applyCondaConfiguration } = await import("../conda");
-
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return "{}";
-      }
-      if (command.includes("--show") && command.includes("--json")) {
-        return '{"default_activation_env": ""}';
-      }
-      // Make --set auto_update_conda fail
-      if (command.includes("--set") && command.includes("auto_update_conda")) {
-        throw new Error("config set failed");
-      }
-      return "";
+  it("removes defaults from existing channels when removeDefaults is true and no input channels", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({
+      channels: "",
+      condaRemoveDefaults: "true",
     });
 
-    const inputs = makeInputs({ channels: "defaults" });
-    await applyCondaConfiguration(inputs, makeOptions(), false);
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ channels: ["defaults", "conda-forge"] }),
+    );
 
-    // Should have called core.warning with the error
-    expect(vi.mocked(core.warning)).toHaveBeenCalledWith(expect.any(Error));
-
-    // Restore mock
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return "{}";
-      }
-      if (command.includes("--show") && command.includes("--json")) {
-        return '{"default_activation_env": ""}';
-      }
-      return "";
+    await writeCondaConfig(inputs, {
+      ...makeOptions(),
+      envSpec: undefined,
     });
+
+    const config = getWrittenConfig();
+    const channels = config["channels"] as string[];
+    expect(channels).not.toContain("defaults");
+    expect(channels).toContain("conda-forge");
   });
 
-  it("warns when both auto_activate and auto_activate_base fail", async () => {
-    const core = await import("@actions/core");
-    const utils = await import("../utils");
-    const { applyCondaConfiguration } = await import("../conda");
+  it("does not duplicate channels already present in existing config", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge" });
 
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return "{}";
-      }
-      if (command.includes("--show") && command.includes("--json")) {
-        return '{"default_activation_env": ""}';
-      }
-      // Fail both auto_activate and auto_activate_base
-      if (
-        command.includes("--set") &&
-        (command.includes("auto_activate") ||
-          command.includes("auto_activate_base"))
-      ) {
-        throw new Error("config set failed");
-      }
-      return "";
-    });
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ channels: ["conda-forge", "defaults"] }),
+    );
 
-    const inputs = makeInputs({ channels: "defaults" });
-    await applyCondaConfiguration(inputs, makeOptions(), false);
+    await writeCondaConfig(inputs, makeOptions());
 
-    // core.warning should have been called with the second error
-    expect(vi.mocked(core.warning)).toHaveBeenCalledWith(expect.any(Error));
-
-    // Restore mock
-    vi.mocked(utils.execute).mockImplementation(async (command: string[]) => {
-      executeCalls.push({ command });
-      if (command.includes("--show-sources") && command.includes("--json")) {
-        return "{}";
-      }
-      if (command.includes("--show") && command.includes("--json")) {
-        return '{"default_activation_env": ""}';
-      }
-      return "";
-    });
+    const config = getWrittenConfig();
+    const channels = config["channels"] as string[];
+    const condaForgeCount = channels.filter((c) => c === "conda-forge").length;
+    expect(condaForgeCount).toBe(1);
   });
 });
 

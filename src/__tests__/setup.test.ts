@@ -54,15 +54,13 @@ vi.mock("../installer", () => ({
 // ./conda
 const mockBootstrapConfig = vi.fn();
 const mockCondaBasePath = vi.fn(() => "/mock/conda");
-const mockCopyConfig = vi.fn();
-const mockApplyCondaConfiguration = vi.fn();
+const mockWriteCondaConfig = vi.fn();
 const mockCondaInit = vi.fn();
 const mockCondaInitActivation = vi.fn();
 vi.mock("../conda", () => ({
   bootstrapConfig: mockBootstrapConfig,
   condaBasePath: mockCondaBasePath,
-  copyConfig: mockCopyConfig,
-  applyCondaConfiguration: mockApplyCondaConfiguration,
+  writeCondaConfig: mockWriteCondaConfig,
   condaInit: mockCondaInit,
   condaInitActivation: mockCondaInitActivation,
 }));
@@ -188,7 +186,7 @@ describe("run", () => {
     expect(mockGetLocalInstallerPath).toHaveBeenCalledOnce();
     expect(mockSetPathVariables).toHaveBeenCalledOnce();
     expect(mockGetEnvSpec).toHaveBeenCalledOnce();
-    expect(mockApplyCondaConfiguration).toHaveBeenCalledOnce();
+    expect(mockWriteCondaConfig).toHaveBeenCalledOnce();
     expect(mockCondaInit).toHaveBeenCalledOnce();
     expect(mockInstallBaseTools).toHaveBeenCalledOnce();
     expect(mockCondaInitActivation).toHaveBeenCalledOnce();
@@ -321,21 +319,15 @@ describe("run", () => {
     );
   });
 
-  it("copies condarc when condaConfigFile is set", async () => {
+  it("passes condaConfigFile through to writeCondaConfig", async () => {
     mockParseInputs.mockResolvedValue(
       makeInputs({ condaConfigFile: "/path/to/.condarc" }),
     );
 
     await importAndRun();
 
-    expect(mockCopyConfig).toHaveBeenCalledOnce();
-  });
-
-  it("skips copying condarc when condaConfigFile is empty", async () => {
-    mockParseInputs.mockResolvedValue(makeInputs({ condaConfigFile: "" }));
-
-    await importAndRun();
-
-    expect(mockCopyConfig).not.toHaveBeenCalled();
+    expect(mockWriteCondaConfig).toHaveBeenCalledOnce();
+    const callArgs = mockWriteCondaConfig.mock.calls[0];
+    expect(callArgs[0].condaConfigFile).toBe("/path/to/.condarc");
   });
 });

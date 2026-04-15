@@ -72,11 +72,6 @@ export async function installBaseTools(
       inputs,
       options,
     );
-
-    // *Now* use the new options, as we may have a new conda/mamba with more supported
-    // options that previously failed. Pass reapply=true to skip channels/pkgs_dirs
-    // which already persist in .condarc from the first call (#57)
-    await conda.applyCondaConfiguration(inputs, postInstallOptions, true);
   } else {
     core.info("No tools were installed in 'base' env.");
   }
