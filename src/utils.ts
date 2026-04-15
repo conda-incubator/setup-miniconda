@@ -1,3 +1,11 @@
+/**
+ * @module utils
+ * Low-level helpers for running shell commands, building conda package
+ * specs, and working with package directories.
+ *
+ * @category Core
+ */
+
 import * as os from "os";
 import * as path from "path";
 import * as stream from "stream";
@@ -6,9 +14,6 @@ import * as exec from "@actions/exec";
 import * as core from "@actions/core";
 import * as constants from "./constants";
 
-/**
- * Split a comma-separated string into trimmed, non-empty entries.
- */
 /**
  * Split a comma-separated string into trimmed, non-empty entries.
  *
@@ -23,7 +28,6 @@ export function parseCommaSeparated(value: string): string[] {
     .filter((s) => s.length > 0);
 }
 
-/** The folder to use as the conda package cache */
 /**
  * Parse the configured `pkgs_dirs` into a list of directories, falling
  * back to a default under the user home if none are configured.
@@ -43,14 +47,34 @@ export function parsePkgsDirs(configuredPkgsDirs: string) {
 }
 
 /**
- * Whether the given env is a conda `base` env
+ * Check whether the given environment name refers to a conda `base` environment.
+ *
+ * @param envName - The environment name to check.
+ * @returns `true` if the name is a known base environment alias.
  */
 export function isBaseEnv(envName: string) {
   return constants.BASE_ENV_NAMES.includes(envName);
 }
 
 /**
- * Run exec.exec with error handling
+ * Execute a shell command with custom environment variables, stdout/stderr
+ * filtering for known warnings and forced errors, and optional output capture.
+ *
+ * @param command - The command and arguments to execute.
+ * @param env - Additional environment variables to merge with `process.env`.
+ * @param captureOutput - When `true`, returns stdout as a string instead of void.
+ * @returns The captured stdout string if `captureOutput` is `true`, otherwise void.
+ * @throws {Error} If the command exits with a non-zero return code.
+ * @throws {Error} If stdout contains any substring in {@link constants.FORCED_ERRORS}.
+ *
+ * @example
+ * ```ts
+ * // Run conda info
+ * await execute(["conda", "info", "--json"]);
+ *
+ * // Capture output
+ * const output = await execute(["conda", "info", "--json"], {}, true);
+ * ```
  */
 export async function execute(
   command: string[],
@@ -104,7 +128,18 @@ export async function execute(
  * Create a conda version spec string.
  *
  * ### Note
- * Generally favors '=' unless specified more tightly.
+ * Generally favors `=` unless the spec already contains an operator.
+ *
+ * @param pkg - The package name.
+ * @param spec - The version spec, optionally prefixed with an operator.
+ * @returns A formatted `pkg=spec` or `pkg<operator>spec` string.
+ *
+ * @example
+ * ```ts
+ * makeSpec("python", "3.11");       // "python=3.11"
+ * makeSpec("conda", ">=23.1");      // "conda>=23.1"
+ * makeSpec("numpy", "1.24|1.25");   // "numpy1.24|1.25"
+ * ```
  */
 export function makeSpec(pkg: string, spec: string) {
   if (spec.match(/[=<>!\|]/)) {

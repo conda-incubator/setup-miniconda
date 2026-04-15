@@ -1,3 +1,11 @@
+/**
+ * @module installer/bundled-miniconda
+ * Use the pre-bundled Miniconda installation already present on the
+ * GitHub Actions runner image, avoiding any download or install step.
+ *
+ * @category Installers
+ */
+
 import * as types from "../types";
 import { MINICONDA_DIR_PATH } from "../constants";
 

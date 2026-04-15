@@ -1,5 +1,8 @@
 /**
+ * @module outputs
  * Modify environment variables and action outputs.
+ *
+ * @category Core
  */
 import * as path from "path";
 
@@ -10,7 +13,10 @@ import * as constants from "./constants";
 import * as conda from "./conda";
 
 /**
- * Add Conda executable to PATH environment variable
+ * Add the conda `condabin` directory to PATH and export the CONDA env variable.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
  */
 export async function setPathVariables(
   inputs: types.IActionInputs,
@@ -28,7 +34,11 @@ export async function setPathVariables(
 }
 
 /**
- * Export the effective environment-file path
+ * Set the action outputs and state for the effective environment-file.
+ *
+ * @param envFile - The path to the environment file used.
+ * @param envContent - The text content of the environment file.
+ * @param patched - Whether the environment file was patched from the original.
  */
 export function setEnvironmentFileOutputs(
   envFile: string,

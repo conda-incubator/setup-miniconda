@@ -1,3 +1,11 @@
+/**
+ * @module delete
+ * Post-action cleanup entry point. Removes extracted packages from the
+ * conda cache to reduce artifact size on GitHub Actions runners.
+ *
+ * @category Core
+ */
+
 import * as fs from "fs";
 import * as path from "path";
 

@@ -110,27 +110,24 @@ describe("miniforgeDownloader", () => {
 
   describe("provides()", () => {
     it("returns true when miniforgeVersion is set", async () => {
-      const { miniforgeDownloader } = await import(
-        "../../installer/download-miniforge"
-      );
+      const { miniforgeDownloader } =
+        await import("../../installer/download-miniforge");
       const inputs = makeInputs({ miniforgeVersion: "4.9.2-5" });
       const result = await miniforgeDownloader.provides(inputs, makeOptions());
       expect(result).toBe(true);
     });
 
     it("returns true when miniforgeVariant is set", async () => {
-      const { miniforgeDownloader } = await import(
-        "../../installer/download-miniforge"
-      );
+      const { miniforgeDownloader } =
+        await import("../../installer/download-miniforge");
       const inputs = makeInputs({ miniforgeVariant: "Mambaforge" });
       const result = await miniforgeDownloader.provides(inputs, makeOptions());
       expect(result).toBe(true);
     });
 
     it("returns true when both miniforgeVersion and miniforgeVariant are set", async () => {
-      const { miniforgeDownloader } = await import(
-        "../../installer/download-miniforge"
-      );
+      const { miniforgeDownloader } =
+        await import("../../installer/download-miniforge");
       const inputs = makeInputs({
         miniforgeVersion: "4.9.2-5",
         miniforgeVariant: "Mambaforge",
@@ -140,9 +137,8 @@ describe("miniforgeDownloader", () => {
     });
 
     it("returns false when neither miniforgeVersion nor miniforgeVariant is set", async () => {
-      const { miniforgeDownloader } = await import(
-        "../../installer/download-miniforge"
-      );
+      const { miniforgeDownloader } =
+        await import("../../installer/download-miniforge");
       const inputs = makeInputs({
         miniforgeVersion: "",
         miniforgeVariant: "",
@@ -155,9 +151,8 @@ describe("miniforgeDownloader", () => {
   describe("installerPath()", () => {
     it("sets useBundled to false in returned options", async () => {
       mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniforge.sh");
-      const { miniforgeDownloader } = await import(
-        "../../installer/download-miniforge"
-      );
+      const { miniforgeDownloader } =
+        await import("../../installer/download-miniforge");
       const inputs = makeInputs({ miniforgeVersion: "latest" });
       const result = await miniforgeDownloader.installerPath(
         inputs,
@@ -177,9 +172,8 @@ describe("downloadMiniforge", () => {
 
   it("constructs a latest URL with default variant when only version=latest", async () => {
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniforge.sh");
-    const { downloadMiniforge } = await import(
-      "../../installer/download-miniforge"
-    );
+    const { downloadMiniforge } =
+      await import("../../installer/download-miniforge");
     const inputs = makeInputs({
       miniforgeVersion: "latest",
       miniforgeVariant: "",
@@ -200,9 +194,8 @@ describe("downloadMiniforge", () => {
 
   it("constructs a versioned URL when version is not latest", async () => {
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniforge.sh");
-    const { downloadMiniforge } = await import(
-      "../../installer/download-miniforge"
-    );
+    const { downloadMiniforge } =
+      await import("../../installer/download-miniforge");
     const inputs = makeInputs({
       miniforgeVersion: "4.9.2-5",
       miniforgeVariant: "",
@@ -223,9 +216,8 @@ describe("downloadMiniforge", () => {
 
   it("uses the provided miniforgeVariant", async () => {
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/mambaforge.sh");
-    const { downloadMiniforge } = await import(
-      "../../installer/download-miniforge"
-    );
+    const { downloadMiniforge } =
+      await import("../../installer/download-miniforge");
     const inputs = makeInputs({
       miniforgeVersion: "latest",
       miniforgeVariant: "Mambaforge",
@@ -244,9 +236,8 @@ describe("downloadMiniforge", () => {
 
   it("defaults variant to Miniforge3 and version to latest when both empty", async () => {
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniforge.sh");
-    const { downloadMiniforge } = await import(
-      "../../installer/download-miniforge"
-    );
+    const { downloadMiniforge } =
+      await import("../../installer/download-miniforge");
     const inputs = makeInputs({
       miniforgeVersion: "",
       miniforgeVariant: "",
@@ -265,9 +256,8 @@ describe("downloadMiniforge", () => {
 
   it("maps arm64 architecture correctly", async () => {
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniforge.sh");
-    const { downloadMiniforge } = await import(
-      "../../installer/download-miniforge"
-    );
+    const { downloadMiniforge } =
+      await import("../../installer/download-miniforge");
     const inputs = makeInputs({
       miniforgeVersion: "latest",
       architecture: "arm64",
@@ -283,9 +273,8 @@ describe("downloadMiniforge", () => {
   });
 
   it("throws for an invalid architecture", async () => {
-    const { downloadMiniforge } = await import(
-      "../../installer/download-miniforge"
-    );
+    const { downloadMiniforge } =
+      await import("../../installer/download-miniforge");
     const inputs = makeInputs({
       miniforgeVersion: "latest",
       architecture: "sparc",
@@ -299,9 +288,8 @@ describe("downloadMiniforge", () => {
   it("uses .exe extension on Windows", async () => {
     mockIsUnix = false;
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniforge.exe");
-    const { downloadMiniforge } = await import(
-      "../../installer/download-miniforge"
-    );
+    const { downloadMiniforge } =
+      await import("../../installer/download-miniforge");
     const inputs = makeInputs({
       miniforgeVersion: "latest",
       architecture: "x64",

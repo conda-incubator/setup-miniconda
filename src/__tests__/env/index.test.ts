@@ -305,9 +305,8 @@ describe("ensureEnvironment", () => {
     }));
 
     // Re-import so the module picks up the mocked providers
-    const { ensureEnvironment: ensureEnvFresh } = await import(
-      "../../env/index"
-    );
+    const { ensureEnvironment: ensureEnvFresh } =
+      await import("../../env/index");
 
     const inputs = makeInputs({ activateEnvironment: "myenv" });
     const options = makeOptions({ envSpec: {} });

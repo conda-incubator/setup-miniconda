@@ -1,3 +1,12 @@
+/**
+ * @module base-tools
+ * Tool provider registry. Collects {@link types.IToolProvider} strategies
+ * for installing or updating conda, mamba, python, and conda-build in the
+ * `base` environment.
+ *
+ * @category Base Tools
+ */
+
 import * as types from "../types";
 
 import * as core from "@actions/core";
@@ -27,9 +36,12 @@ const TOOL_PROVIDERS: types.IToolProvider[] = [
 ];
 
 /**
- * Update the 'base' env with relevant tools
+ * Install all requested tools into the `base` environment in a single solve,
+ * then run any post-install actions and reapply configuration.
  *
- * Do this in one step to avoid multiple solves
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The updated dynamic options after tool installation.
  */
 export async function installBaseTools(
   inputs: types.IActionInputs,

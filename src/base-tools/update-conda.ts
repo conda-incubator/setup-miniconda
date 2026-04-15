@@ -1,7 +1,14 @@
+/**
+ * @module base-tools/update-conda
+ * Tool provider for installing or pinning `conda` in the `base` environment.
+ *
+ * @category Base Tools
+ */
+
 import * as types from "../types";
 import * as utils from "../utils";
 
-/** Install `conda` in the `base` env at a specified version */
+/** Install `conda` in the `base` env at a specified version. */
 export const updateConda: types.IToolProvider = {
   label: "update conda",
   provides: async (inputs, _options) =>
