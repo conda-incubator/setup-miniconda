@@ -43,9 +43,7 @@
     "@actions/exec": "^3.0.0",
     "@actions/io": "^3.0.2",
     "@actions/tool-cache": "^4.0.0",
-    "get-hrefs": "^4.0.0",
     "js-yaml": "^4.1.1",
-    "normalize-url": "^9.0.0",
     "semver": "^7.7.4"
   },
   "devDependencies": {

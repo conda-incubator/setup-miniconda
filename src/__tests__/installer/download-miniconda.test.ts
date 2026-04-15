@@ -11,12 +11,6 @@ vi.mock("@actions/core", () => ({
   warning: vi.fn(),
 }));
 
-vi.mock("@actions/tool-cache", () => ({
-  downloadTool: vi.fn(async () => "/tmp/miniconda-index"),
-  find: vi.fn(() => ""),
-  cacheFile: vi.fn(async () => "/tmp/cached"),
-}));
-
 // OS name used in miniconda installer filenames
 const OS_NAME_MAP: Record<string, string> = {
   linux: "Linux",
@@ -24,27 +18,6 @@ const OS_NAME_MAP: Record<string, string> = {
   win32: "Windows",
 };
 const osName = OS_NAME_MAP[process.platform] ?? "Linux";
-
-vi.mock("fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("fs")>();
-  return {
-    ...actual,
-    readFileSync: vi.fn(
-      () =>
-        `<a href="/Miniconda3-latest-${osName}-x86_64.sh">link</a>` +
-        `<a href="/Miniconda3-py39_4.12.0-${osName}-x86_64.sh">link</a>` +
-        `<a href="/Miniconda3-latest-${osName}-aarch64.sh">link</a>`,
-    ),
-  };
-});
-
-vi.mock("get-hrefs", () => ({
-  default: vi.fn((content: string) => {
-    // Simple extraction for test purposes
-    const matches = content.match(/href="([^"]+)"/g) || [];
-    return matches.map((m: string) => m.replace('href="', "").replace('"', ""));
-  }),
-}));
 
 const mockEnsureLocalInstaller = vi.fn();
 vi.mock("../../installer/base", () => ({
@@ -185,12 +158,6 @@ describe("downloadMiniconda", () => {
   });
 
   it("constructs the correct installer name and URL for a known version", async () => {
-    // Set up the mock to include the expected installer name in the versions list
-    const fs = await import("fs");
-    (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
-      `<a href="/Miniconda3-latest-${osName}-x86_64.sh">link</a>`,
-    );
-
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniconda.sh");
     const { downloadMiniconda } =
       await import("../../installer/download-miniconda");
@@ -217,11 +184,8 @@ describe("downloadMiniconda", () => {
     await expect(downloadMiniconda(3, inputs)).rejects.toThrow(/Invalid arch/i);
   });
 
-  it("throws when the requested version is not found in available versions", async () => {
-    const fs = await import("fs");
-    (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
-      `<a href="/Miniconda3-latest-${osName}-x86_64.sh">link</a>`,
-    );
+  it("wraps ensureLocalInstaller errors with a descriptive message", async () => {
+    mockEnsureLocalInstaller.mockRejectedValue(new Error("HTTP 404"));
 
     const { downloadMiniconda } =
       await import("../../installer/download-miniconda");
@@ -231,16 +195,24 @@ describe("downloadMiniconda", () => {
     });
 
     await expect(downloadMiniconda(3, inputs)).rejects.toThrow(
-      /Invalid miniconda version/i,
+      /Failed to download Miniconda installer/i,
     );
   });
 
-  it("maps architecture names through MINICONDA_ARCHITECTURES", async () => {
-    const fs = await import("fs");
-    (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
-      `<a href="/Miniconda3-latest-${osName}-aarch64.sh">link</a>`,
-    );
+  it("includes the version and platform in the error message", async () => {
+    mockEnsureLocalInstaller.mockRejectedValue(new Error("HTTP 404"));
 
+    const { downloadMiniconda } =
+      await import("../../installer/download-miniconda");
+    const inputs = makeInputs({
+      minicondaVersion: "bad-version",
+      architecture: "x64",
+    });
+
+    await expect(downloadMiniconda(3, inputs)).rejects.toThrow(/bad-version/);
+  });
+
+  it("maps architecture names through MINICONDA_ARCHITECTURES", async () => {
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniconda.sh");
     const { downloadMiniconda } =
       await import("../../installer/download-miniconda");
@@ -259,11 +231,6 @@ describe("downloadMiniconda", () => {
   });
 
   it("defaults minicondaVersion to 'latest' when empty", async () => {
-    const fs = await import("fs");
-    (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
-      `<a href="/Miniconda3-latest-${osName}-x86_64.sh">link</a>`,
-    );
-
     mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniconda.sh");
     const { downloadMiniconda } =
       await import("../../installer/download-miniconda");
@@ -280,32 +247,5 @@ describe("downloadMiniconda", () => {
         url: expect.stringContaining(`Miniconda3-latest-${osName}-`),
       }),
     );
-  });
-
-  it("returns empty array and warns when minicondaVersions fetch fails (lines 33-34)", async () => {
-    // Make tc.downloadTool throw so minicondaVersions enters the catch branch
-    const tc = await import("@actions/tool-cache");
-    vi.mocked(tc.downloadTool).mockRejectedValueOnce(
-      new Error("Network failure"),
-    );
-    const core = await import("@actions/core");
-
-    mockEnsureLocalInstaller.mockResolvedValue("/tmp/miniconda.sh");
-    const { downloadMiniconda } =
-      await import("../../installer/download-miniconda");
-    const inputs = makeInputs({
-      minicondaVersion: "latest",
-      architecture: "x64",
-    });
-
-    // When minicondaVersions returns [] (catch branch), the versions check
-    // `if (versions)` is truthy (empty array is truthy) but
-    // `versions.includes(...)` returns false, so it throws "Invalid miniconda version".
-    await expect(downloadMiniconda(3, inputs)).rejects.toThrow(
-      /Invalid miniconda version/i,
-    );
-
-    // The catch branch should have called core.warning
-    expect(core.warning).toHaveBeenCalledWith(expect.any(Error));
   });
 });
