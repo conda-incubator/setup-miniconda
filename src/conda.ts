@@ -170,11 +170,7 @@ export async function applyCondaConfiguration(
   if (!reapply) {
     // Channels are special: if specified as an action input, these take priority
     // over what is found in (at present) a YAML-based environment
-    let channels = inputs.condaConfig.channels
-      .trim()
-      .split(/,/)
-      .map((c) => c.trim())
-      .filter((c) => c.length);
+    let channels = utils.parseCommaSeparated(inputs.condaConfig.channels);
 
     if (!channels.length && options.envSpec?.yaml?.channels?.length) {
       channels = options.envSpec.yaml.channels;

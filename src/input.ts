@@ -61,6 +61,21 @@ const RULES: IRule[] = [
   (i) =>
     !!(i.installerUrl && i.miniforgeVersion) &&
     `only one of 'installer-url: ${i.installerUrl}' or 'miniforge-version: ${i.miniforgeVersion}' may be provided`,
+  (i) => {
+    if (!i.installerUrl) return false;
+    const ALLOWED_PROTOCOLS = ["https:", "http:", "file:"];
+    try {
+      const protocol = new URL(i.installerUrl).protocol;
+      if (!ALLOWED_PROTOCOLS.includes(protocol)) {
+        return `'installer-url' protocol '${protocol}' is not allowed. Must be one of: ${ALLOWED_PROTOCOLS.join(
+          ", ",
+        )}`;
+      }
+    } catch {
+      return `'installer-url: ${i.installerUrl}' is not a valid URL`;
+    }
+    return false;
+  },
   (i) =>
     !!(
       i.installerUrl &&
