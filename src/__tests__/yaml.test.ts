@@ -69,6 +69,7 @@ function makeInputs(
     condaRemoveDefaults: "false",
     pythonVersion: overrides.pythonVersion ?? "",
     removeProfiles: "true",
+    runInit: "true",
     useMamba: "",
     cleanPatchedEnvironmentFile: "true",
     runPost: "true",
@@ -233,5 +234,191 @@ describe("ensureYaml python-version patching", () => {
       (dep) => typeof dep === "string" && dep.startsWith("python"),
     );
     expect(pythonSpecs).toEqual(["python=3.11"]);
+  });
+});
+
+describe("ensureYaml.provides", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns true when envSpec.yaml has keys", async () => {
+    const inputs = makeInputs();
+    const options = makeOptions({
+      name: "test",
+      channels: ["conda-forge"],
+    });
+    expect(await ensureYaml.provides(inputs, options)).toBe(true);
+  });
+
+  it("returns false when envSpec.yaml is an empty object", async () => {
+    const inputs = makeInputs();
+    const options: types.IDynamicOptions = {
+      useBundled: false,
+      useMamba: false,
+      mambaInInstaller: false,
+      envSpec: { yaml: {} },
+      condaConfig: {},
+    };
+    expect(await ensureYaml.provides(inputs, options)).toBe(false);
+  });
+
+  it("returns false when envSpec.yaml is undefined", async () => {
+    const inputs = makeInputs();
+    const options: types.IDynamicOptions = {
+      useBundled: false,
+      useMamba: false,
+      mambaInInstaller: false,
+      envSpec: {},
+      condaConfig: {},
+    };
+    expect(await ensureYaml.provides(inputs, options)).toBe(false);
+  });
+
+  it("returns false when envSpec is undefined", async () => {
+    const inputs = makeInputs();
+    const options: types.IDynamicOptions = {
+      useBundled: false,
+      useMamba: false,
+      mambaInInstaller: false,
+      envSpec: undefined,
+      condaConfig: {},
+    };
+    expect(await ensureYaml.provides(inputs, options)).toBe(false);
+  });
+});
+
+describe("ensureYaml mamba create vs update subcommand", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("uses 'update' subcommand when useMamba is false", async () => {
+    const yamlData: types.IEnvironment = {
+      name: "test",
+      channels: ["conda-forge"],
+      dependencies: ["numpy"],
+    };
+
+    const inputs = makeInputs();
+    const options = makeOptions(yamlData);
+    options.useMamba = false;
+
+    const args = await ensureYaml.condaArgs(inputs, options);
+    // Should be ["env", "update", "--name", "test", "--file", ...]
+    expect(args[0]).toBe("env");
+    expect(args[1]).toBe("update");
+  });
+
+  it("uses 'create' subcommand when useMamba is true and env path does not exist", async () => {
+    const yamlData: types.IEnvironment = {
+      name: "test",
+      channels: ["conda-forge"],
+      dependencies: ["numpy"],
+    };
+
+    const inputs = makeInputs();
+    const options = makeOptions(yamlData);
+    options.useMamba = true;
+
+    const fs = await import("fs");
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+
+    const args = await ensureYaml.condaArgs(inputs, options);
+    expect(args[0]).toBe("env");
+    expect(args[1]).toBe("create");
+  });
+
+  it("uses 'update' subcommand when useMamba is true and env path exists", async () => {
+    const yamlData: types.IEnvironment = {
+      name: "test",
+      channels: ["conda-forge"],
+      dependencies: ["numpy"],
+    };
+
+    const inputs = makeInputs();
+    const options = makeOptions(yamlData);
+    options.useMamba = true;
+
+    const fs = await import("fs");
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+
+    const args = await ensureYaml.condaArgs(inputs, options);
+    expect(args[0]).toBe("env");
+    expect(args[1]).toBe("update");
+  });
+
+  it("checks the correct env path for --name flag", async () => {
+    const yamlData: types.IEnvironment = {
+      name: "test",
+      channels: ["conda-forge"],
+      dependencies: ["numpy"],
+    };
+
+    const inputs = makeInputs();
+    const options = makeOptions(yamlData);
+    options.useMamba = true;
+
+    const fs = await import("fs");
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+
+    await ensureYaml.condaArgs(inputs, options);
+
+    // envCommandFlag returns ["--name", "test"], so envPath should be
+    // condaBasePath + "/envs/" + "test" = "/mock/conda/envs/test"
+    const path = await import("path");
+    expect(fs.existsSync).toHaveBeenCalledWith(
+      path.join("/mock/conda", "envs", "test"),
+    );
+  });
+  it("uses nameOrPath directly as envPath for --prefix flag (path-based env)", async () => {
+    const yamlData: types.IEnvironment = {
+      name: "test",
+      channels: ["conda-forge"],
+      dependencies: ["numpy"],
+    };
+
+    // Mock envCommandFlag to return --prefix (as if activateEnvironment contains /)
+    const conda = await import("../conda");
+    vi.mocked(conda.envCommandFlag).mockReturnValue([
+      "--prefix",
+      "/custom/envs/myenv",
+    ]);
+
+    const inputs = makeInputs();
+    const options = makeOptions(yamlData);
+    options.useMamba = true;
+
+    const fs = await import("fs");
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+
+    const args = await ensureYaml.condaArgs(inputs, options);
+
+    // With --prefix, envPath should be nameOrPath directly, not condaBasePath/envs/name
+    expect(fs.existsSync).toHaveBeenCalledWith("/custom/envs/myenv");
+    expect(args[1]).toBe("create"); // doesn't exist → create
+    expect(args[2]).toBe("--prefix");
+    expect(args[3]).toBe("/custom/envs/myenv");
+
+    // Restore default mock
+    vi.mocked(conda.envCommandFlag).mockReturnValue(["--name", "test"]);
+  });
+});
+
+describe("ensureYaml.condaArgs error handling", () => {
+  it("throws when yamlData is null (line 68)", async () => {
+    // envSpec.yaml is set to undefined/null but provides() was bypassed
+    const inputs = makeInputs();
+    const options: types.IDynamicOptions = {
+      useBundled: false,
+      useMamba: false,
+      mambaInInstaller: false,
+      envSpec: { yaml: undefined as unknown as types.IEnvironment },
+      condaConfig: {},
+    };
+
+    await expect(ensureYaml.condaArgs(inputs, options)).rejects.toThrow(
+      "appears to be malformed",
+    );
   });
 });
