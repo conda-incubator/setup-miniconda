@@ -53709,6 +53709,12 @@ var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
 /**
  * Split a comma-separated string into trimmed, non-empty entries.
  */
+/**
+ * Split a comma-separated string into trimmed, non-empty entries.
+ *
+ * @param value - Comma-separated string to split.
+ * @returns An array of trimmed, non-empty string entries.
+ */
 function parseCommaSeparated(value) {
     return value
         .trim()
@@ -53717,6 +53723,13 @@ function parseCommaSeparated(value) {
         .filter((s) => s.length > 0);
 }
 /** The folder to use as the conda package cache */
+/**
+ * Parse the configured `pkgs_dirs` into a list of directories, falling
+ * back to a default under the user home if none are configured.
+ *
+ * @param configuredPkgsDirs - Comma-separated string of package directory paths.
+ * @returns An array of resolved package directory paths.
+ */
 function parsePkgsDirs(configuredPkgsDirs) {
     const pkgsDirs = parseCommaSeparated(configuredPkgsDirs);
     // Falling back to our default package directories value
