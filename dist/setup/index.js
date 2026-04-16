@@ -33928,1963 +33928,6 @@ function parseInputs() {
     });
 }
 
-;// CONCATENATED MODULE: external "stream"
-const external_stream_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("stream");
-;// CONCATENATED MODULE: ./src/utils.ts
-/**
- * @module utils
- * Low-level helpers for running shell commands, building conda package
- * specs, and working with package directories.
- *
- * @category Core
- */
-var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-
-
-
-
-
-/**
- * Split a comma-separated string into trimmed, non-empty entries.
- *
- * @param value - Comma-separated string to split.
- * @returns An array of trimmed, non-empty string entries.
- */
-function parseCommaSeparated(value) {
-    return value
-        .trim()
-        .split(/,/)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
-}
-/**
- * Parse the configured `pkgs_dirs` into a list of directories, falling
- * back to a default under the user home if none are configured.
- *
- * @param configuredPkgsDirs - Comma-separated string of package directory paths.
- * @returns An array of resolved package directory paths.
- */
-function parsePkgsDirs(configuredPkgsDirs) {
-    const pkgsDirs = parseCommaSeparated(configuredPkgsDirs);
-    // Falling back to our default package directories value
-    if (pkgsDirs.length) {
-        return pkgsDirs;
-    }
-    else {
-        return [external_path_namespaceObject.join(external_os_namespaceObject.homedir(), DEFAULT_PKGS_DIR)];
-    }
-}
-/**
- * Check whether the given environment name refers to a conda `base` environment.
- *
- * @param envName - The environment name to check.
- * @returns `true` if the name is a known base environment alias.
- */
-function isBaseEnv(envName) {
-    return BASE_ENV_NAMES.includes(envName);
-}
-/**
- * Execute a shell command with custom environment variables, stdout/stderr
- * filtering for known warnings and forced errors, and optional output capture.
- *
- * @param command - The command and arguments to execute.
- * @param env - Additional environment variables to merge with `process.env`.
- * @param captureOutput - When `true`, returns stdout as a string instead of void.
- * @returns The captured stdout string if `captureOutput` is `true`, otherwise void.
- * @throws {Error} If the command exits with a non-zero return code.
- * @throws {Error} If stdout contains any substring in {@link constants.FORCED_ERRORS}.
- *
- * @example
- * ```ts
- * // Run conda info
- * await execute(["conda", "info", "--json"]);
- *
- * // Capture output
- * const output = await execute(["conda", "info", "--json"], {}, true);
- * ```
- */
-function execute(command_1) {
-    return utils_awaiter(this, arguments, void 0, function* (command, env = {}, captureOutput = false) {
-        let capturedOutput = "";
-        const options = {
-            errStream: new external_stream_namespaceObject.Writable(),
-            listeners: {
-                stdout: (data) => {
-                    const stringData = data.toString();
-                    if (captureOutput) {
-                        capturedOutput += stringData;
-                    }
-                    for (const forced_error of FORCED_ERRORS) {
-                        if (stringData.includes(forced_error)) {
-                            throw new Error(`"${command}" failed with "${forced_error}"`);
-                        }
-                    }
-                    return data;
-                },
-                stderr: (data) => {
-                    const stringData = data.toString();
-                    for (const ignore of IGNORED_WARNINGS) {
-                        if (stringData.includes(ignore)) {
-                            return;
-                        }
-                    }
-                    warning(stringData);
-                },
-            },
-            env: Object.assign(Object.assign({}, process.env), env),
-        };
-        const exe = command[0];
-        if (!exe) {
-            throw new Error("execute() called with empty command array");
-        }
-        const rc = yield exec_exec(exe, command.slice(1), options);
-        if (rc !== 0) {
-            throw new Error(`${exe} return error code ${rc}`);
-        }
-        if (captureOutput) {
-            return capturedOutput;
-        }
-    });
-}
-/**
- * Create a conda version spec string.
- *
- * ### Note
- * Generally favors `=` unless the spec already contains an operator.
- *
- * @param pkg - The package name.
- * @param spec - The version spec, optionally prefixed with an operator.
- * @returns A formatted `pkg=spec` or `pkg<operator>spec` string.
- *
- * @example
- * ```ts
- * makeSpec("python", "3.11");       // "python=3.11"
- * makeSpec("conda", ">=23.1");      // "conda>=23.1"
- * makeSpec("numpy", "1.24|1.25");   // "numpy1.24|1.25"
- * ```
- */
-function makeSpec(pkg, spec) {
-    if (spec.match(/[=<>!\|]/)) {
-        return `${pkg}${spec}`;
-    }
-    else {
-        return `${pkg}=${spec}`;
-    }
-}
-
-;// CONCATENATED MODULE: ./src/conda.ts
-/**
- * @module conda
- * High-level helpers for locating, running, and configuring a conda or
- * mamba installation, including shell initialization and `.condarc` management.
- *
- * @category Core
- */
-var conda_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-//-----------------------------------------------------------------------
-// Conda helpers
-//-----------------------------------------------------------------------
-
-
-
-
-
-
-
-/**
- * Return the base path of the conda installation, determined by whether
- * the bundled install, a custom directory, or the default `~/miniconda3` is in use.
- *
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- * @returns The absolute path to the conda base directory.
- */
-function condaBasePath(inputs, options) {
-    let condaPath;
-    if (options.useBundled) {
-        condaPath = MINICONDA_DIR_PATH;
-    }
-    else if (inputs.installationDir) {
-        condaPath = constants_IS_WINDOWS
-            ? inputs.installationDir.replace("/", "\\")
-            : inputs.installationDir;
-    }
-    else {
-        condaPath = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), "miniconda3");
-    }
-    return condaPath;
-}
-/**
- * Return the conda CLI flags for identifying an environment by name or prefix.
- *
- * ### Note
- * Only really detects by presence of a path separator, as the path may not yet exist.
- *
- * @param inputs - The parsed action inputs.
- * @returns A two-element array of `["--name"|"--prefix", envName]`.
- */
-function envCommandFlag(inputs) {
-    return [
-        inputs.activateEnvironment.match(/(\\|\/)/) ? "--prefix" : "--name",
-        inputs.activateEnvironment,
-    ];
-}
-/**
- * Return candidate paths where the conda or mamba executable might exist,
- * checking both `condabin` and platform-specific binary directories.
- *
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- * @param subcommand - If provided, mamba is only used when it supports this subcommand.
- * @returns An array of candidate executable paths.
- */
-function condaExecutableLocations(inputs, options, subcommand) {
-    const dir = condaBasePath(inputs, options);
-    const condaExes = [];
-    let commandName = "conda";
-    if (options.useMamba &&
-        (subcommand == null || MAMBA_SUBCOMMANDS.includes(subcommand))) {
-        commandName = "mamba";
-    }
-    condaExes.push(external_path_namespaceObject.join(dir, "condabin", constants_IS_WINDOWS ? commandName + ".bat" : commandName));
-    if (constants_IS_WINDOWS) {
-        condaExes.push(external_path_namespaceObject.join(dir, "Library", "bin", commandName + ".exe"));
-    }
-    else {
-        condaExes.push(external_path_namespaceObject.join(dir, "bin", commandName));
-    }
-    return condaExes;
-}
-/**
- * Find and return the first existing conda or mamba executable, throwing
- * an error if none of the candidate locations exist on disk.
- *
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- * @param subcommand - If provided, mamba is only used when it supports this subcommand.
- * @returns The absolute path to the found executable.
- * @throws {Error} If no conda or mamba executable exists at any candidate location.
- */
-function condaExecutable(inputs, options, subcommand) {
-    const locations = condaExecutableLocations(inputs, options, subcommand);
-    for (const exe of locations) {
-        if (external_fs_namespaceObject.existsSync(exe))
-            return exe;
-    }
-    throw Error(`No existing ${options.useMamba ? "mamba" : "conda"} executable found at any of ${locations}`);
-}
-/**
- * Check whether a mamba executable exists in the current conda installation.
- *
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- * @returns `true` if mamba is found at any candidate location.
- */
-function isMambaInstalled(inputs, options) {
-    for (const exe of condaExecutableLocations(inputs, Object.assign(Object.assign({}, options), { useMamba: true }))) {
-        if (external_fs_namespaceObject.existsSync(exe))
-            return true;
-    }
-    return false;
-}
-/**
- * Run a conda or mamba CLI command, resolving the executable and setting
- * `MAMBA_ROOT_PREFIX` when mamba is in use.
- *
- * @param cmd - The conda subcommand and arguments (e.g. `["install", "numpy"]`).
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- * @param captureOutput - When `true`, returns stdout as a string.
- * @returns The captured stdout if `captureOutput` is `true`, otherwise void.
- * @throws {Error} If the command exits with a non-zero return code.
- *
- * @example
- * ```ts
- * // Install numpy into the active env
- * await condaCommand(["install", "numpy"], inputs, options);
- *
- * // Capture JSON config output
- * const json = await condaCommand(
- *   ["config", "--show", "--json"], inputs, options, true
- * );
- * ```
- */
-function condaCommand(cmd_1, inputs_1, options_1) {
-    return conda_awaiter(this, arguments, void 0, function* (cmd, inputs, options, captureOutput = false) {
-        const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
-        const env = {};
-        if (options.useMamba) {
-            env["MAMBA_ROOT_PREFIX"] = condaBasePath(inputs, options);
-        }
-        return yield execute(command, env, captureOutput);
-    });
-}
-/**
- * Write a minimal bootstrap `.condarc` file to suppress early warnings.
- */
-function bootstrapConfig() {
-    return conda_awaiter(this, void 0, void 0, function* () {
-        yield external_fs_namespaceObject.promises.writeFile(CONDARC_PATH, BOOTSTRAP_CONDARC);
-    });
-}
-/**
- * Copy a user-provided `.condarc` file from the workspace into `~/.condarc`.
- *
- * @param inputs - The parsed action inputs containing the condarc file path.
- */
-function copyConfig(inputs) {
-    return conda_awaiter(this, void 0, void 0, function* () {
-        const sourcePath = external_path_namespaceObject.join(process.env["GITHUB_WORKSPACE"] || "", inputs.condaConfigFile);
-        info(`Copying "${sourcePath}" to "${CONDARC_PATH}..."`);
-        yield io_cp(sourcePath, CONDARC_PATH);
-    });
-}
-/**
- * Apply all conda configuration from the action inputs, including channels,
- * package directories, auto-activation, and arbitrary config keys.
- *
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- * @param reapply - When `true`, skip channels and `pkgs_dirs` that persist from the first call.
- */
-function applyCondaConfiguration(inputs_1, options_1) {
-    return conda_awaiter(this, arguments, void 0, function* (inputs, options, reapply = false) {
-        var _a, _b, _c, _d;
-        const configEntries = Object.entries(inputs.condaConfig);
-        // Skip channels and pkgs_dirs on reapply — they persist in .condarc from the
-        // first call and re-adding them produces spurious warnings (see #57)
-        if (!reapply) {
-            // Channels are special: if specified as an action input, these take priority
-            // over what is found in (at present) a YAML-based environment
-            let channels = parseCommaSeparated(inputs.condaConfig.channels);
-            if (!channels.length && ((_c = (_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) === null || _b === void 0 ? void 0 : _b.channels) === null || _c === void 0 ? void 0 : _c.length)) {
-                channels = options.envSpec.yaml.channels;
-            }
-            // This can be enabled via conda-remove-defaults and channels = nodefaults
-            let removeDefaults = inputs.condaRemoveDefaults === "true";
-            // LIFO: reverse order to preserve higher priority as listed in the option
-            // .slice ensures working against a copy
-            for (const channel of channels.slice().reverse()) {
-                if (channel === "nodefaults") {
-                    warning("'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
-                        "In the future, 'nodefaults' to remove 'defaults' won't be supported. " +
-                        "Please set 'conda-remove-defaults' = 'true' in setup-miniconda to remove this warning.");
-                    removeDefaults = true;
-                    continue;
-                }
-                info(`Adding channel '${channel}'`);
-                yield condaCommand(["config", "--add", "channels", channel], inputs, options);
-            }
-            if (!channels.includes("defaults")) {
-                if (removeDefaults) {
-                    info("Removing implicitly added 'defaults' channel");
-                    const configsOutput = (yield condaCommand(["config", "--show-sources", "--json"], inputs, options, true));
-                    const configs = JSON.parse(configsOutput);
-                    for (const fileName in configs) {
-                        const fileConfig = configs[fileName];
-                        if ((_d = fileConfig === null || fileConfig === void 0 ? void 0 : fileConfig.channels) === null || _d === void 0 ? void 0 : _d.includes("defaults")) {
-                            yield condaCommand([
-                                "config",
-                                "--remove",
-                                "channels",
-                                "defaults",
-                                "--file",
-                                fileName,
-                            ], inputs, options);
-                        }
-                    }
-                }
-                else {
-                    warning("The 'defaults' channel might have been added implicitly. " +
-                        "If this is intentional, add 'defaults' to the 'channels' list. " +
-                        "Otherwise, consider setting 'conda-remove-defaults' to 'true'.");
-                }
-            }
-            // Package directories are also comma-separated, like channels
-            const pkgsDirs = parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
-            for (const pkgsDir of pkgsDirs) {
-                info(`Adding pkgs_dir '${pkgsDir}'`);
-                yield condaCommand(["config", "--add", "pkgs_dirs", pkgsDir], inputs, options);
-            }
-        }
-        // auto_activate_base was renamed to auto_activate in 25.5.0
-        info(`auto_activate: ${inputs.condaConfig.auto_activate}`);
-        try {
-            // 25.5.0+
-            yield condaCommand(["config", "--set", "auto_activate", inputs.condaConfig.auto_activate], inputs, options);
-        }
-        catch (_e) {
-            try {
-                // <25.5.0
-                yield condaCommand([
-                    "config",
-                    "--set",
-                    "auto_activate_base",
-                    inputs.condaConfig.auto_activate,
-                ], inputs, options);
-            }
-            catch (err2) {
-                warning(err2);
-            }
-        }
-        // All other options are just passed as their string representations
-        for (const [key, value] of configEntries) {
-            if (value.trim().length === 0 ||
-                key === "channels" ||
-                key === "pkgs_dirs" ||
-                key === "auto_activate") {
-                continue;
-            }
-            info(`${key}: ${value}`);
-            try {
-                yield condaCommand(["config", "--set", key, value], inputs, options);
-            }
-            catch (err) {
-                warning(err);
-            }
-        }
-        // Log all configuration information
-        yield condaCommand(["config", "--show-sources"], inputs, options);
-        yield condaCommand(["config", "--show"], inputs, options);
-    });
-}
-/**
- * Resolve an environment name or path to a fully-qualified absolute path.
- *
- * @param inputPathOrName - An environment name or path (e.g. `"myenv"` or `"~/envs/myenv"`).
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- * @returns The resolved absolute path to the environment directory.
- */
-function _getFullEnvironmentPath(inputPathOrName, inputs, options) {
-    if (!inputPathOrName.includes("/")) {
-        // likely an environment name
-        const installationDirectory = condaBasePath(inputs, options);
-        if (isBaseEnv(inputPathOrName)) {
-            return external_path_namespaceObject.resolve(installationDirectory);
-        }
-        return external_path_namespaceObject.resolve(installationDirectory, "envs", inputPathOrName);
-    }
-    if (inputPathOrName.startsWith("~/")) {
-        return external_path_namespaceObject.resolve(external_os_namespaceObject.homedir(), inputPathOrName.slice(2));
-    }
-    return external_path_namespaceObject.resolve(inputPathOrName);
-}
-/**
- * Determine whether the given environment is the default activation target,
- * either via `default_activation_env` config or by being a base environment alias.
- *
- * @param envName - The environment name to check.
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- * @returns `true` if the environment is the default activation target.
- */
-function isDefaultEnvironment(envName, inputs, options) {
-    return conda_awaiter(this, void 0, void 0, function* () {
-        const configsOutput = (yield condaCommand(["config", "--show", "--json"], inputs, options, true));
-        const config = JSON.parse(configsOutput);
-        if (config.default_activation_env) {
-            const defaultEnv = _getFullEnvironmentPath(config.default_activation_env, inputs, options);
-            const activationEnv = _getFullEnvironmentPath(envName, inputs, options);
-            return defaultEnv === activationEnv;
-        }
-        return isBaseEnv(envName);
-    });
-}
-/**
- * Initialize conda shell integration for all shells, fix folder ownership
- * on bundled installs, and remove/rename profile files.
- *
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- */
-function condaInit(inputs, options) {
-    return conda_awaiter(this, void 0, void 0, function* () {
-        // Fix ownership of folders
-        if (options.useBundled) {
-            if (IS_MAC) {
-                info("Fixing conda folders ownership");
-                const userName = external_os_namespaceObject.userInfo().username;
-                yield execute([
-                    "sudo",
-                    "chown",
-                    "-R",
-                    `${userName}:staff`,
-                    condaBasePath(inputs, options),
-                ]);
-            }
-            else if (constants_IS_WINDOWS) {
-                const basePath = condaBasePath(inputs, options);
-                const takeownPromises = WIN_PERMS_FOLDERS.map((folder) => {
-                    const ownPath = external_path_namespaceObject.join(basePath, folder);
-                    if (external_fs_namespaceObject.existsSync(ownPath)) {
-                        info(`Fixing ${folder} ownership`);
-                        return execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
-                    }
-                    return undefined;
-                }).filter(Boolean);
-                yield Promise.all(takeownPromises);
-            }
-        }
-        // Skip conda init and all profile modifications if run-init is false
-        if (inputs.runInit == "false") {
-            info("Skipping conda init and profile modifications (run-init=false)");
-        }
-        else {
-            // Remove profile files
-            if (inputs.removeProfiles == "true") {
-                for (const rc of PROFILES) {
-                    try {
-                        const file = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), rc);
-                        if (external_fs_namespaceObject.existsSync(file)) {
-                            info(`Removing "${file}"`);
-                            yield rmRF(file);
-                        }
-                    }
-                    catch (err) {
-                        warning(err);
-                    }
-                }
-            }
-            // Run conda init
-            for (const cmd of ["--all"]) {
-                yield condaCommand(["init", cmd], inputs, options);
-            }
-            if (inputs.removeProfiles == "true") {
-                // Rename files
-                if (IS_LINUX) {
-                    const source = "~/.bashrc".replace("~", external_os_namespaceObject.homedir());
-                    const dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
-                    if (external_fs_namespaceObject.existsSync(source)) {
-                        info(`Renaming "${source}" to "${dest}"\n`);
-                        yield mv(source, dest);
-                    }
-                }
-                else if (IS_MAC) {
-                    const source = "~/.bash_profile".replace("~", external_os_namespaceObject.homedir());
-                    const dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
-                    if (external_fs_namespaceObject.existsSync(source)) {
-                        info(`Renaming "${source}" to "${dest}"\n`);
-                        yield mv(source, dest);
-                    }
-                }
-            }
-        }
-    });
-}
-/**
- * Append activation commands to all shell profile files so that
- * subsequent workflow steps start with the correct environment active.
- *
- * This must be called AFTER the target environment has been created,
- * otherwise `.bat` wrappers (which source `conda_hook.bat`) would try
- * to activate a non-existent environment during setup and emit false
- * warnings (see #474).
- *
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- */
-function condaInitActivation(inputs, options) {
-    return conda_awaiter(this, void 0, void 0, function* () {
-        // Skip profile modifications when run-init is false (mirrors condaInit guard)
-        if (inputs.runInit == "false") {
-            info("Skipping activation profile modifications (run-init=false)");
-            return;
-        }
-        const isValidActivate = !!inputs.activateEnvironment &&
-            !(yield isDefaultEnvironment(inputs.activateEnvironment, inputs, options));
-        const autoActivateDefault = options.condaConfig.auto_activate === "true";
-        const installationDirectory = condaBasePath(inputs, options);
-        // PowerShell profiles
-        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-        const powerLines = [
-            "",
-            "# ----------------------------------------------------------------------------",
-        ];
-        if (isValidActivate) {
-            powerLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`);
-        }
-        powerLines.push("# ----------------------------------------------------------------------------");
-        const powerExtraText = powerLines.join("\n");
-        // Bash profiles
-        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-        const bashLines = [
-            "",
-            "# ----------------------------------------------------------------------------",
-            "# Conda Setup Action: Basic configuration",
-            "set -eo pipefail",
-        ];
-        if (isValidActivate) {
-            bashLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`, "# ----------------------------------------------------------------------------");
-        }
-        const bashExtraText = bashLines.join("\n");
-        // Xonsh profiles
-        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-        const xonshLines = [
-            "",
-            "# ----------------------------------------------------------------------------",
-            "# Conda Setup Action: Basic configuration",
-            "$RAISE_SUBPROC_ERROR = True", // equivalent to: set -e
-            "$XONSH_PIPEFAIL = True", // equivalent to: set -o pipefail
-        ];
-        if (isValidActivate) {
-            xonshLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`, "# ----------------------------------------------------------------------------");
-        }
-        const xonshExtraText = xonshLines.join("\n");
-        // Batch profiles
-        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
-        const batchLines = [
-            "",
-            ":: ---------------------------------------------------------------------------",
-        ];
-        if (autoActivateDefault) {
-            batchLines.push(":: Conda Setup Action: Activate default environment", '@CALL "%CONDA_BAT%" activate');
-        }
-        if (isValidActivate) {
-            batchLines.push(":: Conda Setup Action: Custom activation", `@CALL "%CONDA_BAT%" activate "${inputs.activateEnvironment}"`);
-        }
-        batchLines.push(":: Conda Setup Action: Basic configuration", "@SETLOCAL EnableExtensions", "@SETLOCAL DisableDelayedExpansion", ":: ---------------------------------------------------------------------------");
-        const batchExtraText = batchLines.join("\n");
-        const shells = {
-            "~/.bash_profile": bashExtraText,
-            "~/.profile": bashExtraText,
-            "~/.zshrc": bashExtraText,
-            "~/.config/fish/config.fish": bashExtraText,
-            "~/.tcshrc": bashExtraText,
-            "~/.xonshrc": xonshExtraText,
-            "~/.config/powershell/profile.ps1": powerExtraText,
-            "~/Documents/PowerShell/profile.ps1": powerExtraText,
-            "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
-            [external_path_namespaceObject.join(installationDirectory, "etc", "profile.d", "conda.sh")]: bashExtraText,
-            [external_path_namespaceObject.join(installationDirectory, "etc", "fish", "conf.d", "conda.fish")]: bashExtraText,
-            [external_path_namespaceObject.join(installationDirectory, "condabin", "conda_hook.bat")]: batchExtraText,
-        };
-        Object.keys(shells).forEach((key) => {
-            const filePath = key.replace("~", external_os_namespaceObject.homedir());
-            const text = shells[key];
-            if (text != null && external_fs_namespaceObject.existsSync(filePath)) {
-                info(`Append to "${filePath}":\n ${text} \n`);
-                external_fs_namespaceObject.appendFileSync(filePath, text);
-            }
-        });
-    });
-}
-
-;// CONCATENATED MODULE: ./src/outputs.ts
-var outputs_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-/**
- * @module outputs
- * Modify environment variables and action outputs.
- *
- * @category Core
- */
-
-
-
-
-/**
- * Add the conda `condabin` directory to PATH and export the CONDA env variable.
- *
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- */
-function setPathVariables(inputs, options) {
-    return outputs_awaiter(this, void 0, void 0, function* () {
-        const condaBin = external_path_namespaceObject.join(condaBasePath(inputs, options), "condabin");
-        const condaPath = condaBasePath(inputs, options);
-        info(`Add "${condaBin}" to PATH`);
-        addPath(condaBin);
-        info(`Set 'CONDA="${condaPath}"'`);
-        exportVariable("CONDA", condaPath);
-    });
-}
-/**
- * Set the action outputs and state for the effective environment-file.
- *
- * @param envFile - The path to the environment file used.
- * @param envContent - The text content of the environment file.
- * @param patched - Whether the environment file was patched from the original.
- */
-function setEnvironmentFileOutputs(envFile, envContent, patched = false) {
-    setOutput(OUTPUT_ENV_FILE_PATH, external_path_namespaceObject.resolve(envFile));
-    setOutput(OUTPUT_ENV_FILE_CONTENT, envContent);
-    setOutput(OUTPUT_ENV_FILE_WAS_PATCHED, patched ? "true" : "false");
-    saveState(OUTPUT_ENV_FILE_WAS_PATCHED, patched);
-}
-
-;// CONCATENATED MODULE: external "url"
-const external_url_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("url");
-;// CONCATENATED MODULE: ./node_modules/@actions/tool-cache/lib/manifest.js
-var manifest_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-
-
-
-
-// Internal object for testability (allows mocking in ESM)
-const _internal = {
-    readLinuxVersionFile() {
-        const lsbReleaseFile = '/etc/lsb-release';
-        const osReleaseFile = '/etc/os-release';
-        let contents = '';
-        if (external_fs_namespaceObject.existsSync(lsbReleaseFile)) {
-            contents = external_fs_namespaceObject.readFileSync(lsbReleaseFile).toString();
-        }
-        else if (external_fs_namespaceObject.existsSync(osReleaseFile)) {
-            contents = external_fs_namespaceObject.readFileSync(osReleaseFile).toString();
-        }
-        return contents;
-    }
-};
-function _findMatch(versionSpec, stable, candidates, archFilter) {
-    return manifest_awaiter(this, void 0, void 0, function* () {
-        const platFilter = os.platform();
-        let result;
-        let match;
-        let file;
-        for (const candidate of candidates) {
-            const version = candidate.version;
-            debug(`check ${version} satisfies ${versionSpec}`);
-            if (semver.satisfies(version, versionSpec) &&
-                (!stable || candidate.stable === stable)) {
-                file = candidate.files.find(item => {
-                    debug(`${item.arch}===${archFilter} && ${item.platform}===${platFilter}`);
-                    let chk = item.arch === archFilter && item.platform === platFilter;
-                    if (chk && item.platform_version) {
-                        const osVersion = _getOsVersion();
-                        if (osVersion === item.platform_version) {
-                            chk = true;
-                        }
-                        else {
-                            chk = semver.satisfies(osVersion, item.platform_version);
-                        }
-                    }
-                    return chk;
-                });
-                if (file) {
-                    debug(`matched ${candidate.version}`);
-                    match = candidate;
-                    break;
-                }
-            }
-        }
-        if (match && file) {
-            // clone since we're mutating the file list to be only the file that matches
-            result = Object.assign({}, match);
-            result.files = [file];
-        }
-        return result;
-    });
-}
-function _getOsVersion() {
-    // TODO: add windows and other linux, arm variants
-    // right now filtering on version is only an ubuntu and macos scenario for tools we build for hosted (python)
-    const plat = os.platform();
-    let version = '';
-    if (plat === 'darwin') {
-        version = cp.execSync('sw_vers -productVersion').toString();
-    }
-    else if (plat === 'linux') {
-        // lsb_release process not in some containers, readfile
-        // Run cat /etc/lsb-release
-        // DISTRIB_ID=Ubuntu
-        // DISTRIB_RELEASE=18.04
-        // DISTRIB_CODENAME=bionic
-        // DISTRIB_DESCRIPTION="Ubuntu 18.04.4 LTS"
-        const lsbContents = _internal.readLinuxVersionFile();
-        if (lsbContents) {
-            const lines = lsbContents.split('\n');
-            for (const line of lines) {
-                const parts = line.split('=');
-                if (parts.length === 2 &&
-                    (parts[0].trim() === 'VERSION_ID' ||
-                        parts[0].trim() === 'DISTRIB_RELEASE')) {
-                    version = parts[1].trim().replace(/^"/, '').replace(/"$/, '');
-                    break;
-                }
-            }
-        }
-    }
-    return version;
-}
-// Alias for backwards compatibility
-function _readLinuxVersionFile() {
-    return _internal.readLinuxVersionFile();
-}
-//# sourceMappingURL=manifest.js.map
-// EXTERNAL MODULE: external "util"
-var external_util_ = __nccwpck_require__(9023);
-;// CONCATENATED MODULE: ./node_modules/@actions/tool-cache/lib/retry-helper.js
-var retry_helper_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-/**
- * Internal class for retries
- */
-class RetryHelper {
-    constructor(maxAttempts, minSeconds, maxSeconds) {
-        if (maxAttempts < 1) {
-            throw new Error('max attempts should be greater than or equal to 1');
-        }
-        this.maxAttempts = maxAttempts;
-        this.minSeconds = Math.floor(minSeconds);
-        this.maxSeconds = Math.floor(maxSeconds);
-        if (this.minSeconds > this.maxSeconds) {
-            throw new Error('min seconds should be less than or equal to max seconds');
-        }
-    }
-    execute(action, isRetryable) {
-        return retry_helper_awaiter(this, void 0, void 0, function* () {
-            let attempt = 1;
-            while (attempt < this.maxAttempts) {
-                // Try
-                try {
-                    return yield action();
-                }
-                catch (err) {
-                    if (isRetryable && !isRetryable(err)) {
-                        throw err;
-                    }
-                    info(err.message);
-                }
-                // Sleep
-                const seconds = this.getSleepAmount();
-                info(`Waiting ${seconds} seconds before trying again`);
-                yield this.sleep(seconds);
-                attempt++;
-            }
-            // Last attempt
-            return yield action();
-        });
-    }
-    getSleepAmount() {
-        return (Math.floor(Math.random() * (this.maxSeconds - this.minSeconds + 1)) +
-            this.minSeconds);
-    }
-    sleep(seconds) {
-        return retry_helper_awaiter(this, void 0, void 0, function* () {
-            return new Promise(resolve => setTimeout(resolve, seconds * 1000));
-        });
-    }
-}
-//# sourceMappingURL=retry-helper.js.map
-;// CONCATENATED MODULE: ./node_modules/@actions/tool-cache/lib/tool-cache.js
-var tool_cache_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class HTTPError extends Error {
-    constructor(httpStatusCode) {
-        super(`Unexpected HTTP response: ${httpStatusCode}`);
-        this.httpStatusCode = httpStatusCode;
-        Object.setPrototypeOf(this, new.target.prototype);
-    }
-}
-const tool_cache_IS_WINDOWS = process.platform === 'win32';
-const tool_cache_IS_MAC = process.platform === 'darwin';
-const userAgent = 'actions/tool-cache';
-/**
- * Download a tool from an url and stream it into a file
- *
- * @param url       url of tool to download
- * @param dest      path to download tool
- * @param auth      authorization header
- * @param headers   other headers
- * @returns         path to downloaded tool
- */
-function downloadTool(url, dest, auth, headers) {
-    return tool_cache_awaiter(this, void 0, void 0, function* () {
-        dest = dest || external_path_namespaceObject.join(_getTempDirectory(), external_crypto_namespaceObject.randomUUID());
-        yield mkdirP(external_path_namespaceObject.dirname(dest));
-        core_debug(`Downloading ${url}`);
-        core_debug(`Destination ${dest}`);
-        const maxAttempts = 3;
-        const minSeconds = _getGlobal('TEST_DOWNLOAD_TOOL_RETRY_MIN_SECONDS', 10);
-        const maxSeconds = _getGlobal('TEST_DOWNLOAD_TOOL_RETRY_MAX_SECONDS', 20);
-        const retryHelper = new RetryHelper(maxAttempts, minSeconds, maxSeconds);
-        return yield retryHelper.execute(() => tool_cache_awaiter(this, void 0, void 0, function* () {
-            return yield downloadToolAttempt(url, dest || '', auth, headers);
-        }), (err) => {
-            if (err instanceof HTTPError && err.httpStatusCode) {
-                // Don't retry anything less than 500, except 408 Request Timeout and 429 Too Many Requests
-                if (err.httpStatusCode < 500 &&
-                    err.httpStatusCode !== 408 &&
-                    err.httpStatusCode !== 429) {
-                    return false;
-                }
-            }
-            // Otherwise retry
-            return true;
-        });
-    });
-}
-function downloadToolAttempt(url, dest, auth, headers) {
-    return tool_cache_awaiter(this, void 0, void 0, function* () {
-        if (external_fs_namespaceObject.existsSync(dest)) {
-            throw new Error(`Destination file path ${dest} already exists`);
-        }
-        // Get the response headers
-        const http = new lib_HttpClient(userAgent, [], {
-            allowRetries: false
-        });
-        if (auth) {
-            core_debug('set auth');
-            if (headers === undefined) {
-                headers = {};
-            }
-            headers.authorization = auth;
-        }
-        const response = yield http.get(url, headers);
-        if (response.message.statusCode !== 200) {
-            const err = new HTTPError(response.message.statusCode);
-            core_debug(`Failed to download from "${url}". Code(${response.message.statusCode}) Message(${response.message.statusMessage})`);
-            throw err;
-        }
-        // Download the response body
-        const pipeline = external_util_.promisify(external_stream_namespaceObject.pipeline);
-        const responseMessageFactory = _getGlobal('TEST_DOWNLOAD_TOOL_RESPONSE_MESSAGE_FACTORY', () => response.message);
-        const readStream = responseMessageFactory();
-        let succeeded = false;
-        try {
-            yield pipeline(readStream, external_fs_namespaceObject.createWriteStream(dest));
-            core_debug('download complete');
-            succeeded = true;
-            return dest;
-        }
-        finally {
-            // Error, delete dest before retry
-            if (!succeeded) {
-                core_debug('download failed');
-                try {
-                    yield rmRF(dest);
-                }
-                catch (err) {
-                    core_debug(`Failed to delete '${dest}'. ${err.message}`);
-                }
-            }
-        }
-    });
-}
-/**
- * Extract a .7z file
- *
- * @param file     path to the .7z file
- * @param dest     destination directory. Optional.
- * @param _7zPath  path to 7zr.exe. Optional, for long path support. Most .7z archives do not have this
- * problem. If your .7z archive contains very long paths, you can pass the path to 7zr.exe which will
- * gracefully handle long paths. By default 7zdec.exe is used because it is a very small program and is
- * bundled with the tool lib. However it does not support long paths. 7zr.exe is the reduced command line
- * interface, it is smaller than the full command line interface, and it does support long paths. At the
- * time of this writing, it is freely available from the LZMA SDK that is available on the 7zip website.
- * Be sure to check the current license agreement. If 7zr.exe is bundled with your action, then the path
- * to 7zr.exe can be pass to this function.
- * @returns        path to the destination directory
- */
-function extract7z(file, dest, _7zPath) {
-    return tool_cache_awaiter(this, void 0, void 0, function* () {
-        ok(tool_cache_IS_WINDOWS, 'extract7z() not supported on current OS');
-        ok(file, 'parameter "file" is required');
-        dest = yield _createExtractFolder(dest);
-        const originalCwd = process.cwd();
-        process.chdir(dest);
-        if (_7zPath) {
-            try {
-                const logLevel = core.isDebug() ? '-bb1' : '-bb0';
-                const args = [
-                    'x', // eXtract files with full paths
-                    logLevel, // -bb[0-3] : set output log level
-                    '-bd', // disable progress indicator
-                    '-sccUTF-8', // set charset for for console input/output
-                    file
-                ];
-                const options = {
-                    silent: true
-                };
-                yield exec(`"${_7zPath}"`, args, options);
-            }
-            finally {
-                process.chdir(originalCwd);
-            }
-        }
-        else {
-            const escapedScript = path
-                .join(__dirname, '..', 'scripts', 'Invoke-7zdec.ps1')
-                .replace(/'/g, "''")
-                .replace(/"|\n|\r/g, ''); // double-up single quotes, remove double quotes and newlines
-            const escapedFile = file.replace(/'/g, "''").replace(/"|\n|\r/g, '');
-            const escapedTarget = dest.replace(/'/g, "''").replace(/"|\n|\r/g, '');
-            const command = `& '${escapedScript}' -Source '${escapedFile}' -Target '${escapedTarget}'`;
-            const args = [
-                '-NoLogo',
-                '-Sta',
-                '-NoProfile',
-                '-NonInteractive',
-                '-ExecutionPolicy',
-                'Unrestricted',
-                '-Command',
-                command
-            ];
-            const options = {
-                silent: true
-            };
-            try {
-                const powershellPath = yield io.which('powershell', true);
-                yield exec(`"${powershellPath}"`, args, options);
-            }
-            finally {
-                process.chdir(originalCwd);
-            }
-        }
-        return dest;
-    });
-}
-/**
- * Extract a compressed tar archive
- *
- * @param file     path to the tar
- * @param dest     destination directory. Optional.
- * @param flags    flags for the tar command to use for extraction. Defaults to 'xz' (extracting gzipped tars). Optional.
- * @returns        path to the destination directory
- */
-function extractTar(file_1, dest_1) {
-    return tool_cache_awaiter(this, arguments, void 0, function* (file, dest, flags = 'xz') {
-        if (!file) {
-            throw new Error("parameter 'file' is required");
-        }
-        // Create dest
-        dest = yield _createExtractFolder(dest);
-        // Determine whether GNU tar
-        core.debug('Checking tar --version');
-        let versionOutput = '';
-        yield exec('tar --version', [], {
-            ignoreReturnCode: true,
-            silent: true,
-            listeners: {
-                stdout: (data) => (versionOutput += data.toString()),
-                stderr: (data) => (versionOutput += data.toString())
-            }
-        });
-        core.debug(versionOutput.trim());
-        const isGnuTar = versionOutput.toUpperCase().includes('GNU TAR');
-        // Initialize args
-        let args;
-        if (flags instanceof Array) {
-            args = flags;
-        }
-        else {
-            args = [flags];
-        }
-        if (core.isDebug() && !flags.includes('v')) {
-            args.push('-v');
-        }
-        let destArg = dest;
-        let fileArg = file;
-        if (tool_cache_IS_WINDOWS && isGnuTar) {
-            args.push('--force-local');
-            destArg = dest.replace(/\\/g, '/');
-            // Technically only the dest needs to have `/` but for aesthetic consistency
-            // convert slashes in the file arg too.
-            fileArg = file.replace(/\\/g, '/');
-        }
-        if (isGnuTar) {
-            // Suppress warnings when using GNU tar to extract archives created by BSD tar
-            args.push('--warning=no-unknown-keyword');
-            args.push('--overwrite');
-        }
-        args.push('-C', destArg, '-f', fileArg);
-        yield exec(`tar`, args);
-        return dest;
-    });
-}
-/**
- * Extract a xar compatible archive
- *
- * @param file     path to the archive
- * @param dest     destination directory. Optional.
- * @param flags    flags for the xar. Optional.
- * @returns        path to the destination directory
- */
-function extractXar(file_1, dest_1) {
-    return tool_cache_awaiter(this, arguments, void 0, function* (file, dest, flags = []) {
-        ok(tool_cache_IS_MAC, 'extractXar() not supported on current OS');
-        ok(file, 'parameter "file" is required');
-        dest = yield _createExtractFolder(dest);
-        let args;
-        if (flags instanceof Array) {
-            args = flags;
-        }
-        else {
-            args = [flags];
-        }
-        args.push('-x', '-C', dest, '-f', file);
-        if (core.isDebug()) {
-            args.push('-v');
-        }
-        const xarPath = yield io.which('xar', true);
-        yield exec(`"${xarPath}"`, _unique(args));
-        return dest;
-    });
-}
-/**
- * Extract a zip
- *
- * @param file     path to the zip
- * @param dest     destination directory. Optional.
- * @returns        path to the destination directory
- */
-function extractZip(file, dest) {
-    return tool_cache_awaiter(this, void 0, void 0, function* () {
-        if (!file) {
-            throw new Error("parameter 'file' is required");
-        }
-        dest = yield _createExtractFolder(dest);
-        if (tool_cache_IS_WINDOWS) {
-            yield extractZipWin(file, dest);
-        }
-        else {
-            yield extractZipNix(file, dest);
-        }
-        return dest;
-    });
-}
-function extractZipWin(file, dest) {
-    return tool_cache_awaiter(this, void 0, void 0, function* () {
-        // build the powershell command
-        const escapedFile = file.replace(/'/g, "''").replace(/"|\n|\r/g, ''); // double-up single quotes, remove double quotes and newlines
-        const escapedDest = dest.replace(/'/g, "''").replace(/"|\n|\r/g, '');
-        const pwshPath = yield io.which('pwsh', false);
-        //To match the file overwrite behavior on nix systems, we use the overwrite = true flag for ExtractToDirectory
-        //and the -Force flag for Expand-Archive as a fallback
-        if (pwshPath) {
-            //attempt to use pwsh with ExtractToDirectory, if this fails attempt Expand-Archive
-            const pwshCommand = [
-                `$ErrorActionPreference = 'Stop' ;`,
-                `try { Add-Type -AssemblyName System.IO.Compression.ZipFile } catch { } ;`,
-                `try { [System.IO.Compression.ZipFile]::ExtractToDirectory('${escapedFile}', '${escapedDest}', $true) }`,
-                `catch { if (($_.Exception.GetType().FullName -eq 'System.Management.Automation.MethodException') -or ($_.Exception.GetType().FullName -eq 'System.Management.Automation.RuntimeException') ){ Expand-Archive -LiteralPath '${escapedFile}' -DestinationPath '${escapedDest}' -Force } else { throw $_ } } ;`
-            ].join(' ');
-            const args = [
-                '-NoLogo',
-                '-NoProfile',
-                '-NonInteractive',
-                '-ExecutionPolicy',
-                'Unrestricted',
-                '-Command',
-                pwshCommand
-            ];
-            core.debug(`Using pwsh at path: ${pwshPath}`);
-            yield exec(`"${pwshPath}"`, args);
-        }
-        else {
-            const powershellCommand = [
-                `$ErrorActionPreference = 'Stop' ;`,
-                `try { Add-Type -AssemblyName System.IO.Compression.FileSystem } catch { } ;`,
-                `if ((Get-Command -Name Expand-Archive -Module Microsoft.PowerShell.Archive -ErrorAction Ignore)) { Expand-Archive -LiteralPath '${escapedFile}' -DestinationPath '${escapedDest}' -Force }`,
-                `else {[System.IO.Compression.ZipFile]::ExtractToDirectory('${escapedFile}', '${escapedDest}', $true) }`
-            ].join(' ');
-            const args = [
-                '-NoLogo',
-                '-Sta',
-                '-NoProfile',
-                '-NonInteractive',
-                '-ExecutionPolicy',
-                'Unrestricted',
-                '-Command',
-                powershellCommand
-            ];
-            const powershellPath = yield io.which('powershell', true);
-            core.debug(`Using powershell at path: ${powershellPath}`);
-            yield exec(`"${powershellPath}"`, args);
-        }
-    });
-}
-function extractZipNix(file, dest) {
-    return tool_cache_awaiter(this, void 0, void 0, function* () {
-        const unzipPath = yield io.which('unzip', true);
-        const args = [file];
-        if (!core.isDebug()) {
-            args.unshift('-q');
-        }
-        args.unshift('-o'); //overwrite with -o, otherwise a prompt is shown which freezes the run
-        yield exec(`"${unzipPath}"`, args, { cwd: dest });
-    });
-}
-/**
- * Caches a directory and installs it into the tool cacheDir
- *
- * @param sourceDir    the directory to cache into tools
- * @param tool          tool name
- * @param version       version of the tool.  semver format
- * @param arch          architecture of the tool.  Optional.  Defaults to machine architecture
- */
-function cacheDir(sourceDir, tool, version, arch) {
-    return tool_cache_awaiter(this, void 0, void 0, function* () {
-        version = semver.clean(version) || version;
-        arch = arch || os.arch();
-        core.debug(`Caching tool ${tool} ${version} ${arch}`);
-        core.debug(`source dir: ${sourceDir}`);
-        if (!fs.statSync(sourceDir).isDirectory()) {
-            throw new Error('sourceDir is not a directory');
-        }
-        // Create the tool dir
-        const destPath = yield _createToolPath(tool, version, arch);
-        // copy each child item. do not move. move can fail on Windows
-        // due to anti-virus software having an open handle on a file.
-        for (const itemName of fs.readdirSync(sourceDir)) {
-            const s = path.join(sourceDir, itemName);
-            yield io.cp(s, destPath, { recursive: true });
-        }
-        // write .complete
-        _completeToolPath(tool, version, arch);
-        return destPath;
-    });
-}
-/**
- * Caches a downloaded file (GUID) and installs it
- * into the tool cache with a given targetName
- *
- * @param sourceFile    the file to cache into tools.  Typically a result of downloadTool which is a guid.
- * @param targetFile    the name of the file name in the tools directory
- * @param tool          tool name
- * @param version       version of the tool.  semver format
- * @param arch          architecture of the tool.  Optional.  Defaults to machine architecture
- */
-function cacheFile(sourceFile, targetFile, tool, version, arch) {
-    return tool_cache_awaiter(this, void 0, void 0, function* () {
-        version = node_modules_semver.clean(version) || version;
-        arch = arch || external_os_namespaceObject.arch();
-        core_debug(`Caching tool ${tool} ${version} ${arch}`);
-        core_debug(`source file: ${sourceFile}`);
-        if (!external_fs_namespaceObject.statSync(sourceFile).isFile()) {
-            throw new Error('sourceFile is not a file');
-        }
-        // create the tool dir
-        const destFolder = yield _createToolPath(tool, version, arch);
-        // copy instead of move. move can fail on Windows due to
-        // anti-virus software having an open handle on a file.
-        const destPath = external_path_namespaceObject.join(destFolder, targetFile);
-        core_debug(`destination file ${destPath}`);
-        yield io_cp(sourceFile, destPath);
-        // write .complete
-        _completeToolPath(tool, version, arch);
-        return destFolder;
-    });
-}
-/**
- * Finds the path to a tool version in the local installed tool cache
- *
- * @param toolName      name of the tool
- * @param versionSpec   version of the tool
- * @param arch          optional arch.  defaults to arch of computer
- */
-function find(toolName, versionSpec, arch) {
-    if (!toolName) {
-        throw new Error('toolName parameter is required');
-    }
-    if (!versionSpec) {
-        throw new Error('versionSpec parameter is required');
-    }
-    arch = arch || external_os_namespaceObject.arch();
-    // attempt to resolve an explicit version
-    if (!isExplicitVersion(versionSpec)) {
-        const localVersions = findAllVersions(toolName, arch);
-        const match = evaluateVersions(localVersions, versionSpec);
-        versionSpec = match;
-    }
-    // check for the explicit version in the cache
-    let toolPath = '';
-    if (versionSpec) {
-        versionSpec = node_modules_semver.clean(versionSpec) || '';
-        const cachePath = external_path_namespaceObject.join(_getCacheDirectory(), toolName, versionSpec, arch);
-        core_debug(`checking cache: ${cachePath}`);
-        if (external_fs_namespaceObject.existsSync(cachePath) && external_fs_namespaceObject.existsSync(`${cachePath}.complete`)) {
-            core_debug(`Found tool in cache ${toolName} ${versionSpec} ${arch}`);
-            toolPath = cachePath;
-        }
-        else {
-            core_debug('not found');
-        }
-    }
-    return toolPath;
-}
-/**
- * Finds the paths to all versions of a tool that are installed in the local tool cache
- *
- * @param toolName  name of the tool
- * @param arch      optional arch.  defaults to arch of computer
- */
-function findAllVersions(toolName, arch) {
-    const versions = [];
-    arch = arch || external_os_namespaceObject.arch();
-    const toolPath = external_path_namespaceObject.join(_getCacheDirectory(), toolName);
-    if (external_fs_namespaceObject.existsSync(toolPath)) {
-        const children = external_fs_namespaceObject.readdirSync(toolPath);
-        for (const child of children) {
-            if (isExplicitVersion(child)) {
-                const fullPath = external_path_namespaceObject.join(toolPath, child, arch || '');
-                if (external_fs_namespaceObject.existsSync(fullPath) && external_fs_namespaceObject.existsSync(`${fullPath}.complete`)) {
-                    versions.push(child);
-                }
-            }
-        }
-    }
-    return versions;
-}
-function getManifestFromRepo(owner_1, repo_1, auth_1) {
-    return tool_cache_awaiter(this, arguments, void 0, function* (owner, repo, auth, branch = 'master') {
-        let releases = [];
-        const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}`;
-        const http = new httpm.HttpClient('tool-cache');
-        const headers = {};
-        if (auth) {
-            core.debug('set auth');
-            headers.authorization = auth;
-        }
-        const response = yield http.getJson(treeUrl, headers);
-        if (!response.result) {
-            return releases;
-        }
-        let manifestUrl = '';
-        for (const item of response.result.tree) {
-            if (item.path === 'versions-manifest.json') {
-                manifestUrl = item.url;
-                break;
-            }
-        }
-        headers['accept'] = 'application/vnd.github.VERSION.raw';
-        let versionsRaw = yield (yield http.get(manifestUrl, headers)).readBody();
-        if (versionsRaw) {
-            // shouldn't be needed but protects against invalid json saved with BOM
-            versionsRaw = versionsRaw.replace(/^\uFEFF/, '');
-            try {
-                releases = JSON.parse(versionsRaw);
-            }
-            catch (_a) {
-                core.debug('Invalid json');
-            }
-        }
-        return releases;
-    });
-}
-function findFromManifest(versionSpec_1, stable_1, manifest_1) {
-    return tool_cache_awaiter(this, arguments, void 0, function* (versionSpec, stable, manifest, archFilter = os.arch()) {
-        // wrap the internal impl
-        const match = yield mm._findMatch(versionSpec, stable, manifest, archFilter);
-        return match;
-    });
-}
-function _createExtractFolder(dest) {
-    return tool_cache_awaiter(this, void 0, void 0, function* () {
-        if (!dest) {
-            // create a temp dir
-            dest = path.join(_getTempDirectory(), crypto.randomUUID());
-        }
-        yield io.mkdirP(dest);
-        return dest;
-    });
-}
-function _createToolPath(tool, version, arch) {
-    return tool_cache_awaiter(this, void 0, void 0, function* () {
-        const folderPath = external_path_namespaceObject.join(_getCacheDirectory(), tool, node_modules_semver.clean(version) || version, arch || '');
-        core_debug(`destination ${folderPath}`);
-        const markerPath = `${folderPath}.complete`;
-        yield rmRF(folderPath);
-        yield rmRF(markerPath);
-        yield mkdirP(folderPath);
-        return folderPath;
-    });
-}
-function _completeToolPath(tool, version, arch) {
-    const folderPath = external_path_namespaceObject.join(_getCacheDirectory(), tool, node_modules_semver.clean(version) || version, arch || '');
-    const markerPath = `${folderPath}.complete`;
-    external_fs_namespaceObject.writeFileSync(markerPath, '');
-    core_debug('finished caching tool');
-}
-/**
- * Check if version string is explicit
- *
- * @param versionSpec      version string to check
- */
-function isExplicitVersion(versionSpec) {
-    const c = node_modules_semver.clean(versionSpec) || '';
-    core_debug(`isExplicit: ${c}`);
-    const valid = node_modules_semver.valid(c) != null;
-    core_debug(`explicit? ${valid}`);
-    return valid;
-}
-/**
- * Get the highest satisfiying semantic version in `versions` which satisfies `versionSpec`
- *
- * @param versions        array of versions to evaluate
- * @param versionSpec     semantic version spec to satisfy
- */
-function evaluateVersions(versions, versionSpec) {
-    let version = '';
-    core_debug(`evaluating ${versions.length} versions`);
-    versions = versions.sort((a, b) => {
-        if (node_modules_semver.gt(a, b)) {
-            return 1;
-        }
-        return -1;
-    });
-    for (let i = versions.length - 1; i >= 0; i--) {
-        const potential = versions[i];
-        const satisfied = node_modules_semver.satisfies(potential, versionSpec);
-        if (satisfied) {
-            version = potential;
-            break;
-        }
-    }
-    if (version) {
-        core_debug(`matched: ${version}`);
-    }
-    else {
-        core_debug('match not found');
-    }
-    return version;
-}
-/**
- * Gets RUNNER_TOOL_CACHE
- */
-function _getCacheDirectory() {
-    const cacheDirectory = process.env['RUNNER_TOOL_CACHE'] || '';
-    (0,external_assert_.ok)(cacheDirectory, 'Expected RUNNER_TOOL_CACHE to be defined');
-    return cacheDirectory;
-}
-/**
- * Gets RUNNER_TEMP
- */
-function _getTempDirectory() {
-    const tempDirectory = process.env['RUNNER_TEMP'] || '';
-    (0,external_assert_.ok)(tempDirectory, 'Expected RUNNER_TEMP to be defined');
-    return tempDirectory;
-}
-/**
- * Gets a global variable
- */
-function _getGlobal(key, defaultValue) {
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const value = global[key];
-    /* eslint-enable @typescript-eslint/no-explicit-any */
-    return value !== undefined ? value : defaultValue;
-}
-/**
- * Returns an array of unique values.
- * @param values Values to make unique.
- */
-function _unique(values) {
-    return Array.from(new Set(values));
-}
-//# sourceMappingURL=tool-cache.js.map
-;// CONCATENATED MODULE: ./src/installer/base.ts
-/**
- * @module installer/base
- * Shared logic for downloading, caching, and locating `constructor`-compatible
- * installers via the `@actions/tool-cache`.
- *
- * @category Installers
- */
-var base_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-
-
-
-
-
-/**
- * Get the path for a locally-executable installer from cache, or as downloaded.
- *
- * ### Note
- * Assumes `url` at least ends with the correct executable extension
- * for this platform, but makes no other assumptions about the URL format:
- * it might include GET params, was not built with `constructor` (but still
- * has the same CLI), or has been renamed during a build process.
- *
- * @param options - Cache and download metadata for the installer.
- * @returns The local path to the installer (with the correct extension).
- * @throws {Error} If no executable path could be determined after all attempts.
- *
- * @example
- * ```ts
- * const localPath = await ensureLocalInstaller({
- *   url: "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh",
- *   tool: "Miniconda3",
- *   version: "latest",
- *   arch: "x86_64",
- * });
- * ```
- */
-function ensureLocalInstaller(options) {
-    return base_awaiter(this, void 0, void 0, function* () {
-        info("Ensuring Installer...");
-        const url = new external_url_namespaceObject.URL(options.url);
-        const installerName = external_path_namespaceObject.basename(url.pathname);
-        // As a URL, we assume posix paths
-        const installerExtension = external_path_namespaceObject.posix.extname(installerName);
-        const tool = options.tool != null ? options.tool : installerName;
-        // Create a fake version if neccessary
-        const version = options.version != null
-            ? options.version
-            : "0.0.0-" +
-                external_crypto_namespaceObject.createHash("sha256").update(options.url).digest("hex");
-        let executablePath = "";
-        if (url.protocol === "file:") {
-            info(`Local file specified, using in-place...`);
-            executablePath = (0,external_url_namespaceObject.fileURLToPath)(options.url);
-        }
-        if (executablePath === "") {
-            info(`Checking for cached ${tool}@${version}...`);
-            // tc.find returns the name of the directory in which
-            // the cached file is located.
-            const cacheDirectoryPath = find(installerName, version, ...(options.arch ? [options.arch] : []));
-            if (cacheDirectoryPath !== "") {
-                info(`Found ${installerName} cache at ${cacheDirectoryPath}!`);
-                // Append the basename of the cached file to the directory
-                // returned by tc.find
-                executablePath = external_path_namespaceObject.join(cacheDirectoryPath, installerName);
-                info(`executablePath is ${executablePath}`);
-            }
-            else {
-                info(`Did not find ${installerName} ${version} in cache`);
-            }
-        }
-        if (executablePath === "") {
-            const rawDownloadPath = yield downloadTool(options.url);
-            info(`Downloaded ${installerName}, ensuring extension ${installerExtension}`);
-            // Always ensure the installer ends with a known path
-            executablePath = rawDownloadPath + installerExtension;
-            yield mv(rawDownloadPath, executablePath);
-            info(`Caching ${tool}@${version}...`);
-            const cacheResult = yield cacheFile(executablePath, installerName, tool, version, ...(options.arch ? [options.arch] : []));
-            info(`Cached ${tool}@${version}: ${cacheResult}!`);
-        }
-        return executablePath;
-    });
-}
-
-;// CONCATENATED MODULE: ./src/installer/download-miniforge.ts
-/**
- * @module installer/download-miniforge
- * Download Miniforge installers from GitHub releases using the well-known
- * release URL structure of the `conda-forge/miniforge` repository.
- *
- * @category Installers
- */
-var download_miniforge_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-
-
-/**
- * Download a specific Miniforge installer determined by the variant, version,
- * and architecture from the action inputs.
- *
- * @param inputs - The parsed action inputs containing variant, version, and architecture.
- * @param _options - The current dynamic options (unused).
- * @returns The local path to the downloaded installer.
- * @throws {Error} If the architecture is not in {@link constants.MINIFORGE_ARCHITECTURES}.
- */
-function downloadMiniforge(inputs, _options) {
-    return download_miniforge_awaiter(this, void 0, void 0, function* () {
-        const tool = inputs.miniforgeVariant.trim() || MINIFORGE_DEFAULT_VARIANT;
-        const version = inputs.miniforgeVersion.trim() || MINIFORGE_DEFAULT_VERSION;
-        const arch = MINIFORGE_ARCHITECTURES[inputs.architecture.toLowerCase()];
-        // Check valid arch
-        if (!arch) {
-            throw new Error(`Invalid 'architecture: ${inputs.architecture}'`);
-        }
-        const extension = IS_UNIX ? "sh" : "exe";
-        const osName = OS_NAMES[process.platform];
-        let fileName;
-        let url;
-        if (version === "latest") {
-            // e.g. https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
-            fileName = [tool, osName, `${arch}.${extension}`].join("-");
-            url = [MINIFORGE_URL_PREFIX, version, "download", fileName].join("/");
-        }
-        else {
-            // e.g. https://github.com/conda-forge/miniforge/releases/download/4.9.2-5/Miniforge3-4.9.2-5-Linux-x86_64.sh
-            fileName = [tool, version, osName, `${arch}.${extension}`].join("-");
-            url = [MINIFORGE_URL_PREFIX, "download", version, fileName].join("/");
-        }
-        info(`Will fetch ${tool} ${version} from ${url}`);
-        return yield ensureLocalInstaller({ url, tool, version, arch });
-    });
-}
-/**
- * Provide a path to a Miniforge downloaded from github.com.
- *
- * ### Note
- * Uses the well-known structure of GitHub releases to resolve and download
- * a particular Miniforge installer.
- */
-const miniforgeDownloader = {
-    label: "download Miniforge",
-    provides: (inputs, _options) => download_miniforge_awaiter(void 0, void 0, void 0, function* () { return inputs.miniforgeVersion !== "" || inputs.miniforgeVariant !== ""; }),
-    installerPath: (inputs, options) => download_miniforge_awaiter(void 0, void 0, void 0, function* () {
-        return {
-            localInstallerPath: yield downloadMiniforge(inputs, options),
-            options: Object.assign(Object.assign({}, options), { useBundled: false }),
-        };
-    }),
-};
-
-;// CONCATENATED MODULE: ./src/installer/download-miniconda.ts
-/**
- * @module installer/download-miniconda
- * Download Miniconda installers from `repo.anaconda.com`.
- *
- * The download will fail with a clear HTTP error if the version is invalid,
- * avoiding the previous approach of downloading and parsing the full HTML
- * index page just for validation.
- *
- * @category Installers
- */
-var download_miniconda_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-
-
-/**
- * Download specific version miniconda defined by version, arch and python major version.
- *
- * The download will fail with a clear HTTP error if the version is invalid,
- * avoiding the previous approach of downloading and parsing the full HTML
- * index page just for validation.
- *
- * @param pythonMajorVersion - The Python major version for the installer (e.g. `3`).
- * @param inputs - The parsed action inputs containing version and architecture.
- * @returns The local path to the downloaded installer.
- * @throws {Error} If the architecture is not in {@link constants.MINICONDA_ARCHITECTURES}.
- * @throws {Error} If the download fails (e.g. Invalid version or unavailable platform).
- */
-function downloadMiniconda(pythonMajorVersion, inputs) {
-    return download_miniconda_awaiter(this, void 0, void 0, function* () {
-        const arch = MINICONDA_ARCHITECTURES[inputs.architecture.toLowerCase()];
-        if (!arch) {
-            throw new Error(`Invalid arch "${inputs.architecture}"!`);
-        }
-        const extension = IS_UNIX ? "sh" : "exe";
-        const osName = OS_NAMES[process.platform];
-        if (!osName) {
-            throw new Error(`Unsupported platform "${process.platform}"!`);
-        }
-        const minicondaVersion = inputs.minicondaVersion || "latest";
-        const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
-        const url = MINICONDA_BASE_URL + minicondaInstallerName;
-        info(minicondaInstallerName);
-        try {
-            return yield ensureLocalInstaller({
-                url,
-                tool: `Miniconda${pythonMajorVersion}`,
-                version: minicondaVersion,
-                arch: arch,
-            });
-        }
-        catch (err) {
-            throw new Error(`Failed to download Miniconda installer from ${url}. ` +
-                `Please verify that miniconda-version '${minicondaVersion}' is valid ` +
-                `for ${osName}-${arch}. Browse available versions at ` +
-                `${MINICONDA_BASE_URL}\n` +
-                `Original error: ${err}`);
-        }
-    });
-}
-/**
- * Provide a path to a Miniconda downloaded from repo.anaconda.com.
- *
- * ### Note
- * Uses the well-known structure of the repo.anaconda.com to resolve and download
- * a particular Miniconda installer.
- */
-const minicondaDownloader = {
-    label: "download Miniconda",
-    provides: (inputs, _options) => download_miniconda_awaiter(void 0, void 0, void 0, function* () {
-        return inputs.installerUrl === "";
-    }),
-    installerPath: (inputs, options) => download_miniconda_awaiter(void 0, void 0, void 0, function* () {
-        return {
-            localInstallerPath: yield downloadMiniconda(3, inputs),
-            options: Object.assign(Object.assign({}, options), { useBundled: false }),
-        };
-    }),
-};
-
-;// CONCATENATED MODULE: ./src/installer/download-url.ts
-/**
- * @module installer/download-url
- * Download a `constructor`-compatible installer from an arbitrary URL,
- * including `file://` URLs for locally-available installers.
- *
- * @category Installers
- */
-var download_url_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-/**
- * Provide a path to a `constructor`-compatible installer downloaded from
- * any URL, including `file://` URLs.
- *
- * ### Note
- * The entire local URL is used as the cache key.
- */
-const urlDownloader = {
-    label: "download a custom installer by URL",
-    provides: (inputs, _options) => download_url_awaiter(void 0, void 0, void 0, function* () { return !!inputs.installerUrl; }),
-    installerPath: (inputs, options) => download_url_awaiter(void 0, void 0, void 0, function* () {
-        return {
-            localInstallerPath: yield ensureLocalInstaller({
-                url: inputs.installerUrl,
-            }),
-            options: Object.assign(Object.assign({}, options), { useBundled: false }),
-        };
-    }),
-};
-
-;// CONCATENATED MODULE: ./src/installer/bundled-miniconda.ts
-/**
- * @module installer/bundled-miniconda
- * Use the pre-bundled Miniconda installation already present on the
- * GitHub Actions runner image, avoiding any download or install step.
- *
- * @category Installers
- */
-var bundled_miniconda_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-/**
- * Provide a path to the pre-bundled (but probably old) Miniconda base installation
- *
- * ### Note
- * This is the "cheapest" provider: if miniconda is already on disk, it can be
- * fastest to avoid the download/install and use what's already on the image.
- */
-const bundledMinicondaUser = {
-    label: "use bundled Miniconda",
-    provides: (inputs, _options) => bundled_miniconda_awaiter(void 0, void 0, void 0, function* () {
-        return (inputs.minicondaVersion === "" &&
-            inputs.miniforgeVariant === "" &&
-            inputs.miniforgeVersion === "" &&
-            inputs.architecture === "x64" &&
-            inputs.installerUrl === "" &&
-            MINICONDA_DIR_PATH.length > 0);
-    }),
-    installerPath: (_inputs, options) => bundled_miniconda_awaiter(void 0, void 0, void 0, function* () {
-        // No actions are performed. This is the only place `useBundled` will ever be true.
-        return {
-            localInstallerPath: "",
-            options: Object.assign(Object.assign({}, options), { useBundled: true }),
-        };
-    }),
-};
-
-;// CONCATENATED MODULE: ./src/installer/index.ts
-/**
- * @module installer
- * Installer provider registry and runner. Iterates through
- * {@link types.IInstallerProvider} strategies to locate or download a
- * `constructor`-compatible installer, then executes it.
- *
- * @category Installers
- */
-var installer_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-
-
-
-
-
-
-
-/**
- * Providers of `constructor`-compatible installers, ordered roughly by "cost".
- *
- * ### Note
- * To add a new installer,
- * - implement IInstallerProvider and add it here
- * - add to `../../action.yaml`
- * - add any new RULEs in ../input.ts, for example if the installer is not
- *   compatible with some architectures
- * - add a test!
- * - The order is important:
- *   - the first provider that provides according to the inputs/options is used.
- *   - the last provider has a fallback in case of no inputs given.
- */
-const INSTALLER_PROVIDERS = [
-    bundledMinicondaUser,
-    urlDownloader,
-    miniforgeDownloader,
-    minicondaDownloader,
-];
-/**
- * Iterate through installer providers and return the result from the first
- * one that matches the given inputs, throwing if none match.
- *
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- * @returns The installer result with the local path and updated options.
- * @throws {Error} If no {@link types.IInstallerProvider} matches the given inputs.
- */
-function getLocalInstallerPath(inputs, options) {
-    return installer_awaiter(this, void 0, void 0, function* () {
-        for (const provider of INSTALLER_PROVIDERS) {
-            info(`Can we ${provider.label}?`);
-            if (yield provider.provides(inputs, options)) {
-                info(`... will ${provider.label}.`);
-                return provider.installerPath(inputs, options);
-            }
-        }
-        throw Error(`No installer could be found for the given inputs`);
-    });
-}
-/**
- * Run a `constructor`-generated installer (`.exe` or `.sh`) and detect
- * whether mamba was provisioned in the resulting base environment.
- *
- * @param installerPath - Path to the installer; must have an appropriate extension for this platform.
- * @param outputPath - The target installation directory.
- * @param inputs - The parsed action inputs.
- * @param options - The current dynamic options.
- * @returns The updated dynamic options reflecting the new installation.
- * @throws {Error} If the installer has an unknown file extension.
- */
-function runInstaller(installerPath, outputPath, inputs, options) {
-    return installer_awaiter(this, void 0, void 0, function* () {
-        const installerExtension = external_path_namespaceObject.extname(installerPath);
-        let command;
-        switch (installerExtension) {
-            case ".exe":
-                /* From https://docs.anaconda.com/anaconda/install/silent-mode/
-                    /D=<installation path> - Destination installation path.
-                                            - Must be the last argument.
-                                            - Do not wrap in quotation marks.
-                                            - Required if you use /S.
-                    For the above reasons, this is treated a monolithic arg
-                  */
-                command = [
-                    `"${installerPath}" /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`,
-                ];
-                break;
-            case ".sh":
-                command = ["bash", installerPath, "-f", "-b", "-p", outputPath];
-                break;
-            default:
-                throw Error(`Unknown installer extension: ${installerExtension}`);
-        }
-        yield execute(command);
-        // The installer may have provisioned `mamba` in `base`: use now if requested
-        const mambaInInstaller = isMambaInstalled(inputs, options);
-        if (mambaInInstaller) {
-            info("Mamba was found in the `base` env");
-            options = Object.assign(Object.assign({}, options), { mambaInInstaller, useMamba: mambaInInstaller && inputs.useMamba === "true" });
-        }
-        return options;
-    });
-}
-
 ;// CONCATENATED MODULE: ./node_modules/js-yaml/dist/js-yaml.mjs
 
 /*! js-yaml 4.1.1 https://github.com/nodeca/js-yaml @license MIT */
@@ -39743,6 +37786,2067 @@ var jsYaml = {
 
 
 
+;// CONCATENATED MODULE: external "stream"
+const external_stream_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("stream");
+;// CONCATENATED MODULE: ./src/utils.ts
+/**
+ * @module utils
+ * Low-level helpers for running shell commands, building conda package
+ * specs, and working with package directories.
+ *
+ * @category Core
+ */
+var utils_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+
+
+
+/**
+ * Split a comma-separated string into trimmed, non-empty entries.
+ *
+ * @param value - Comma-separated string to split.
+ * @returns An array of trimmed, non-empty string entries.
+ */
+function parseCommaSeparated(value) {
+    return value
+        .trim()
+        .split(/,/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+}
+/**
+ * Parse the configured `pkgs_dirs` into a list of directories, falling
+ * back to a default under the user home if none are configured.
+ *
+ * @param configuredPkgsDirs - Comma-separated string of package directory paths.
+ * @returns An array of resolved package directory paths.
+ */
+function parsePkgsDirs(configuredPkgsDirs) {
+    const pkgsDirs = parseCommaSeparated(configuredPkgsDirs);
+    // Falling back to our default package directories value
+    if (pkgsDirs.length) {
+        return pkgsDirs;
+    }
+    else {
+        return [external_path_namespaceObject.join(external_os_namespaceObject.homedir(), DEFAULT_PKGS_DIR)];
+    }
+}
+/**
+ * Check whether the given environment name refers to a conda `base` environment.
+ *
+ * @param envName - The environment name to check.
+ * @returns `true` if the name is a known base environment alias.
+ */
+function isBaseEnv(envName) {
+    return BASE_ENV_NAMES.includes(envName);
+}
+/**
+ * Execute a shell command with custom environment variables, stdout/stderr
+ * filtering for known warnings and forced errors, and optional output capture.
+ *
+ * @param command - The command and arguments to execute.
+ * @param env - Additional environment variables to merge with `process.env`.
+ * @param captureOutput - When `true`, returns stdout as a string instead of void.
+ * @returns The captured stdout string if `captureOutput` is `true`, otherwise void.
+ * @throws {Error} If the command exits with a non-zero return code.
+ * @throws {Error} If stdout contains any substring in {@link constants.FORCED_ERRORS}.
+ *
+ * @example
+ * ```ts
+ * // Run conda info
+ * await execute(["conda", "info", "--json"]);
+ *
+ * // Capture output
+ * const output = await execute(["conda", "info", "--json"], {}, true);
+ * ```
+ */
+function execute(command_1) {
+    return utils_awaiter(this, arguments, void 0, function* (command, env = {}, captureOutput = false) {
+        let capturedOutput = "";
+        const options = {
+            errStream: new external_stream_namespaceObject.Writable(),
+            listeners: {
+                stdout: (data) => {
+                    const stringData = data.toString();
+                    if (captureOutput) {
+                        capturedOutput += stringData;
+                    }
+                    for (const forced_error of FORCED_ERRORS) {
+                        if (stringData.includes(forced_error)) {
+                            throw new Error(`"${command}" failed with "${forced_error}"`);
+                        }
+                    }
+                    return data;
+                },
+                stderr: (data) => {
+                    const stringData = data.toString();
+                    for (const ignore of IGNORED_WARNINGS) {
+                        if (stringData.includes(ignore)) {
+                            return;
+                        }
+                    }
+                    warning(stringData);
+                },
+            },
+            env: Object.assign(Object.assign({}, process.env), env),
+        };
+        const exe = command[0];
+        if (!exe) {
+            throw new Error("execute() called with empty command array");
+        }
+        const rc = yield exec_exec(exe, command.slice(1), options);
+        if (rc !== 0) {
+            throw new Error(`${exe} return error code ${rc}`);
+        }
+        if (captureOutput) {
+            return capturedOutput;
+        }
+    });
+}
+/**
+ * Create a conda version spec string.
+ *
+ * ### Note
+ * Generally favors `=` unless the spec already contains an operator.
+ *
+ * @param pkg - The package name.
+ * @param spec - The version spec, optionally prefixed with an operator.
+ * @returns A formatted `pkg=spec` or `pkg<operator>spec` string.
+ *
+ * @example
+ * ```ts
+ * makeSpec("python", "3.11");       // "python=3.11"
+ * makeSpec("conda", ">=23.1");      // "conda>=23.1"
+ * makeSpec("numpy", "1.24|1.25");   // "numpy1.24|1.25"
+ * ```
+ */
+function makeSpec(pkg, spec) {
+    if (spec.match(/[=<>!\|]/)) {
+        return `${pkg}${spec}`;
+    }
+    else {
+        return `${pkg}=${spec}`;
+    }
+}
+
+;// CONCATENATED MODULE: ./src/conda.ts
+/**
+ * @module conda
+ * High-level helpers for locating, running, and configuring a conda or
+ * mamba installation, including shell initialization and `.condarc` management.
+ *
+ * @category Core
+ */
+var conda_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+//-----------------------------------------------------------------------
+// Conda helpers
+//-----------------------------------------------------------------------
+
+
+
+
+
+
+
+
+/**
+ * Return the base path of the conda installation, determined by whether
+ * the bundled install, a custom directory, or the default `~/miniconda3` is in use.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The absolute path to the conda base directory.
+ */
+function condaBasePath(inputs, options) {
+    let condaPath;
+    if (options.useBundled) {
+        condaPath = MINICONDA_DIR_PATH;
+    }
+    else if (inputs.installationDir) {
+        condaPath = constants_IS_WINDOWS
+            ? inputs.installationDir.replace("/", "\\")
+            : inputs.installationDir;
+    }
+    else {
+        condaPath = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), "miniconda3");
+    }
+    return condaPath;
+}
+/**
+ * Return the conda CLI flags for identifying an environment by name or prefix.
+ *
+ * ### Note
+ * Only really detects by presence of a path separator, as the path may not yet exist.
+ *
+ * @param inputs - The parsed action inputs.
+ * @returns A two-element array of `["--name"|"--prefix", envName]`.
+ */
+function envCommandFlag(inputs) {
+    return [
+        inputs.activateEnvironment.match(/(\\|\/)/) ? "--prefix" : "--name",
+        inputs.activateEnvironment,
+    ];
+}
+/**
+ * Return candidate paths where the conda or mamba executable might exist,
+ * checking both `condabin` and platform-specific binary directories.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @param subcommand - If provided, mamba is only used when it supports this subcommand.
+ * @returns An array of candidate executable paths.
+ */
+function condaExecutableLocations(inputs, options, subcommand) {
+    const dir = condaBasePath(inputs, options);
+    const condaExes = [];
+    let commandName = "conda";
+    if (options.useMamba &&
+        (subcommand == null || MAMBA_SUBCOMMANDS.includes(subcommand))) {
+        commandName = "mamba";
+    }
+    condaExes.push(external_path_namespaceObject.join(dir, "condabin", constants_IS_WINDOWS ? commandName + ".bat" : commandName));
+    if (constants_IS_WINDOWS) {
+        condaExes.push(external_path_namespaceObject.join(dir, "Library", "bin", commandName + ".exe"));
+    }
+    else {
+        condaExes.push(external_path_namespaceObject.join(dir, "bin", commandName));
+    }
+    return condaExes;
+}
+/**
+ * Find and return the first existing conda or mamba executable, throwing
+ * an error if none of the candidate locations exist on disk.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @param subcommand - If provided, mamba is only used when it supports this subcommand.
+ * @returns The absolute path to the found executable.
+ * @throws {Error} If no conda or mamba executable exists at any candidate location.
+ */
+function condaExecutable(inputs, options, subcommand) {
+    const locations = condaExecutableLocations(inputs, options, subcommand);
+    for (const exe of locations) {
+        if (external_fs_namespaceObject.existsSync(exe))
+            return exe;
+    }
+    throw Error(`No existing ${options.useMamba ? "mamba" : "conda"} executable found at any of ${locations}`);
+}
+/**
+ * Check whether a mamba executable exists in the current conda installation.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns `true` if mamba is found at any candidate location.
+ */
+function isMambaInstalled(inputs, options) {
+    for (const exe of condaExecutableLocations(inputs, Object.assign(Object.assign({}, options), { useMamba: true }))) {
+        if (external_fs_namespaceObject.existsSync(exe))
+            return true;
+    }
+    return false;
+}
+/**
+ * Run a conda or mamba CLI command, resolving the executable and setting
+ * `MAMBA_ROOT_PREFIX` when mamba is in use.
+ *
+ * @param cmd - The conda subcommand and arguments (e.g. `["install", "numpy"]`).
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @param captureOutput - When `true`, returns stdout as a string.
+ * @returns The captured stdout if `captureOutput` is `true`, otherwise void.
+ * @throws {Error} If the command exits with a non-zero return code.
+ *
+ * @example
+ * ```ts
+ * // Install numpy into the active env
+ * await condaCommand(["install", "numpy"], inputs, options);
+ *
+ * // Capture JSON config output
+ * const json = await condaCommand(
+ *   ["config", "--show", "--json"], inputs, options, true
+ * );
+ * ```
+ */
+function condaCommand(cmd_1, inputs_1, options_1) {
+    return conda_awaiter(this, arguments, void 0, function* (cmd, inputs, options, captureOutput = false) {
+        const command = [condaExecutable(inputs, options, cmd[0]), ...cmd];
+        const env = {};
+        if (options.useMamba) {
+            env["MAMBA_ROOT_PREFIX"] = condaBasePath(inputs, options);
+        }
+        return yield execute(command, env, captureOutput);
+    });
+}
+/**
+ * Write a minimal bootstrap `.condarc` file to suppress early warnings.
+ */
+function bootstrapConfig() {
+    return conda_awaiter(this, void 0, void 0, function* () {
+        yield external_fs_namespaceObject.promises.writeFile(CONDARC_PATH, BOOTSTRAP_CONDARC);
+    });
+}
+const BOOLEAN_CONDARC_KEYS = new Set([
+    "add_anaconda_token",
+    "add_pip_as_python_dependency",
+    "allow_softlinks",
+    "auto_activate_base",
+    "auto_update_conda",
+    "show_channel_urls",
+    "use_only_tar_bz2",
+    "always_yes",
+    "changeps1",
+    "notify_outdated_conda",
+]);
+const KNOWN_CONDARC_KEYS = new Set([
+    ...BOOLEAN_CONDARC_KEYS,
+    "channels",
+    "channel_alias",
+    "channel_priority",
+    "channel_settings",
+    "custom_channels",
+    "custom_multichannels",
+    "default_channels",
+    "default_activation_env",
+    "denylist_channels",
+    "allowlist_channels",
+    "create_default_packages",
+    "envs_dirs",
+    "override_channels_enabled",
+    "pkgs_dirs",
+    "proxy_servers",
+    "repodata_threads",
+    "restore_free_channel",
+    "safety_checks",
+    "solver",
+    "ssl_verify",
+    "auto_activate",
+]);
+const TRUTHY_VALUES = new Set(["true", "yes", "on", "y", "1"]);
+const FALSY_VALUES = new Set(["false", "no", "off", "n", "0"]);
+/**
+ * Coerce a string value to its appropriate YAML type for a given condarc key.
+ * Handles all YAML 1.1 boolean literals (true/false/yes/no/on/off/y/n/1/0).
+ *
+ * @param key - The condarc configuration key name.
+ * @param value - The raw string value from the action input.
+ * @returns The coerced boolean or original string value.
+ */
+function coerceConfigValue(key, value) {
+    if (BOOLEAN_CONDARC_KEYS.has(key)) {
+        const lower = value.toLowerCase();
+        if (TRUTHY_VALUES.has(lower))
+            return true;
+        if (FALSY_VALUES.has(lower))
+            return false;
+    }
+    return value;
+}
+/**
+ * Build the complete conda configuration and write it directly to ~/.condarc.
+ *
+ * This replaces the old approach of spawning N `conda config --set/--add`
+ * subprocesses (each taking 2-5s for Python/conda startup overhead).
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ */
+function writeCondaConfig(inputs, options) {
+    return conda_awaiter(this, void 0, void 0, function* () {
+        var _a, _b, _c;
+        let config = {};
+        if (external_fs_namespaceObject.existsSync(CONDARC_PATH)) {
+            const existingConfig = load(external_fs_namespaceObject.readFileSync(CONDARC_PATH, "utf8"));
+            if (existingConfig) {
+                config = Object.assign({}, existingConfig);
+                info(`Read existing condarc from ${CONDARC_PATH} as base config`);
+            }
+        }
+        if (inputs.condaConfigFile) {
+            const sourcePath = external_path_namespaceObject.join(process.env["GITHUB_WORKSPACE"] || "", inputs.condaConfigFile);
+            info(`Reading user condarc from "${sourcePath}"...`);
+            const userConfig = load(external_fs_namespaceObject.readFileSync(sourcePath, "utf8"));
+            if (userConfig) {
+                config = Object.assign(Object.assign({}, config), userConfig);
+            }
+        }
+        config["notify_outdated_conda"] = false;
+        // --- Channels ---
+        let channels = inputs.condaConfig.channels
+            .trim()
+            .split(/,/)
+            .map((c) => c.trim())
+            .filter((c) => c.length);
+        if (!channels.length && ((_c = (_b = (_a = options.envSpec) === null || _a === void 0 ? void 0 : _a.yaml) === null || _b === void 0 ? void 0 : _b.channels) === null || _c === void 0 ? void 0 : _c.length)) {
+            channels = options.envSpec.yaml.channels;
+        }
+        let removeDefaults = inputs.condaRemoveDefaults === "true";
+        const filteredChannels = [];
+        for (const channel of channels) {
+            if (channel === "nodefaults") {
+                warning("'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
+                    "In the future, 'nodefaults' to remove 'defaults' won't be supported. " +
+                    "Please set 'conda-remove-defaults' = 'true' in setup-miniconda to remove this warning.");
+                removeDefaults = true;
+                continue;
+            }
+            filteredChannels.push(channel);
+        }
+        const existingChannels = config["channels"] || [];
+        const userExplicitlyAddedDefaults = filteredChannels.includes("defaults");
+        if (filteredChannels.length) {
+            const merged = [
+                ...filteredChannels,
+                ...existingChannels.filter((c) => !filteredChannels.includes(c)),
+            ];
+            if (removeDefaults && !userExplicitlyAddedDefaults) {
+                config["channels"] = merged.filter((c) => c !== "defaults");
+                info("Removing implicitly added 'defaults' channel");
+            }
+            else {
+                config["channels"] = merged;
+            }
+        }
+        else if (removeDefaults) {
+            config["channels"] = existingChannels.filter((c) => c !== "defaults");
+            info("Removing implicitly added 'defaults' channel");
+        }
+        else if (!existingChannels.length) {
+            warning("The 'defaults' channel might have been added implicitly. " +
+                "If this is intentional, add 'defaults' to the 'channels' list. " +
+                "Otherwise, consider setting 'conda-remove-defaults' to 'true'.");
+        }
+        for (const ch of config["channels"] || []) {
+            info(`Channel: '${ch}'`);
+        }
+        // --- Package directories ---
+        const inputPkgsDirs = parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
+        const existingPkgsDirs = config["pkgs_dirs"] || [];
+        const mergedPkgsDirs = [
+            ...inputPkgsDirs,
+            ...existingPkgsDirs.filter((d) => !inputPkgsDirs.includes(d)),
+        ];
+        config["pkgs_dirs"] = mergedPkgsDirs;
+        for (const pkgsDir of mergedPkgsDirs) {
+            info(`pkgs_dir: '${pkgsDir}'`);
+        }
+        // --- auto_activate_base ---
+        // Write auto_activate_base for broad compatibility. Conda 25.5.0+ also
+        // accepts auto_activate as the canonical name, but older versions only
+        // recognize auto_activate_base.
+        config["auto_activate_base"] = coerceConfigValue("auto_activate_base", inputs.condaConfig.auto_activate);
+        info(`auto_activate_base: ${config["auto_activate_base"]}`);
+        // --- All other config entries ---
+        const SKIP_KEYS = new Set([
+            "channels",
+            "pkgs_dirs",
+            "auto_activate",
+            "default_activation_env",
+        ]);
+        const configEntries = Object.entries(inputs.condaConfig);
+        for (const [key, value] of configEntries) {
+            if (SKIP_KEYS.has(key) || value.trim().length === 0) {
+                continue;
+            }
+            const coerced = coerceConfigValue(key, value);
+            config[key] = coerced;
+            info(`${key}: ${coerced}`);
+        }
+        // Strip 'defaults' from prefix-level condarc files too
+        if (removeDefaults && !userExplicitlyAddedDefaults) {
+            const basePath = condaBasePath(inputs, options);
+            const prefixCondarcPaths = [
+                external_path_namespaceObject.join(basePath, ".condarc"),
+                external_path_namespaceObject.join(basePath, "condarc"),
+            ];
+            for (const condarcPath of prefixCondarcPaths) {
+                if (!external_fs_namespaceObject.existsSync(condarcPath))
+                    continue;
+                try {
+                    const prefixConfig = load(external_fs_namespaceObject.readFileSync(condarcPath, "utf8"));
+                    if ((prefixConfig === null || prefixConfig === void 0 ? void 0 : prefixConfig["channels"]) &&
+                        Array.isArray(prefixConfig["channels"]) &&
+                        prefixConfig["channels"].includes("defaults")) {
+                        prefixConfig["channels"] = prefixConfig["channels"].filter((c) => c !== "defaults");
+                        const updatedYaml = dump(prefixConfig, { lineWidth: -1 });
+                        external_fs_namespaceObject.writeFileSync(condarcPath, updatedYaml, "utf8");
+                        info(`Removed 'defaults' channel from prefix condarc at ${condarcPath}`);
+                    }
+                }
+                catch (err) {
+                    warning(`Failed to process prefix condarc at ${condarcPath}: ${err}`);
+                }
+            }
+        }
+        for (const key of Object.keys(config)) {
+            if (!KNOWN_CONDARC_KEYS.has(key)) {
+                warning(`Unrecognized condarc key '${key}'. This may be a typo or a ` +
+                    `key from a newer conda version. conda will ignore unknown keys.`);
+            }
+        }
+        const configYaml = dump(config, { lineWidth: -1 });
+        info(`Writing condarc to ${CONDARC_PATH}:\n${configYaml}`);
+        external_fs_namespaceObject.writeFileSync(CONDARC_PATH, configYaml, "utf8");
+        if (isDebug()) {
+            yield condaCommand(["config", "--show"], inputs, options);
+        }
+    });
+}
+/**
+ * Resolve an environment name or path to a fully-qualified absolute path.
+ *
+ * @param inputPathOrName - An environment name or path (e.g. `"myenv"` or `"~/envs/myenv"`).
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The resolved absolute path to the environment directory.
+ */
+function _getFullEnvironmentPath(inputPathOrName, inputs, options) {
+    if (!inputPathOrName.includes("/")) {
+        // likely an environment name
+        const installationDirectory = condaBasePath(inputs, options);
+        if (isBaseEnv(inputPathOrName)) {
+            return external_path_namespaceObject.resolve(installationDirectory);
+        }
+        return external_path_namespaceObject.resolve(installationDirectory, "envs", inputPathOrName);
+    }
+    if (inputPathOrName.startsWith("~/")) {
+        return external_path_namespaceObject.resolve(external_os_namespaceObject.homedir(), inputPathOrName.slice(2));
+    }
+    return external_path_namespaceObject.resolve(inputPathOrName);
+}
+/**
+ * Determine whether the given environment is the default activation target,
+ * either via `default_activation_env` config or by being a base environment alias.
+ *
+ * Determined locally from condarc files (user-level and prefix-level),
+ * avoiding a conda subprocess call.
+ *
+ * @param envName - The environment name to check.
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns `true` if the environment is the default activation target.
+ */
+function isDefaultEnvironment(envName, inputs, options) {
+    if (envName === "") {
+        return false;
+    }
+    const basePath = condaBasePath(inputs, options);
+    const condarcLocations = [
+        CONDARC_PATH,
+        external_path_namespaceObject.join(basePath, ".condarc"),
+        external_path_namespaceObject.join(basePath, "condarc"),
+    ];
+    for (const condarcPath of condarcLocations) {
+        if (!external_fs_namespaceObject.existsSync(condarcPath))
+            continue;
+        try {
+            const condarcConfig = load(external_fs_namespaceObject.readFileSync(condarcPath, "utf8"));
+            if (condarcConfig === null || condarcConfig === void 0 ? void 0 : condarcConfig["default_activation_env"]) {
+                const defaultEnv = _getFullEnvironmentPath(condarcConfig["default_activation_env"], inputs, options);
+                const activationEnv = _getFullEnvironmentPath(envName, inputs, options);
+                return defaultEnv === activationEnv;
+            }
+        }
+        catch (_a) {
+            // Continue to next condarc location
+        }
+    }
+    return isBaseEnv(envName);
+}
+/**
+ * Initialize conda shell integration for all shells, fix folder ownership
+ * on bundled installs, and remove/rename profile files.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ */
+function condaInit(inputs, options) {
+    return conda_awaiter(this, void 0, void 0, function* () {
+        // Fix ownership of folders
+        if (options.useBundled) {
+            if (IS_MAC) {
+                info("Fixing conda folders ownership");
+                const userName = external_os_namespaceObject.userInfo().username;
+                yield execute([
+                    "sudo",
+                    "chown",
+                    "-R",
+                    `${userName}:staff`,
+                    condaBasePath(inputs, options),
+                ]);
+            }
+            else if (constants_IS_WINDOWS) {
+                const basePath = condaBasePath(inputs, options);
+                const takeownPromises = WIN_PERMS_FOLDERS.map((folder) => {
+                    const ownPath = external_path_namespaceObject.join(basePath, folder);
+                    if (external_fs_namespaceObject.existsSync(ownPath)) {
+                        info(`Fixing ${folder} ownership`);
+                        return execute(["takeown", "/f", ownPath, "/r", "/d", "y"]);
+                    }
+                    return undefined;
+                }).filter(Boolean);
+                yield Promise.all(takeownPromises);
+            }
+        }
+        // Skip conda init and all profile modifications if run-init is false
+        if (inputs.runInit == "false") {
+            info("Skipping conda init and profile modifications (run-init=false)");
+        }
+        else {
+            // Remove profile files
+            if (inputs.removeProfiles == "true") {
+                for (const rc of PROFILES) {
+                    try {
+                        const file = external_path_namespaceObject.join(external_os_namespaceObject.homedir(), rc);
+                        if (external_fs_namespaceObject.existsSync(file)) {
+                            info(`Removing "${file}"`);
+                            yield rmRF(file);
+                        }
+                    }
+                    catch (err) {
+                        warning(err);
+                    }
+                }
+            }
+            // Run conda init
+            for (const cmd of ["--all"]) {
+                yield condaCommand(["init", cmd], inputs, options);
+            }
+            if (inputs.removeProfiles == "true") {
+                // Rename files
+                if (IS_LINUX) {
+                    const source = "~/.bashrc".replace("~", external_os_namespaceObject.homedir());
+                    const dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
+                    if (external_fs_namespaceObject.existsSync(source)) {
+                        info(`Renaming "${source}" to "${dest}"\n`);
+                        yield mv(source, dest);
+                    }
+                }
+                else if (IS_MAC) {
+                    const source = "~/.bash_profile".replace("~", external_os_namespaceObject.homedir());
+                    const dest = "~/.profile".replace("~", external_os_namespaceObject.homedir());
+                    if (external_fs_namespaceObject.existsSync(source)) {
+                        info(`Renaming "${source}" to "${dest}"\n`);
+                        yield mv(source, dest);
+                    }
+                }
+            }
+        }
+    });
+}
+/**
+ * Append activation commands to all shell profile files so that
+ * subsequent workflow steps start with the correct environment active.
+ *
+ * This must be called AFTER the target environment has been created,
+ * otherwise `.bat` wrappers (which source `conda_hook.bat`) would try
+ * to activate a non-existent environment during setup and emit false
+ * warnings (see #474).
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ */
+function condaInitActivation(inputs, options) {
+    return conda_awaiter(this, void 0, void 0, function* () {
+        // Skip profile modifications when run-init is false (mirrors condaInit guard)
+        if (inputs.runInit == "false") {
+            info("Skipping activation profile modifications (run-init=false)");
+            return;
+        }
+        const isValidActivate = !!inputs.activateEnvironment &&
+            !isDefaultEnvironment(inputs.activateEnvironment, inputs, options);
+        const autoActivateDefault = options.condaConfig.auto_activate === "true";
+        const installationDirectory = condaBasePath(inputs, options);
+        // PowerShell profiles
+        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+        const powerLines = [
+            "",
+            "# ----------------------------------------------------------------------------",
+        ];
+        if (isValidActivate) {
+            powerLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`);
+        }
+        powerLines.push("# ----------------------------------------------------------------------------");
+        const powerExtraText = powerLines.join("\n");
+        // Bash profiles
+        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+        const bashLines = [
+            "",
+            "# ----------------------------------------------------------------------------",
+            "# Conda Setup Action: Basic configuration",
+            "set -eo pipefail",
+        ];
+        if (isValidActivate) {
+            bashLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`, "# ----------------------------------------------------------------------------");
+        }
+        const bashExtraText = bashLines.join("\n");
+        // Xonsh profiles
+        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+        const xonshLines = [
+            "",
+            "# ----------------------------------------------------------------------------",
+            "# Conda Setup Action: Basic configuration",
+            "$RAISE_SUBPROC_ERROR = True", // equivalent to: set -e
+            "$XONSH_PIPEFAIL = True", // equivalent to: set -o pipefail
+        ];
+        if (isValidActivate) {
+            xonshLines.push("# Conda Setup Action: Custom activation", `conda activate "${inputs.activateEnvironment}"`, "# ----------------------------------------------------------------------------");
+        }
+        const xonshExtraText = xonshLines.join("\n");
+        // Batch profiles
+        // NOTE: Using array.join() to prevent auto-formatters from adding indentation
+        const batchLines = [
+            "",
+            ":: ---------------------------------------------------------------------------",
+        ];
+        if (autoActivateDefault) {
+            batchLines.push(":: Conda Setup Action: Activate default environment", '@CALL "%CONDA_BAT%" activate');
+        }
+        if (isValidActivate) {
+            batchLines.push(":: Conda Setup Action: Custom activation", `@CALL "%CONDA_BAT%" activate "${inputs.activateEnvironment}"`);
+        }
+        batchLines.push(":: Conda Setup Action: Basic configuration", "@SETLOCAL EnableExtensions", "@SETLOCAL DisableDelayedExpansion", ":: ---------------------------------------------------------------------------");
+        const batchExtraText = batchLines.join("\n");
+        const shells = {
+            "~/.bash_profile": bashExtraText,
+            "~/.profile": bashExtraText,
+            "~/.zshrc": bashExtraText,
+            "~/.config/fish/config.fish": bashExtraText,
+            "~/.tcshrc": bashExtraText,
+            "~/.xonshrc": xonshExtraText,
+            "~/.config/powershell/profile.ps1": powerExtraText,
+            "~/Documents/PowerShell/profile.ps1": powerExtraText,
+            "~/Documents/WindowsPowerShell/profile.ps1": powerExtraText,
+            [external_path_namespaceObject.join(installationDirectory, "etc", "profile.d", "conda.sh")]: bashExtraText,
+            [external_path_namespaceObject.join(installationDirectory, "etc", "fish", "conf.d", "conda.fish")]: bashExtraText,
+            [external_path_namespaceObject.join(installationDirectory, "condabin", "conda_hook.bat")]: batchExtraText,
+        };
+        Object.keys(shells).forEach((key) => {
+            const filePath = key.replace("~", external_os_namespaceObject.homedir());
+            const text = shells[key];
+            if (text != null && external_fs_namespaceObject.existsSync(filePath)) {
+                info(`Append to "${filePath}":\n ${text} \n`);
+                external_fs_namespaceObject.appendFileSync(filePath, text);
+            }
+        });
+    });
+}
+
+;// CONCATENATED MODULE: ./src/outputs.ts
+var outputs_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+/**
+ * @module outputs
+ * Modify environment variables and action outputs.
+ *
+ * @category Core
+ */
+
+
+
+
+/**
+ * Add the conda `condabin` directory to PATH and export the CONDA env variable.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ */
+function setPathVariables(inputs, options) {
+    return outputs_awaiter(this, void 0, void 0, function* () {
+        const condaBin = external_path_namespaceObject.join(condaBasePath(inputs, options), "condabin");
+        const condaPath = condaBasePath(inputs, options);
+        info(`Add "${condaBin}" to PATH`);
+        addPath(condaBin);
+        info(`Set 'CONDA="${condaPath}"'`);
+        exportVariable("CONDA", condaPath);
+    });
+}
+/**
+ * Set the action outputs and state for the effective environment-file.
+ *
+ * @param envFile - The path to the environment file used.
+ * @param envContent - The text content of the environment file.
+ * @param patched - Whether the environment file was patched from the original.
+ */
+function setEnvironmentFileOutputs(envFile, envContent, patched = false) {
+    setOutput(OUTPUT_ENV_FILE_PATH, external_path_namespaceObject.resolve(envFile));
+    setOutput(OUTPUT_ENV_FILE_CONTENT, envContent);
+    setOutput(OUTPUT_ENV_FILE_WAS_PATCHED, patched ? "true" : "false");
+    saveState(OUTPUT_ENV_FILE_WAS_PATCHED, patched);
+}
+
+;// CONCATENATED MODULE: external "url"
+const external_url_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("url");
+;// CONCATENATED MODULE: ./node_modules/@actions/tool-cache/lib/manifest.js
+var manifest_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+
+
+// Internal object for testability (allows mocking in ESM)
+const _internal = {
+    readLinuxVersionFile() {
+        const lsbReleaseFile = '/etc/lsb-release';
+        const osReleaseFile = '/etc/os-release';
+        let contents = '';
+        if (external_fs_namespaceObject.existsSync(lsbReleaseFile)) {
+            contents = external_fs_namespaceObject.readFileSync(lsbReleaseFile).toString();
+        }
+        else if (external_fs_namespaceObject.existsSync(osReleaseFile)) {
+            contents = external_fs_namespaceObject.readFileSync(osReleaseFile).toString();
+        }
+        return contents;
+    }
+};
+function _findMatch(versionSpec, stable, candidates, archFilter) {
+    return manifest_awaiter(this, void 0, void 0, function* () {
+        const platFilter = os.platform();
+        let result;
+        let match;
+        let file;
+        for (const candidate of candidates) {
+            const version = candidate.version;
+            debug(`check ${version} satisfies ${versionSpec}`);
+            if (semver.satisfies(version, versionSpec) &&
+                (!stable || candidate.stable === stable)) {
+                file = candidate.files.find(item => {
+                    debug(`${item.arch}===${archFilter} && ${item.platform}===${platFilter}`);
+                    let chk = item.arch === archFilter && item.platform === platFilter;
+                    if (chk && item.platform_version) {
+                        const osVersion = _getOsVersion();
+                        if (osVersion === item.platform_version) {
+                            chk = true;
+                        }
+                        else {
+                            chk = semver.satisfies(osVersion, item.platform_version);
+                        }
+                    }
+                    return chk;
+                });
+                if (file) {
+                    debug(`matched ${candidate.version}`);
+                    match = candidate;
+                    break;
+                }
+            }
+        }
+        if (match && file) {
+            // clone since we're mutating the file list to be only the file that matches
+            result = Object.assign({}, match);
+            result.files = [file];
+        }
+        return result;
+    });
+}
+function _getOsVersion() {
+    // TODO: add windows and other linux, arm variants
+    // right now filtering on version is only an ubuntu and macos scenario for tools we build for hosted (python)
+    const plat = os.platform();
+    let version = '';
+    if (plat === 'darwin') {
+        version = cp.execSync('sw_vers -productVersion').toString();
+    }
+    else if (plat === 'linux') {
+        // lsb_release process not in some containers, readfile
+        // Run cat /etc/lsb-release
+        // DISTRIB_ID=Ubuntu
+        // DISTRIB_RELEASE=18.04
+        // DISTRIB_CODENAME=bionic
+        // DISTRIB_DESCRIPTION="Ubuntu 18.04.4 LTS"
+        const lsbContents = _internal.readLinuxVersionFile();
+        if (lsbContents) {
+            const lines = lsbContents.split('\n');
+            for (const line of lines) {
+                const parts = line.split('=');
+                if (parts.length === 2 &&
+                    (parts[0].trim() === 'VERSION_ID' ||
+                        parts[0].trim() === 'DISTRIB_RELEASE')) {
+                    version = parts[1].trim().replace(/^"/, '').replace(/"$/, '');
+                    break;
+                }
+            }
+        }
+    }
+    return version;
+}
+// Alias for backwards compatibility
+function _readLinuxVersionFile() {
+    return _internal.readLinuxVersionFile();
+}
+//# sourceMappingURL=manifest.js.map
+// EXTERNAL MODULE: external "util"
+var external_util_ = __nccwpck_require__(9023);
+;// CONCATENATED MODULE: ./node_modules/@actions/tool-cache/lib/retry-helper.js
+var retry_helper_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+/**
+ * Internal class for retries
+ */
+class RetryHelper {
+    constructor(maxAttempts, minSeconds, maxSeconds) {
+        if (maxAttempts < 1) {
+            throw new Error('max attempts should be greater than or equal to 1');
+        }
+        this.maxAttempts = maxAttempts;
+        this.minSeconds = Math.floor(minSeconds);
+        this.maxSeconds = Math.floor(maxSeconds);
+        if (this.minSeconds > this.maxSeconds) {
+            throw new Error('min seconds should be less than or equal to max seconds');
+        }
+    }
+    execute(action, isRetryable) {
+        return retry_helper_awaiter(this, void 0, void 0, function* () {
+            let attempt = 1;
+            while (attempt < this.maxAttempts) {
+                // Try
+                try {
+                    return yield action();
+                }
+                catch (err) {
+                    if (isRetryable && !isRetryable(err)) {
+                        throw err;
+                    }
+                    info(err.message);
+                }
+                // Sleep
+                const seconds = this.getSleepAmount();
+                info(`Waiting ${seconds} seconds before trying again`);
+                yield this.sleep(seconds);
+                attempt++;
+            }
+            // Last attempt
+            return yield action();
+        });
+    }
+    getSleepAmount() {
+        return (Math.floor(Math.random() * (this.maxSeconds - this.minSeconds + 1)) +
+            this.minSeconds);
+    }
+    sleep(seconds) {
+        return retry_helper_awaiter(this, void 0, void 0, function* () {
+            return new Promise(resolve => setTimeout(resolve, seconds * 1000));
+        });
+    }
+}
+//# sourceMappingURL=retry-helper.js.map
+;// CONCATENATED MODULE: ./node_modules/@actions/tool-cache/lib/tool-cache.js
+var tool_cache_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class HTTPError extends Error {
+    constructor(httpStatusCode) {
+        super(`Unexpected HTTP response: ${httpStatusCode}`);
+        this.httpStatusCode = httpStatusCode;
+        Object.setPrototypeOf(this, new.target.prototype);
+    }
+}
+const tool_cache_IS_WINDOWS = process.platform === 'win32';
+const tool_cache_IS_MAC = process.platform === 'darwin';
+const userAgent = 'actions/tool-cache';
+/**
+ * Download a tool from an url and stream it into a file
+ *
+ * @param url       url of tool to download
+ * @param dest      path to download tool
+ * @param auth      authorization header
+ * @param headers   other headers
+ * @returns         path to downloaded tool
+ */
+function downloadTool(url, dest, auth, headers) {
+    return tool_cache_awaiter(this, void 0, void 0, function* () {
+        dest = dest || external_path_namespaceObject.join(_getTempDirectory(), external_crypto_namespaceObject.randomUUID());
+        yield mkdirP(external_path_namespaceObject.dirname(dest));
+        core_debug(`Downloading ${url}`);
+        core_debug(`Destination ${dest}`);
+        const maxAttempts = 3;
+        const minSeconds = _getGlobal('TEST_DOWNLOAD_TOOL_RETRY_MIN_SECONDS', 10);
+        const maxSeconds = _getGlobal('TEST_DOWNLOAD_TOOL_RETRY_MAX_SECONDS', 20);
+        const retryHelper = new RetryHelper(maxAttempts, minSeconds, maxSeconds);
+        return yield retryHelper.execute(() => tool_cache_awaiter(this, void 0, void 0, function* () {
+            return yield downloadToolAttempt(url, dest || '', auth, headers);
+        }), (err) => {
+            if (err instanceof HTTPError && err.httpStatusCode) {
+                // Don't retry anything less than 500, except 408 Request Timeout and 429 Too Many Requests
+                if (err.httpStatusCode < 500 &&
+                    err.httpStatusCode !== 408 &&
+                    err.httpStatusCode !== 429) {
+                    return false;
+                }
+            }
+            // Otherwise retry
+            return true;
+        });
+    });
+}
+function downloadToolAttempt(url, dest, auth, headers) {
+    return tool_cache_awaiter(this, void 0, void 0, function* () {
+        if (external_fs_namespaceObject.existsSync(dest)) {
+            throw new Error(`Destination file path ${dest} already exists`);
+        }
+        // Get the response headers
+        const http = new lib_HttpClient(userAgent, [], {
+            allowRetries: false
+        });
+        if (auth) {
+            core_debug('set auth');
+            if (headers === undefined) {
+                headers = {};
+            }
+            headers.authorization = auth;
+        }
+        const response = yield http.get(url, headers);
+        if (response.message.statusCode !== 200) {
+            const err = new HTTPError(response.message.statusCode);
+            core_debug(`Failed to download from "${url}". Code(${response.message.statusCode}) Message(${response.message.statusMessage})`);
+            throw err;
+        }
+        // Download the response body
+        const pipeline = external_util_.promisify(external_stream_namespaceObject.pipeline);
+        const responseMessageFactory = _getGlobal('TEST_DOWNLOAD_TOOL_RESPONSE_MESSAGE_FACTORY', () => response.message);
+        const readStream = responseMessageFactory();
+        let succeeded = false;
+        try {
+            yield pipeline(readStream, external_fs_namespaceObject.createWriteStream(dest));
+            core_debug('download complete');
+            succeeded = true;
+            return dest;
+        }
+        finally {
+            // Error, delete dest before retry
+            if (!succeeded) {
+                core_debug('download failed');
+                try {
+                    yield rmRF(dest);
+                }
+                catch (err) {
+                    core_debug(`Failed to delete '${dest}'. ${err.message}`);
+                }
+            }
+        }
+    });
+}
+/**
+ * Extract a .7z file
+ *
+ * @param file     path to the .7z file
+ * @param dest     destination directory. Optional.
+ * @param _7zPath  path to 7zr.exe. Optional, for long path support. Most .7z archives do not have this
+ * problem. If your .7z archive contains very long paths, you can pass the path to 7zr.exe which will
+ * gracefully handle long paths. By default 7zdec.exe is used because it is a very small program and is
+ * bundled with the tool lib. However it does not support long paths. 7zr.exe is the reduced command line
+ * interface, it is smaller than the full command line interface, and it does support long paths. At the
+ * time of this writing, it is freely available from the LZMA SDK that is available on the 7zip website.
+ * Be sure to check the current license agreement. If 7zr.exe is bundled with your action, then the path
+ * to 7zr.exe can be pass to this function.
+ * @returns        path to the destination directory
+ */
+function extract7z(file, dest, _7zPath) {
+    return tool_cache_awaiter(this, void 0, void 0, function* () {
+        ok(tool_cache_IS_WINDOWS, 'extract7z() not supported on current OS');
+        ok(file, 'parameter "file" is required');
+        dest = yield _createExtractFolder(dest);
+        const originalCwd = process.cwd();
+        process.chdir(dest);
+        if (_7zPath) {
+            try {
+                const logLevel = core.isDebug() ? '-bb1' : '-bb0';
+                const args = [
+                    'x', // eXtract files with full paths
+                    logLevel, // -bb[0-3] : set output log level
+                    '-bd', // disable progress indicator
+                    '-sccUTF-8', // set charset for for console input/output
+                    file
+                ];
+                const options = {
+                    silent: true
+                };
+                yield exec(`"${_7zPath}"`, args, options);
+            }
+            finally {
+                process.chdir(originalCwd);
+            }
+        }
+        else {
+            const escapedScript = path
+                .join(__dirname, '..', 'scripts', 'Invoke-7zdec.ps1')
+                .replace(/'/g, "''")
+                .replace(/"|\n|\r/g, ''); // double-up single quotes, remove double quotes and newlines
+            const escapedFile = file.replace(/'/g, "''").replace(/"|\n|\r/g, '');
+            const escapedTarget = dest.replace(/'/g, "''").replace(/"|\n|\r/g, '');
+            const command = `& '${escapedScript}' -Source '${escapedFile}' -Target '${escapedTarget}'`;
+            const args = [
+                '-NoLogo',
+                '-Sta',
+                '-NoProfile',
+                '-NonInteractive',
+                '-ExecutionPolicy',
+                'Unrestricted',
+                '-Command',
+                command
+            ];
+            const options = {
+                silent: true
+            };
+            try {
+                const powershellPath = yield io.which('powershell', true);
+                yield exec(`"${powershellPath}"`, args, options);
+            }
+            finally {
+                process.chdir(originalCwd);
+            }
+        }
+        return dest;
+    });
+}
+/**
+ * Extract a compressed tar archive
+ *
+ * @param file     path to the tar
+ * @param dest     destination directory. Optional.
+ * @param flags    flags for the tar command to use for extraction. Defaults to 'xz' (extracting gzipped tars). Optional.
+ * @returns        path to the destination directory
+ */
+function extractTar(file_1, dest_1) {
+    return tool_cache_awaiter(this, arguments, void 0, function* (file, dest, flags = 'xz') {
+        if (!file) {
+            throw new Error("parameter 'file' is required");
+        }
+        // Create dest
+        dest = yield _createExtractFolder(dest);
+        // Determine whether GNU tar
+        core.debug('Checking tar --version');
+        let versionOutput = '';
+        yield exec('tar --version', [], {
+            ignoreReturnCode: true,
+            silent: true,
+            listeners: {
+                stdout: (data) => (versionOutput += data.toString()),
+                stderr: (data) => (versionOutput += data.toString())
+            }
+        });
+        core.debug(versionOutput.trim());
+        const isGnuTar = versionOutput.toUpperCase().includes('GNU TAR');
+        // Initialize args
+        let args;
+        if (flags instanceof Array) {
+            args = flags;
+        }
+        else {
+            args = [flags];
+        }
+        if (core.isDebug() && !flags.includes('v')) {
+            args.push('-v');
+        }
+        let destArg = dest;
+        let fileArg = file;
+        if (tool_cache_IS_WINDOWS && isGnuTar) {
+            args.push('--force-local');
+            destArg = dest.replace(/\\/g, '/');
+            // Technically only the dest needs to have `/` but for aesthetic consistency
+            // convert slashes in the file arg too.
+            fileArg = file.replace(/\\/g, '/');
+        }
+        if (isGnuTar) {
+            // Suppress warnings when using GNU tar to extract archives created by BSD tar
+            args.push('--warning=no-unknown-keyword');
+            args.push('--overwrite');
+        }
+        args.push('-C', destArg, '-f', fileArg);
+        yield exec(`tar`, args);
+        return dest;
+    });
+}
+/**
+ * Extract a xar compatible archive
+ *
+ * @param file     path to the archive
+ * @param dest     destination directory. Optional.
+ * @param flags    flags for the xar. Optional.
+ * @returns        path to the destination directory
+ */
+function extractXar(file_1, dest_1) {
+    return tool_cache_awaiter(this, arguments, void 0, function* (file, dest, flags = []) {
+        ok(tool_cache_IS_MAC, 'extractXar() not supported on current OS');
+        ok(file, 'parameter "file" is required');
+        dest = yield _createExtractFolder(dest);
+        let args;
+        if (flags instanceof Array) {
+            args = flags;
+        }
+        else {
+            args = [flags];
+        }
+        args.push('-x', '-C', dest, '-f', file);
+        if (core.isDebug()) {
+            args.push('-v');
+        }
+        const xarPath = yield io.which('xar', true);
+        yield exec(`"${xarPath}"`, _unique(args));
+        return dest;
+    });
+}
+/**
+ * Extract a zip
+ *
+ * @param file     path to the zip
+ * @param dest     destination directory. Optional.
+ * @returns        path to the destination directory
+ */
+function extractZip(file, dest) {
+    return tool_cache_awaiter(this, void 0, void 0, function* () {
+        if (!file) {
+            throw new Error("parameter 'file' is required");
+        }
+        dest = yield _createExtractFolder(dest);
+        if (tool_cache_IS_WINDOWS) {
+            yield extractZipWin(file, dest);
+        }
+        else {
+            yield extractZipNix(file, dest);
+        }
+        return dest;
+    });
+}
+function extractZipWin(file, dest) {
+    return tool_cache_awaiter(this, void 0, void 0, function* () {
+        // build the powershell command
+        const escapedFile = file.replace(/'/g, "''").replace(/"|\n|\r/g, ''); // double-up single quotes, remove double quotes and newlines
+        const escapedDest = dest.replace(/'/g, "''").replace(/"|\n|\r/g, '');
+        const pwshPath = yield io.which('pwsh', false);
+        //To match the file overwrite behavior on nix systems, we use the overwrite = true flag for ExtractToDirectory
+        //and the -Force flag for Expand-Archive as a fallback
+        if (pwshPath) {
+            //attempt to use pwsh with ExtractToDirectory, if this fails attempt Expand-Archive
+            const pwshCommand = [
+                `$ErrorActionPreference = 'Stop' ;`,
+                `try { Add-Type -AssemblyName System.IO.Compression.ZipFile } catch { } ;`,
+                `try { [System.IO.Compression.ZipFile]::ExtractToDirectory('${escapedFile}', '${escapedDest}', $true) }`,
+                `catch { if (($_.Exception.GetType().FullName -eq 'System.Management.Automation.MethodException') -or ($_.Exception.GetType().FullName -eq 'System.Management.Automation.RuntimeException') ){ Expand-Archive -LiteralPath '${escapedFile}' -DestinationPath '${escapedDest}' -Force } else { throw $_ } } ;`
+            ].join(' ');
+            const args = [
+                '-NoLogo',
+                '-NoProfile',
+                '-NonInteractive',
+                '-ExecutionPolicy',
+                'Unrestricted',
+                '-Command',
+                pwshCommand
+            ];
+            core.debug(`Using pwsh at path: ${pwshPath}`);
+            yield exec(`"${pwshPath}"`, args);
+        }
+        else {
+            const powershellCommand = [
+                `$ErrorActionPreference = 'Stop' ;`,
+                `try { Add-Type -AssemblyName System.IO.Compression.FileSystem } catch { } ;`,
+                `if ((Get-Command -Name Expand-Archive -Module Microsoft.PowerShell.Archive -ErrorAction Ignore)) { Expand-Archive -LiteralPath '${escapedFile}' -DestinationPath '${escapedDest}' -Force }`,
+                `else {[System.IO.Compression.ZipFile]::ExtractToDirectory('${escapedFile}', '${escapedDest}', $true) }`
+            ].join(' ');
+            const args = [
+                '-NoLogo',
+                '-Sta',
+                '-NoProfile',
+                '-NonInteractive',
+                '-ExecutionPolicy',
+                'Unrestricted',
+                '-Command',
+                powershellCommand
+            ];
+            const powershellPath = yield io.which('powershell', true);
+            core.debug(`Using powershell at path: ${powershellPath}`);
+            yield exec(`"${powershellPath}"`, args);
+        }
+    });
+}
+function extractZipNix(file, dest) {
+    return tool_cache_awaiter(this, void 0, void 0, function* () {
+        const unzipPath = yield io.which('unzip', true);
+        const args = [file];
+        if (!core.isDebug()) {
+            args.unshift('-q');
+        }
+        args.unshift('-o'); //overwrite with -o, otherwise a prompt is shown which freezes the run
+        yield exec(`"${unzipPath}"`, args, { cwd: dest });
+    });
+}
+/**
+ * Caches a directory and installs it into the tool cacheDir
+ *
+ * @param sourceDir    the directory to cache into tools
+ * @param tool          tool name
+ * @param version       version of the tool.  semver format
+ * @param arch          architecture of the tool.  Optional.  Defaults to machine architecture
+ */
+function cacheDir(sourceDir, tool, version, arch) {
+    return tool_cache_awaiter(this, void 0, void 0, function* () {
+        version = semver.clean(version) || version;
+        arch = arch || os.arch();
+        core.debug(`Caching tool ${tool} ${version} ${arch}`);
+        core.debug(`source dir: ${sourceDir}`);
+        if (!fs.statSync(sourceDir).isDirectory()) {
+            throw new Error('sourceDir is not a directory');
+        }
+        // Create the tool dir
+        const destPath = yield _createToolPath(tool, version, arch);
+        // copy each child item. do not move. move can fail on Windows
+        // due to anti-virus software having an open handle on a file.
+        for (const itemName of fs.readdirSync(sourceDir)) {
+            const s = path.join(sourceDir, itemName);
+            yield io.cp(s, destPath, { recursive: true });
+        }
+        // write .complete
+        _completeToolPath(tool, version, arch);
+        return destPath;
+    });
+}
+/**
+ * Caches a downloaded file (GUID) and installs it
+ * into the tool cache with a given targetName
+ *
+ * @param sourceFile    the file to cache into tools.  Typically a result of downloadTool which is a guid.
+ * @param targetFile    the name of the file name in the tools directory
+ * @param tool          tool name
+ * @param version       version of the tool.  semver format
+ * @param arch          architecture of the tool.  Optional.  Defaults to machine architecture
+ */
+function cacheFile(sourceFile, targetFile, tool, version, arch) {
+    return tool_cache_awaiter(this, void 0, void 0, function* () {
+        version = node_modules_semver.clean(version) || version;
+        arch = arch || external_os_namespaceObject.arch();
+        core_debug(`Caching tool ${tool} ${version} ${arch}`);
+        core_debug(`source file: ${sourceFile}`);
+        if (!external_fs_namespaceObject.statSync(sourceFile).isFile()) {
+            throw new Error('sourceFile is not a file');
+        }
+        // create the tool dir
+        const destFolder = yield _createToolPath(tool, version, arch);
+        // copy instead of move. move can fail on Windows due to
+        // anti-virus software having an open handle on a file.
+        const destPath = external_path_namespaceObject.join(destFolder, targetFile);
+        core_debug(`destination file ${destPath}`);
+        yield io_cp(sourceFile, destPath);
+        // write .complete
+        _completeToolPath(tool, version, arch);
+        return destFolder;
+    });
+}
+/**
+ * Finds the path to a tool version in the local installed tool cache
+ *
+ * @param toolName      name of the tool
+ * @param versionSpec   version of the tool
+ * @param arch          optional arch.  defaults to arch of computer
+ */
+function find(toolName, versionSpec, arch) {
+    if (!toolName) {
+        throw new Error('toolName parameter is required');
+    }
+    if (!versionSpec) {
+        throw new Error('versionSpec parameter is required');
+    }
+    arch = arch || external_os_namespaceObject.arch();
+    // attempt to resolve an explicit version
+    if (!isExplicitVersion(versionSpec)) {
+        const localVersions = findAllVersions(toolName, arch);
+        const match = evaluateVersions(localVersions, versionSpec);
+        versionSpec = match;
+    }
+    // check for the explicit version in the cache
+    let toolPath = '';
+    if (versionSpec) {
+        versionSpec = node_modules_semver.clean(versionSpec) || '';
+        const cachePath = external_path_namespaceObject.join(_getCacheDirectory(), toolName, versionSpec, arch);
+        core_debug(`checking cache: ${cachePath}`);
+        if (external_fs_namespaceObject.existsSync(cachePath) && external_fs_namespaceObject.existsSync(`${cachePath}.complete`)) {
+            core_debug(`Found tool in cache ${toolName} ${versionSpec} ${arch}`);
+            toolPath = cachePath;
+        }
+        else {
+            core_debug('not found');
+        }
+    }
+    return toolPath;
+}
+/**
+ * Finds the paths to all versions of a tool that are installed in the local tool cache
+ *
+ * @param toolName  name of the tool
+ * @param arch      optional arch.  defaults to arch of computer
+ */
+function findAllVersions(toolName, arch) {
+    const versions = [];
+    arch = arch || external_os_namespaceObject.arch();
+    const toolPath = external_path_namespaceObject.join(_getCacheDirectory(), toolName);
+    if (external_fs_namespaceObject.existsSync(toolPath)) {
+        const children = external_fs_namespaceObject.readdirSync(toolPath);
+        for (const child of children) {
+            if (isExplicitVersion(child)) {
+                const fullPath = external_path_namespaceObject.join(toolPath, child, arch || '');
+                if (external_fs_namespaceObject.existsSync(fullPath) && external_fs_namespaceObject.existsSync(`${fullPath}.complete`)) {
+                    versions.push(child);
+                }
+            }
+        }
+    }
+    return versions;
+}
+function getManifestFromRepo(owner_1, repo_1, auth_1) {
+    return tool_cache_awaiter(this, arguments, void 0, function* (owner, repo, auth, branch = 'master') {
+        let releases = [];
+        const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}`;
+        const http = new httpm.HttpClient('tool-cache');
+        const headers = {};
+        if (auth) {
+            core.debug('set auth');
+            headers.authorization = auth;
+        }
+        const response = yield http.getJson(treeUrl, headers);
+        if (!response.result) {
+            return releases;
+        }
+        let manifestUrl = '';
+        for (const item of response.result.tree) {
+            if (item.path === 'versions-manifest.json') {
+                manifestUrl = item.url;
+                break;
+            }
+        }
+        headers['accept'] = 'application/vnd.github.VERSION.raw';
+        let versionsRaw = yield (yield http.get(manifestUrl, headers)).readBody();
+        if (versionsRaw) {
+            // shouldn't be needed but protects against invalid json saved with BOM
+            versionsRaw = versionsRaw.replace(/^\uFEFF/, '');
+            try {
+                releases = JSON.parse(versionsRaw);
+            }
+            catch (_a) {
+                core.debug('Invalid json');
+            }
+        }
+        return releases;
+    });
+}
+function findFromManifest(versionSpec_1, stable_1, manifest_1) {
+    return tool_cache_awaiter(this, arguments, void 0, function* (versionSpec, stable, manifest, archFilter = os.arch()) {
+        // wrap the internal impl
+        const match = yield mm._findMatch(versionSpec, stable, manifest, archFilter);
+        return match;
+    });
+}
+function _createExtractFolder(dest) {
+    return tool_cache_awaiter(this, void 0, void 0, function* () {
+        if (!dest) {
+            // create a temp dir
+            dest = path.join(_getTempDirectory(), crypto.randomUUID());
+        }
+        yield io.mkdirP(dest);
+        return dest;
+    });
+}
+function _createToolPath(tool, version, arch) {
+    return tool_cache_awaiter(this, void 0, void 0, function* () {
+        const folderPath = external_path_namespaceObject.join(_getCacheDirectory(), tool, node_modules_semver.clean(version) || version, arch || '');
+        core_debug(`destination ${folderPath}`);
+        const markerPath = `${folderPath}.complete`;
+        yield rmRF(folderPath);
+        yield rmRF(markerPath);
+        yield mkdirP(folderPath);
+        return folderPath;
+    });
+}
+function _completeToolPath(tool, version, arch) {
+    const folderPath = external_path_namespaceObject.join(_getCacheDirectory(), tool, node_modules_semver.clean(version) || version, arch || '');
+    const markerPath = `${folderPath}.complete`;
+    external_fs_namespaceObject.writeFileSync(markerPath, '');
+    core_debug('finished caching tool');
+}
+/**
+ * Check if version string is explicit
+ *
+ * @param versionSpec      version string to check
+ */
+function isExplicitVersion(versionSpec) {
+    const c = node_modules_semver.clean(versionSpec) || '';
+    core_debug(`isExplicit: ${c}`);
+    const valid = node_modules_semver.valid(c) != null;
+    core_debug(`explicit? ${valid}`);
+    return valid;
+}
+/**
+ * Get the highest satisfiying semantic version in `versions` which satisfies `versionSpec`
+ *
+ * @param versions        array of versions to evaluate
+ * @param versionSpec     semantic version spec to satisfy
+ */
+function evaluateVersions(versions, versionSpec) {
+    let version = '';
+    core_debug(`evaluating ${versions.length} versions`);
+    versions = versions.sort((a, b) => {
+        if (node_modules_semver.gt(a, b)) {
+            return 1;
+        }
+        return -1;
+    });
+    for (let i = versions.length - 1; i >= 0; i--) {
+        const potential = versions[i];
+        const satisfied = node_modules_semver.satisfies(potential, versionSpec);
+        if (satisfied) {
+            version = potential;
+            break;
+        }
+    }
+    if (version) {
+        core_debug(`matched: ${version}`);
+    }
+    else {
+        core_debug('match not found');
+    }
+    return version;
+}
+/**
+ * Gets RUNNER_TOOL_CACHE
+ */
+function _getCacheDirectory() {
+    const cacheDirectory = process.env['RUNNER_TOOL_CACHE'] || '';
+    (0,external_assert_.ok)(cacheDirectory, 'Expected RUNNER_TOOL_CACHE to be defined');
+    return cacheDirectory;
+}
+/**
+ * Gets RUNNER_TEMP
+ */
+function _getTempDirectory() {
+    const tempDirectory = process.env['RUNNER_TEMP'] || '';
+    (0,external_assert_.ok)(tempDirectory, 'Expected RUNNER_TEMP to be defined');
+    return tempDirectory;
+}
+/**
+ * Gets a global variable
+ */
+function _getGlobal(key, defaultValue) {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const value = global[key];
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+    return value !== undefined ? value : defaultValue;
+}
+/**
+ * Returns an array of unique values.
+ * @param values Values to make unique.
+ */
+function _unique(values) {
+    return Array.from(new Set(values));
+}
+//# sourceMappingURL=tool-cache.js.map
+;// CONCATENATED MODULE: ./src/installer/base.ts
+/**
+ * @module installer/base
+ * Shared logic for downloading, caching, and locating `constructor`-compatible
+ * installers via the `@actions/tool-cache`.
+ *
+ * @category Installers
+ */
+var base_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+
+
+
+/**
+ * Get the path for a locally-executable installer from cache, or as downloaded.
+ *
+ * ### Note
+ * Assumes `url` at least ends with the correct executable extension
+ * for this platform, but makes no other assumptions about the URL format:
+ * it might include GET params, was not built with `constructor` (but still
+ * has the same CLI), or has been renamed during a build process.
+ *
+ * @param options - Cache and download metadata for the installer.
+ * @returns The local path to the installer (with the correct extension).
+ * @throws {Error} If no executable path could be determined after all attempts.
+ *
+ * @example
+ * ```ts
+ * const localPath = await ensureLocalInstaller({
+ *   url: "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh",
+ *   tool: "Miniconda3",
+ *   version: "latest",
+ *   arch: "x86_64",
+ * });
+ * ```
+ */
+function ensureLocalInstaller(options) {
+    return base_awaiter(this, void 0, void 0, function* () {
+        info("Ensuring Installer...");
+        const url = new external_url_namespaceObject.URL(options.url);
+        const installerName = external_path_namespaceObject.basename(url.pathname);
+        // As a URL, we assume posix paths
+        const installerExtension = external_path_namespaceObject.posix.extname(installerName);
+        const tool = options.tool != null ? options.tool : installerName;
+        // Create a fake version if neccessary
+        const version = options.version != null
+            ? options.version
+            : "0.0.0-" +
+                external_crypto_namespaceObject.createHash("sha256").update(options.url).digest("hex");
+        let executablePath = "";
+        if (url.protocol === "file:") {
+            info(`Local file specified, using in-place...`);
+            executablePath = (0,external_url_namespaceObject.fileURLToPath)(options.url);
+        }
+        if (executablePath === "") {
+            info(`Checking for cached ${tool}@${version}...`);
+            // tc.find returns the name of the directory in which
+            // the cached file is located.
+            const cacheDirectoryPath = find(installerName, version, ...(options.arch ? [options.arch] : []));
+            if (cacheDirectoryPath !== "") {
+                info(`Found ${installerName} cache at ${cacheDirectoryPath}!`);
+                // Append the basename of the cached file to the directory
+                // returned by tc.find
+                executablePath = external_path_namespaceObject.join(cacheDirectoryPath, installerName);
+                info(`executablePath is ${executablePath}`);
+            }
+            else {
+                info(`Did not find ${installerName} ${version} in cache`);
+            }
+        }
+        if (executablePath === "") {
+            const rawDownloadPath = yield downloadTool(options.url);
+            info(`Downloaded ${installerName}, ensuring extension ${installerExtension}`);
+            // Always ensure the installer ends with a known path
+            executablePath = rawDownloadPath + installerExtension;
+            yield mv(rawDownloadPath, executablePath);
+            info(`Caching ${tool}@${version}...`);
+            const cacheResult = yield cacheFile(executablePath, installerName, tool, version, ...(options.arch ? [options.arch] : []));
+            info(`Cached ${tool}@${version}: ${cacheResult}!`);
+        }
+        return executablePath;
+    });
+}
+
+;// CONCATENATED MODULE: ./src/installer/download-miniforge.ts
+/**
+ * @module installer/download-miniforge
+ * Download Miniforge installers from GitHub releases using the well-known
+ * release URL structure of the `conda-forge/miniforge` repository.
+ *
+ * @category Installers
+ */
+var download_miniforge_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+/**
+ * Download a specific Miniforge installer determined by the variant, version,
+ * and architecture from the action inputs.
+ *
+ * @param inputs - The parsed action inputs containing variant, version, and architecture.
+ * @param _options - The current dynamic options (unused).
+ * @returns The local path to the downloaded installer.
+ * @throws {Error} If the architecture is not in {@link constants.MINIFORGE_ARCHITECTURES}.
+ */
+function downloadMiniforge(inputs, _options) {
+    return download_miniforge_awaiter(this, void 0, void 0, function* () {
+        const tool = inputs.miniforgeVariant.trim() || MINIFORGE_DEFAULT_VARIANT;
+        const version = inputs.miniforgeVersion.trim() || MINIFORGE_DEFAULT_VERSION;
+        const arch = MINIFORGE_ARCHITECTURES[inputs.architecture.toLowerCase()];
+        // Check valid arch
+        if (!arch) {
+            throw new Error(`Invalid 'architecture: ${inputs.architecture}'`);
+        }
+        const extension = IS_UNIX ? "sh" : "exe";
+        const osName = OS_NAMES[process.platform];
+        let fileName;
+        let url;
+        if (version === "latest") {
+            // e.g. https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+            fileName = [tool, osName, `${arch}.${extension}`].join("-");
+            url = [MINIFORGE_URL_PREFIX, version, "download", fileName].join("/");
+        }
+        else {
+            // e.g. https://github.com/conda-forge/miniforge/releases/download/4.9.2-5/Miniforge3-4.9.2-5-Linux-x86_64.sh
+            fileName = [tool, version, osName, `${arch}.${extension}`].join("-");
+            url = [MINIFORGE_URL_PREFIX, "download", version, fileName].join("/");
+        }
+        info(`Will fetch ${tool} ${version} from ${url}`);
+        return yield ensureLocalInstaller({ url, tool, version, arch });
+    });
+}
+/**
+ * Provide a path to a Miniforge downloaded from github.com.
+ *
+ * ### Note
+ * Uses the well-known structure of GitHub releases to resolve and download
+ * a particular Miniforge installer.
+ */
+const miniforgeDownloader = {
+    label: "download Miniforge",
+    provides: (inputs, _options) => download_miniforge_awaiter(void 0, void 0, void 0, function* () { return inputs.miniforgeVersion !== "" || inputs.miniforgeVariant !== ""; }),
+    installerPath: (inputs, options) => download_miniforge_awaiter(void 0, void 0, void 0, function* () {
+        return {
+            localInstallerPath: yield downloadMiniforge(inputs, options),
+            options: Object.assign(Object.assign({}, options), { useBundled: false }),
+        };
+    }),
+};
+
+;// CONCATENATED MODULE: ./src/installer/download-miniconda.ts
+/**
+ * @module installer/download-miniconda
+ * Download Miniconda installers from `repo.anaconda.com`.
+ *
+ * The download will fail with a clear HTTP error if the version is invalid,
+ * avoiding the previous approach of downloading and parsing the full HTML
+ * index page just for validation.
+ *
+ * @category Installers
+ */
+var download_miniconda_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+/**
+ * Download specific version miniconda defined by version, arch and python major version.
+ *
+ * The download will fail with a clear HTTP error if the version is invalid,
+ * avoiding the previous approach of downloading and parsing the full HTML
+ * index page just for validation.
+ *
+ * @param pythonMajorVersion - The Python major version for the installer (e.g. `3`).
+ * @param inputs - The parsed action inputs containing version and architecture.
+ * @returns The local path to the downloaded installer.
+ * @throws {Error} If the architecture is not in {@link constants.MINICONDA_ARCHITECTURES}.
+ * @throws {Error} If the download fails (e.g. Invalid version or unavailable platform).
+ */
+function downloadMiniconda(pythonMajorVersion, inputs) {
+    return download_miniconda_awaiter(this, void 0, void 0, function* () {
+        const arch = MINICONDA_ARCHITECTURES[inputs.architecture.toLowerCase()];
+        if (!arch) {
+            throw new Error(`Invalid arch "${inputs.architecture}"!`);
+        }
+        const extension = IS_UNIX ? "sh" : "exe";
+        const osName = OS_NAMES[process.platform];
+        if (!osName) {
+            throw new Error(`Unsupported platform "${process.platform}"!`);
+        }
+        const minicondaVersion = inputs.minicondaVersion || "latest";
+        const minicondaInstallerName = `Miniconda${pythonMajorVersion}-${minicondaVersion}-${osName}-${arch}.${extension}`;
+        const url = MINICONDA_BASE_URL + minicondaInstallerName;
+        info(minicondaInstallerName);
+        try {
+            return yield ensureLocalInstaller({
+                url,
+                tool: `Miniconda${pythonMajorVersion}`,
+                version: minicondaVersion,
+                arch: arch,
+            });
+        }
+        catch (err) {
+            throw new Error(`Failed to download Miniconda installer from ${url}. ` +
+                `Please verify that miniconda-version '${minicondaVersion}' is valid ` +
+                `for ${osName}-${arch}. Browse available versions at ` +
+                `${MINICONDA_BASE_URL}\n` +
+                `Original error: ${err}`);
+        }
+    });
+}
+/**
+ * Provide a path to a Miniconda downloaded from repo.anaconda.com.
+ *
+ * ### Note
+ * Uses the well-known structure of the repo.anaconda.com to resolve and download
+ * a particular Miniconda installer.
+ */
+const minicondaDownloader = {
+    label: "download Miniconda",
+    provides: (inputs, _options) => download_miniconda_awaiter(void 0, void 0, void 0, function* () {
+        return inputs.installerUrl === "";
+    }),
+    installerPath: (inputs, options) => download_miniconda_awaiter(void 0, void 0, void 0, function* () {
+        return {
+            localInstallerPath: yield downloadMiniconda(3, inputs),
+            options: Object.assign(Object.assign({}, options), { useBundled: false }),
+        };
+    }),
+};
+
+;// CONCATENATED MODULE: ./src/installer/download-url.ts
+/**
+ * @module installer/download-url
+ * Download a `constructor`-compatible installer from an arbitrary URL,
+ * including `file://` URLs for locally-available installers.
+ *
+ * @category Installers
+ */
+var download_url_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+/**
+ * Provide a path to a `constructor`-compatible installer downloaded from
+ * any URL, including `file://` URLs.
+ *
+ * ### Note
+ * The entire local URL is used as the cache key.
+ */
+const urlDownloader = {
+    label: "download a custom installer by URL",
+    provides: (inputs, _options) => download_url_awaiter(void 0, void 0, void 0, function* () { return !!inputs.installerUrl; }),
+    installerPath: (inputs, options) => download_url_awaiter(void 0, void 0, void 0, function* () {
+        return {
+            localInstallerPath: yield ensureLocalInstaller({
+                url: inputs.installerUrl,
+            }),
+            options: Object.assign(Object.assign({}, options), { useBundled: false }),
+        };
+    }),
+};
+
+;// CONCATENATED MODULE: ./src/installer/bundled-miniconda.ts
+/**
+ * @module installer/bundled-miniconda
+ * Use the pre-bundled Miniconda installation already present on the
+ * GitHub Actions runner image, avoiding any download or install step.
+ *
+ * @category Installers
+ */
+var bundled_miniconda_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+/**
+ * Provide a path to the pre-bundled (but probably old) Miniconda base installation
+ *
+ * ### Note
+ * This is the "cheapest" provider: if miniconda is already on disk, it can be
+ * fastest to avoid the download/install and use what's already on the image.
+ */
+const bundledMinicondaUser = {
+    label: "use bundled Miniconda",
+    provides: (inputs, _options) => bundled_miniconda_awaiter(void 0, void 0, void 0, function* () {
+        return (inputs.minicondaVersion === "" &&
+            inputs.miniforgeVariant === "" &&
+            inputs.miniforgeVersion === "" &&
+            inputs.architecture === "x64" &&
+            inputs.installerUrl === "" &&
+            MINICONDA_DIR_PATH.length > 0);
+    }),
+    installerPath: (_inputs, options) => bundled_miniconda_awaiter(void 0, void 0, void 0, function* () {
+        // No actions are performed. This is the only place `useBundled` will ever be true.
+        return {
+            localInstallerPath: "",
+            options: Object.assign(Object.assign({}, options), { useBundled: true }),
+        };
+    }),
+};
+
+;// CONCATENATED MODULE: ./src/installer/index.ts
+/**
+ * @module installer
+ * Installer provider registry and runner. Iterates through
+ * {@link types.IInstallerProvider} strategies to locate or download a
+ * `constructor`-compatible installer, then executes it.
+ *
+ * @category Installers
+ */
+var installer_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+
+
+
+
+
+/**
+ * Providers of `constructor`-compatible installers, ordered roughly by "cost".
+ *
+ * ### Note
+ * To add a new installer,
+ * - implement IInstallerProvider and add it here
+ * - add to `../../action.yaml`
+ * - add any new RULEs in ../input.ts, for example if the installer is not
+ *   compatible with some architectures
+ * - add a test!
+ * - The order is important:
+ *   - the first provider that provides according to the inputs/options is used.
+ *   - the last provider has a fallback in case of no inputs given.
+ */
+const INSTALLER_PROVIDERS = [
+    bundledMinicondaUser,
+    urlDownloader,
+    miniforgeDownloader,
+    minicondaDownloader,
+];
+/**
+ * Iterate through installer providers and return the result from the first
+ * one that matches the given inputs, throwing if none match.
+ *
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The installer result with the local path and updated options.
+ * @throws {Error} If no {@link types.IInstallerProvider} matches the given inputs.
+ */
+function getLocalInstallerPath(inputs, options) {
+    return installer_awaiter(this, void 0, void 0, function* () {
+        for (const provider of INSTALLER_PROVIDERS) {
+            info(`Can we ${provider.label}?`);
+            if (yield provider.provides(inputs, options)) {
+                info(`... will ${provider.label}.`);
+                return provider.installerPath(inputs, options);
+            }
+        }
+        throw Error(`No installer could be found for the given inputs`);
+    });
+}
+/**
+ * Run a `constructor`-generated installer (`.exe` or `.sh`) and detect
+ * whether mamba was provisioned in the resulting base environment.
+ *
+ * @param installerPath - Path to the installer; must have an appropriate extension for this platform.
+ * @param outputPath - The target installation directory.
+ * @param inputs - The parsed action inputs.
+ * @param options - The current dynamic options.
+ * @returns The updated dynamic options reflecting the new installation.
+ * @throws {Error} If the installer has an unknown file extension.
+ */
+function runInstaller(installerPath, outputPath, inputs, options) {
+    return installer_awaiter(this, void 0, void 0, function* () {
+        const installerExtension = external_path_namespaceObject.extname(installerPath);
+        let command;
+        switch (installerExtension) {
+            case ".exe":
+                /* From https://docs.anaconda.com/anaconda/install/silent-mode/
+                    /D=<installation path> - Destination installation path.
+                                            - Must be the last argument.
+                                            - Do not wrap in quotation marks.
+                                            - Required if you use /S.
+                    For the above reasons, this is treated a monolithic arg
+                  */
+                command = [
+                    `"${installerPath}" /InstallationType=JustMe /RegisterPython=0 /S /D=${outputPath}`,
+                ];
+                break;
+            case ".sh":
+                command = ["bash", installerPath, "-f", "-b", "-p", outputPath];
+                break;
+            default:
+                throw Error(`Unknown installer extension: ${installerExtension}`);
+        }
+        yield execute(command);
+        // The installer may have provisioned `mamba` in `base`: use now if requested
+        const mambaInInstaller = isMambaInstalled(inputs, options);
+        if (mambaInInstaller) {
+            info("Mamba was found in the `base` env");
+            options = Object.assign(Object.assign({}, options), { mambaInInstaller, useMamba: mambaInInstaller && inputs.useMamba === "true" });
+        }
+        return options;
+    });
+}
+
 ;// CONCATENATED MODULE: ./src/env/explicit.ts
 /**
  * @module env/explicit
@@ -40301,10 +40405,6 @@ function installBaseTools(inputs, options) {
         }
         if (tools.length) {
             yield condaCommand(["install", "--name", "base", ...tools], inputs, options);
-            // *Now* use the new options, as we may have a new conda/mamba with more supported
-            // options that previously failed. Pass reapply=true to skip channels/pkgs_dirs
-            // which already persist in .condarc from the first call (#57)
-            yield applyCondaConfiguration(inputs, postInstallOptions, true);
         }
         else {
             info("No tools were installed in 'base' env.");
@@ -40380,12 +40480,9 @@ function setupMiniconda(inputs) {
                 "respectively, to the parameters for this action.");
         }
         yield group("Setup environment variables...", () => setPathVariables(inputs, options));
-        if (inputs.condaConfigFile) {
-            yield group("Copying condarc file...", () => copyConfig(inputs));
-        }
         // For potential 'channels' that may alter configuration
         options.envSpec = yield group("Parsing environment...", () => getEnvSpec(inputs));
-        yield group("Applying initial configuration...", () => applyCondaConfiguration(inputs, options));
+        yield group("Writing conda configuration...", () => writeCondaConfig(inputs, options));
         yield group("Initializing conda shell integration...", () => condaInit(inputs, options));
         // New base tools may change options
         options = yield group("Adding tools to 'base' env...", () => installBaseTools(inputs, options));

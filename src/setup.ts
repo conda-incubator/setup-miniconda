@@ -75,17 +75,13 @@ async function setupMiniconda(inputs: types.IActionInputs): Promise<void> {
     outputs.setPathVariables(inputs, options),
   );
 
-  if (inputs.condaConfigFile) {
-    await core.group("Copying condarc file...", () => conda.copyConfig(inputs));
-  }
-
   // For potential 'channels' that may alter configuration
   options.envSpec = await core.group("Parsing environment...", () =>
     env.getEnvSpec(inputs),
   );
 
-  await core.group("Applying initial configuration...", () =>
-    conda.applyCondaConfiguration(inputs, options),
+  await core.group("Writing conda configuration...", () =>
+    conda.writeCondaConfig(inputs, options),
   );
 
   await core.group("Initializing conda shell integration...", () =>
