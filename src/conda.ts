@@ -14,6 +14,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 
+import * as yaml from "js-yaml";
 import * as core from "@actions/core";
 import * as io from "@actions/io";
 
@@ -389,32 +390,51 @@ function _getFullEnvironmentPath(
  * Determine whether the given environment is the default activation target,
  * either via `default_activation_env` config or by being a base environment alias.
  *
+ * Determined locally from condarc files (user-level and prefix-level),
+ * avoiding a conda subprocess call.
+ *
  * @param envName - The environment name to check.
  * @param inputs - The parsed action inputs.
  * @param options - The current dynamic options.
  * @returns `true` if the environment is the default activation target.
  */
-async function isDefaultEnvironment(
+function isDefaultEnvironment(
   envName: string,
   inputs: types.IActionInputs,
   options: types.IDynamicOptions,
-): Promise<boolean> {
-  const configsOutput = (await condaCommand(
-    ["config", "--show", "--json"],
-    inputs,
-    options,
-    true,
-  )) as string;
-  const config = JSON.parse(configsOutput) as types.ICondaConfig;
-  if (config.default_activation_env) {
-    const defaultEnv = _getFullEnvironmentPath(
-      config.default_activation_env,
-      inputs,
-      options,
-    );
-    const activationEnv = _getFullEnvironmentPath(envName, inputs, options);
-    return defaultEnv === activationEnv;
+): boolean {
+  if (envName === "") {
+    return false;
   }
+
+  const basePath = condaBasePath(inputs, options);
+  const condarcLocations = [
+    constants.CONDARC_PATH,
+    path.join(basePath, ".condarc"),
+    path.join(basePath, "condarc"),
+  ];
+
+  for (const condarcPath of condarcLocations) {
+    if (!fs.existsSync(condarcPath)) continue;
+    try {
+      const config = yaml.load(fs.readFileSync(condarcPath, "utf8")) as Record<
+        string,
+        unknown
+      > | null;
+      if (config?.["default_activation_env"]) {
+        const defaultEnv = _getFullEnvironmentPath(
+          config["default_activation_env"] as string,
+          inputs,
+          options,
+        );
+        const activationEnv = _getFullEnvironmentPath(envName, inputs, options);
+        return defaultEnv === activationEnv;
+      }
+    } catch {
+      // Continue to next condarc location
+    }
+  }
+
   return utils.isBaseEnv(envName);
 }
 
@@ -524,7 +544,7 @@ export async function condaInitActivation(
 
   const isValidActivate =
     !!inputs.activateEnvironment &&
-    !(await isDefaultEnvironment(inputs.activateEnvironment, inputs, options));
+    !isDefaultEnvironment(inputs.activateEnvironment, inputs, options);
   const autoActivateDefault: boolean =
     options.condaConfig.auto_activate === "true";
   const installationDirectory = condaBasePath(inputs, options);
