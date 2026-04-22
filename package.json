@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/conda-incubator/setup-miniconda#conda-incubatorsetup-miniconda",
   "dependencies": {
-    "@actions/core": "^3.0.0",
+    "@actions/core": "^3.0.1",
     "@actions/exec": "^3.0.0",
     "@actions/io": "^3.0.2",
     "@actions/tool-cache": "^4.0.0",
