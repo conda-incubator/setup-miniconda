@@ -50,7 +50,7 @@ jobs:
           path: docs/api
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: pages
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       # Netlify preview — only on PRs
       - if: github.event_name == 'pull_request'
