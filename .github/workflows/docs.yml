@@ -45,7 +45,7 @@ jobs:
 
       # GitHub Pages — only on push to main
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: docs/api
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
