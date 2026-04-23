@@ -175,7 +175,7 @@ You can change the default `test` environment to have a different name or path
 by setting the `activate-environment` input option.
 
 ```yaml
-- uses: conda-incubator/setup-miniconda@v3
+- uses: conda-incubator/setup-miniconda@v4
   with:
     activate-environment: whatever
 ```
@@ -200,7 +200,7 @@ environment, you will need to do **both**:
 - set `auto-activate` to `true`
 
 ```yaml
-- uses: conda-incubator/setup-miniconda@v3
+- uses: conda-incubator/setup-miniconda@v4
   with:
     auto-activate: true
     activate-environment: ""
@@ -226,7 +226,7 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         python-version: ["3.7", "3.11"]
     steps:
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
@@ -250,7 +250,7 @@ jobs:
     name: Ex2 Linux
     runs-on: "ubuntu-latest"
     steps:
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -269,7 +269,7 @@ jobs:
     name: Ex2 Mac
     runs-on: "macos-latest"
     steps:
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -293,7 +293,7 @@ jobs:
     name: Ex2 Windows
     runs-on: "windows-latest"
     steps:
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           miniconda-version: "latest"
           activate-environment: foo
@@ -336,8 +336,8 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           activate-environment: anaconda-client-env
           environment-file: etc/example-environment.yml
@@ -368,8 +368,8 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           activate-environment: foo
           python-version: 3.6
@@ -410,8 +410,8 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           installer-url: https://github.com/conda-forge/miniforge/releases/download/4.8.3-2/Miniforge-pypy3-4.8.3-2-Linux-x86_64.sh
           allow-softlinks: true
@@ -446,8 +446,8 @@ jobs:
     name: Ex6 Mamba
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           python-version: 3.6
           mamba-version: "*"
@@ -498,8 +498,8 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           auto-update-conda: false
           activate-environment: explicit-env
@@ -529,8 +529,8 @@ jobs:
       matrix:
         os: ["ubuntu", "macos", "windows"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           environment-file: etc/example-environment.yml
           miniforge-version: latest
@@ -562,8 +562,8 @@ jobs:
         architecture: ["x86"]
         miniconda-version: ["latest"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           architecture: ${{ matrix.architecture }}
           miniconda-version: $${{ matrix.miniconda-version }}
@@ -589,8 +589,8 @@ jobs:
         solver: ["classic", "libmamba"]
         os: ["ubuntu-latest", "windows-latest"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         id: setup-miniconda
         continue-on-error: true
         with:
@@ -611,8 +611,8 @@ jobs:
       matrix:
         os: ["macos-14"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         id: setup-miniforge
         continue-on-error: true
         with:
@@ -639,8 +639,8 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         id: setup-miniconda
         continue-on-error: true
         with:
@@ -665,8 +665,8 @@ jobs:
       matrix:
         os: ["ubuntu-24.04-arm"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         id: setup-miniconda
         continue-on-error: true
         with:
@@ -700,9 +700,9 @@ jobs:
     name: Caching
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Cache conda
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           # Increase this value to reset cache if etc/example-environment.yml has not changed
           CACHE_NUMBER: 0
@@ -711,7 +711,7 @@ jobs:
           key:
             ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
             hashFiles('etc/example-environment.yml') }}
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           activate-environment: anaconda-client-env
           channel-priority: strict
@@ -730,9 +730,9 @@ jobs:
     name: Caching
     runs-on: "windows-latest"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Cache conda
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           # Increase this value to reset cache if etc/example-environment.yml has not changed
           CACHE_NUMBER: 0
@@ -743,7 +743,7 @@ jobs:
           key:
             ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
             hashFiles('etc/example-environment.yml') }}
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           activate-environment: anaconda-client-env
           channel-priority: strict
@@ -770,7 +770,7 @@ a environment file.
 
 ```yaml
 - name: Setup Miniforge
-  uses: conda-incubator/setup-miniconda@v3
+  uses: conda-incubator/setup-miniconda@v4
   with:
     miniforge-version: latest
     activate-environment: anaconda-client-env
@@ -789,7 +789,7 @@ the "Get Date" step below if you use a resolved environment file product of
   shell: bash
 
 - name: Cache Conda env
-  uses: actions/cache@v4
+  uses: actions/cache@v5
   with:
     path: ${{ env.CONDA }}/envs
     key:
@@ -849,8 +849,8 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           activate-environment: anaconda-client-env
           environment-file: etc/example-environment-caching.yml
@@ -872,8 +872,8 @@ jobs:
     name: Restricted environment
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v5
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           activate-environment: myenv
           environment-file: environment.yml

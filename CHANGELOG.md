@@ -1,5 +1,95 @@
 # CHANGELOG
 
+## [v4.0.0] (2026-04-23)
+
+### Breaking Changes
+
+- [#459][459]: Upgrade action runtime to Node.js 24.x (requires runners with
+  Node 24 support; this is the reason for the v4 major bump)
+- [#450][450]: Switch action build to ESM (for `@actions/exec` v3)
+
+### Features and Enhancements
+
+- [#469][469]: Add `conda-init` input to optionally skip `conda init` and
+  document activation for restricted environments
+- [#482][482]: Add channels parsing utility and URL validation
+- [#481][481]: Enable stricter TypeScript checks and typing
+- [#480][480]: Add more tests, increase coverage, add Codecov integration and
+  coverage badge
+- [#479][479]: Add TypeDoc-based API docs, generation and checks; configure
+  GitHub Pages and Netlify previews
+
+### Fixes
+
+- [#465][465]: Fix double channel configuration being applied
+- [#467][467]: Speed up Windows post-run cleanup by moving the extracted
+  packages directory instead of removing files one by one
+- [#470][470]: Fix `name-version-build` syntax expansion and add tests
+- [#475][475]: Split shell init and activation of the test environment to remove
+  spurious warning
+
+### Performance
+
+- [#486][486]: Remove HTML index scraping for Miniconda version validation
+- [#487][487]: Parallelize Windows `takeown` calls with `Promise.all`
+- [#488][488]: Replace `isDefaultEnvironment` subprocess with local YAML reads
+- [#489][489]: Replace `conda config` subprocesses with direct `.condarc` YAML
+  writes
+
+### Tasks and Maintenance
+
+- [#444][444]: Bump conda-incubator/setup-miniconda from 3.2.0 to 3.3.0
+- [#445][445]: Bump actions/checkout from 6.0.1 to 6.0.2
+- [#449][449]: Bump @actions/exec from 2.0.0 to 3.0.0
+- [#456][456], [#484][484], [#491][491]: Bump actions/upload-artifact
+- [#460][460]: Bump actions/download-artifact from 7.0.0 to 8.0.1
+- [#464][464]: Update dependencies for actions and packages
+- [#466][466]: Bump @actions/tool-cache from 2.0.2 to 4.0.0
+- [#473][473]: Bump flatted from 3.2.9 to 3.4.2
+- [#476][476]: Bump picomatch
+- [#477][477]: Bump conda-incubator/installer from 0.1.0 to 0.1.1
+- [#485][485]: Bump vite from 8.0.0 to 8.0.8
+- [#492][492]: Bump actions/upload-pages-artifact from 3 to 5
+- [#493][493]: Bump marocchino/sticky-pull-request-comment from 2 to 3
+- [#494][494]: Bump actions/deploy-pages from 4 to 5
+- [#495][495]: Bump codecov/codecov-action from 5 to 6
+- [#496][496]: Bump @actions/core from 3.0.0 to 3.0.1
+
+[v4.0.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v4.0.0
+[444]: https://github.com/conda-incubator/setup-miniconda/pull/444
+[445]: https://github.com/conda-incubator/setup-miniconda/pull/445
+[449]: https://github.com/conda-incubator/setup-miniconda/pull/449
+[450]: https://github.com/conda-incubator/setup-miniconda/pull/450
+[456]: https://github.com/conda-incubator/setup-miniconda/pull/456
+[459]: https://github.com/conda-incubator/setup-miniconda/pull/459
+[460]: https://github.com/conda-incubator/setup-miniconda/pull/460
+[464]: https://github.com/conda-incubator/setup-miniconda/pull/464
+[465]: https://github.com/conda-incubator/setup-miniconda/pull/465
+[466]: https://github.com/conda-incubator/setup-miniconda/pull/466
+[467]: https://github.com/conda-incubator/setup-miniconda/pull/467
+[469]: https://github.com/conda-incubator/setup-miniconda/pull/469
+[470]: https://github.com/conda-incubator/setup-miniconda/pull/470
+[473]: https://github.com/conda-incubator/setup-miniconda/pull/473
+[475]: https://github.com/conda-incubator/setup-miniconda/pull/475
+[476]: https://github.com/conda-incubator/setup-miniconda/pull/476
+[477]: https://github.com/conda-incubator/setup-miniconda/pull/477
+[479]: https://github.com/conda-incubator/setup-miniconda/pull/479
+[480]: https://github.com/conda-incubator/setup-miniconda/pull/480
+[481]: https://github.com/conda-incubator/setup-miniconda/pull/481
+[482]: https://github.com/conda-incubator/setup-miniconda/pull/482
+[484]: https://github.com/conda-incubator/setup-miniconda/pull/484
+[485]: https://github.com/conda-incubator/setup-miniconda/pull/485
+[486]: https://github.com/conda-incubator/setup-miniconda/pull/486
+[487]: https://github.com/conda-incubator/setup-miniconda/pull/487
+[488]: https://github.com/conda-incubator/setup-miniconda/pull/488
+[489]: https://github.com/conda-incubator/setup-miniconda/pull/489
+[491]: https://github.com/conda-incubator/setup-miniconda/pull/491
+[492]: https://github.com/conda-incubator/setup-miniconda/pull/492
+[493]: https://github.com/conda-incubator/setup-miniconda/pull/493
+[494]: https://github.com/conda-incubator/setup-miniconda/pull/494
+[495]: https://github.com/conda-incubator/setup-miniconda/pull/495
+[496]: https://github.com/conda-incubator/setup-miniconda/pull/496
+
 ## [v3.3.0] (2026-01-20)
 
 ### Fixes
