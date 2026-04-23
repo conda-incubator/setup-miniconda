@@ -52,8 +52,8 @@ jobs:
         id: pages
         uses: actions/deploy-pages@v5
 
-      # Netlify preview — only on PRs
-      - if: github.event_name == 'pull_request'
+      # Netlify preview — only on PRs (excluding Dependabot, which has no secrets access)
+      - if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
         name: Deploy to Netlify
         id: netlify
         env:
@@ -69,7 +69,7 @@ jobs:
           DEPLOY_URL=$(jq -r '.deploy_url' deploy_output.json)
           echo "deploy_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
 
-      - if: github.event_name == 'pull_request'
+      - if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
         name: Comment on PR
         uses: marocchino/sticky-pull-request-comment@v3
         with:
