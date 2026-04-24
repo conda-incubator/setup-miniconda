@@ -261,7 +261,7 @@ describe("writeCondaConfig", () => {
     expect(config["pkgs_dirs"]).toContain("/mock/pkgs");
   });
 
-  it("sets auto_activate_base from input", async () => {
+  it("sets auto_activate_base from input when no alias is in existing condarc", async () => {
     const { writeCondaConfig } = await import("../conda");
     const inputs = makeInputs({ channels: "conda-forge" });
 
@@ -271,6 +271,38 @@ describe("writeCondaConfig", () => {
 
     const config = getWrittenConfig();
     expect(config["auto_activate_base"]).toBe(false);
+    expect(config).not.toHaveProperty("auto_activate");
+  });
+
+  it("prefers auto_activate key when user condarc already contains it (avoids MultipleKeysError on conda 25.11+)", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge" });
+
+    // Simulate a user condarc that uses the new canonical key name
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ auto_activate: true }),
+    );
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config).not.toHaveProperty("auto_activate_base");
+    expect(config["auto_activate"]).toBe(false);
+  });
+
+  it("uses auto_activate_base when user condarc has auto_activate_base (avoids MultipleKeysError on conda 25.11+)", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge" });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ auto_activate_base: false }),
+    );
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["auto_activate_base"]).toBe(false);
+    expect(config).not.toHaveProperty("auto_activate");
   });
 
   it("sets notify_outdated_conda to false", async () => {

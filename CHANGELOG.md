@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [v4.0.1] (2026-04-24)
+
+### Fixes
+
+- Fix `MultipleKeysError` on conda 25.11+ when a user-supplied `condarc-file`
+  already declares `auto_activate`: now only one of `auto_activate` /
+  `auto_activate_base` is written to `.condarc`, preferring whichever key the
+  user's existing condarc uses.
+- Add `auto_activate` to the boolean coercion set so its value is serialized as
+  a YAML boolean when it is the chosen canonical key.
+- Add `local_repodata_ttl` to `KNOWN_CONDARC_KEYS` to silence a spurious
+  "Unrecognized condarc key" warning for a valid conda key.
+
+[v4.0.1]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v4.0.1
+
 ## [v4.0.0] (2026-04-23)
 
 ### Breaking Changes

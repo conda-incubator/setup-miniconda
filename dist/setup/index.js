@@ -38107,6 +38107,7 @@ const BOOLEAN_CONDARC_KEYS = new Set([
     "add_anaconda_token",
     "add_pip_as_python_dependency",
     "allow_softlinks",
+    "auto_activate",
     "auto_activate_base",
     "auto_update_conda",
     "show_channel_urls",
@@ -38132,6 +38133,7 @@ const KNOWN_CONDARC_KEYS = new Set([
     "override_channels_enabled",
     "pkgs_dirs",
     "proxy_servers",
+    "local_repodata_ttl",
     "repodata_threads",
     "restore_free_channel",
     "safety_checks",
@@ -38247,12 +38249,18 @@ function writeCondaConfig(inputs, options) {
         for (const pkgsDir of mergedPkgsDirs) {
             info(`pkgs_dir: '${pkgsDir}'`);
         }
-        // --- auto_activate_base ---
-        // Write auto_activate_base for broad compatibility. Conda 25.5.0+ also
-        // accepts auto_activate as the canonical name, but older versions only
-        // recognize auto_activate_base.
-        config["auto_activate_base"] = coerceConfigValue("auto_activate_base", inputs.condaConfig.auto_activate);
-        info(`auto_activate_base: ${config["auto_activate_base"]}`);
+        // --- auto_activate / auto_activate_base ---
+        // conda 25.11+ raises MultipleKeysError if both aliases coexist in the same
+        // .condarc. Prefer whichever key the user already set (via condarc-file or
+        // an existing .condarc); fall back to auto_activate_base for compatibility
+        // with conda versions older than 25.5.0.
+        const autoActivateKey = "auto_activate" in config && !("auto_activate_base" in config)
+            ? "auto_activate"
+            : "auto_activate_base";
+        delete config["auto_activate"];
+        delete config["auto_activate_base"];
+        config[autoActivateKey] = coerceConfigValue(autoActivateKey, inputs.condaConfig.auto_activate);
+        info(`${autoActivateKey}: ${config[autoActivateKey]}`);
         // --- All other config entries ---
         const SKIP_KEYS = new Set([
             "channels",
