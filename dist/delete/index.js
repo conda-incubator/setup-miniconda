@@ -33644,6 +33644,9 @@ const IGNORED_WARNINGS = (/* unused pure expression or super */ null && ([
     `cygpath is not available, fallback to manual path conversion`,
     // Harmless warning for older Conda versions use auto_activate instead of auto_activate_base
     `'auto_activate': unknown parameter`,
+    // We write `auto_activate_base` by default for compatibility with conda
+    // <25.5.0; conda >=25.5.0 treats it as a deprecated alias and emits this.
+    `Key auto_activate_base is an alias of auto_activate`,
 ]));
 /**
  * Warnings that should be errors.
