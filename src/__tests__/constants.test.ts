@@ -312,6 +312,14 @@ describe("IGNORED_WARNINGS", () => {
   it("includes cygpath fallback warning", () => {
     expect(IGNORED_WARNINGS.some((w) => w.includes("cygpath"))).toBe(true);
   });
+
+  it("includes the auto_activate_base alias warning", () => {
+    expect(
+      IGNORED_WARNINGS.some((w) =>
+        w.includes("Key auto_activate_base is an alias of auto_activate"),
+      ),
+    ).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
