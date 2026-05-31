@@ -7,11 +7,11 @@
  * instead of every test module that builds inputs.
  */
 
-import * as types from "../types";
+import type * as types from "../types";
 
 /**
  * Overrides accepted by {@link makeActionInputs}: any top-level input field,
- * plus a *partial* `condaConfig` that is deep-merged onto the defaults.
+ * plus a *partial* `condaConfig` that is shallow-merged onto the defaults.
  */
 export type ActionInputsOverrides = Partial<
   Omit<types.IActionInputs, "condaConfig">
@@ -28,7 +28,7 @@ export type ActionInputsOverrides = Partial<
 export function makeCondaConfig(
   overrides: Partial<types.ICondaConfig> = {},
 ): types.ICondaConfig {
-  return {
+  return Object.freeze({
     add_anaconda_token: "",
     add_pip_as_python_dependency: "",
     allow_softlinks: "",
@@ -45,13 +45,13 @@ export function makeCondaConfig(
     solver: "",
     pkgs_dirs: "",
     ...overrides,
-  };
+  });
 }
 
 /**
  * Build a complete `IActionInputs` for tests with sensible defaults.
  *
- * Top-level fields can be overridden directly; `condaConfig` is deep-merged
+ * Top-level fields can be overridden directly; `condaConfig` is shallow-merged
  * onto the defaults via {@link makeCondaConfig}.
  *
  * @param overrides - Input fields to override on top of the defaults.
@@ -61,7 +61,7 @@ export function makeActionInputs(
   overrides: ActionInputsOverrides = {},
 ): types.IActionInputs {
   const { condaConfig: condaConfigOverrides, ...rest } = overrides;
-  return {
+  return Object.freeze({
     activateEnvironment: "test",
     architecture: "x64",
     condaBuildVersion: "",
@@ -83,5 +83,5 @@ export function makeActionInputs(
     runPost: "true",
     ...rest,
     condaConfig: makeCondaConfig(condaConfigOverrides),
-  };
+  });
 }
