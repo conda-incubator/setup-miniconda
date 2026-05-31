@@ -4,11 +4,31 @@ on:
   pull_request:
     branches:
       - "*"
+    paths:
+      - "src/**"
+      - "!src/__tests__/**"
+      - "dist/**"
+      - "action.yml"
+      - "etc/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
+      - ".github/workflows/example-5.yml"
   push:
     branches:
       - "develop"
       - "main"
       - "master"
+    paths:
+      - "src/**"
+      - "!src/__tests__/**"
+      - "dist/**"
+      - "action.yml"
+      - "etc/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
+      - ".github/workflows/example-5.yml"
   schedule:
     # Note that cronjobs run on master/main by default
     - cron: "0 0 * * *"
