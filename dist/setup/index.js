@@ -33892,6 +33892,7 @@ function parseInputs() {
                 default_activation_env: "", // Needed for type definition
                 show_channel_urls: getInput("show-channel-urls"),
                 use_only_tar_bz2: getInput("use-only-tar-bz2"),
+                use_sharded_repodata: getInput("use-sharded-repodata"),
                 solver: getInput("conda-solver"),
                 pkgs_dirs: getInput("pkgs-dirs"),
                 // These are always set to avoid terminal issues
@@ -38112,6 +38113,7 @@ const BOOLEAN_CONDARC_KEYS = new Set([
     "auto_update_conda",
     "show_channel_urls",
     "use_only_tar_bz2",
+    "use_sharded_repodata",
     "always_yes",
     "changeps1",
     "notify_outdated_conda",
@@ -38132,6 +38134,7 @@ const KNOWN_CONDARC_KEYS = new Set([
     "envs_dirs",
     "override_channels_enabled",
     "pkgs_dirs",
+    "plugins",
     "proxy_servers",
     "local_repodata_ttl",
     "repodata_threads",
@@ -38162,6 +38165,40 @@ function coerceConfigValue(key, value) {
     return value;
 }
 /**
+ * Type guard for a plain (non-array, non-null) object suitable for deep merging.
+ *
+ * @param value - The value to test.
+ * @returns `true` if `value` is a non-null, non-array object.
+ */
+function isPlainObject(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+/**
+ * Recursively merge `source` over `target`, returning a new object.
+ *
+ * Nested plain objects such as condarc's `plugins:` section are merged key by
+ * key so that setting one nested value does not clobber its siblings. Arrays
+ * and scalars from `source` replace those in `target` without element-wise
+ * array merging, matching conda's last-writer-wins semantics for list keys.
+ *
+ * @param target - The base configuration.
+ * @param source - Values to layer on top of `target`.
+ * @returns A new object with `source` deeply merged over `target`.
+ */
+function deepMerge(target, source) {
+    const result = Object.assign({}, target);
+    for (const [key, sourceValue] of Object.entries(source)) {
+        const targetValue = result[key];
+        if (isPlainObject(targetValue) && isPlainObject(sourceValue)) {
+            result[key] = deepMerge(targetValue, sourceValue);
+        }
+        else {
+            result[key] = sourceValue;
+        }
+    }
+    return result;
+}
+/**
  * Build the complete conda configuration and write it directly to ~/.condarc.
  *
  * This replaces the old approach of spawning N `conda config --set/--add`
@@ -38186,7 +38223,7 @@ function writeCondaConfig(inputs, options) {
             info(`Reading user condarc from "${sourcePath}"...`);
             const userConfig = load(external_fs_namespaceObject.readFileSync(sourcePath, "utf8"));
             if (userConfig) {
-                config = Object.assign(Object.assign({}, config), userConfig);
+                config = deepMerge(config, userConfig);
             }
         }
         config["notify_outdated_conda"] = false;
@@ -38267,6 +38304,8 @@ function writeCondaConfig(inputs, options) {
             "pkgs_dirs",
             "auto_activate",
             "default_activation_env",
+            // Written as the nested `plugins.use_sharded_repodata` key below.
+            "use_sharded_repodata",
         ]);
         const configEntries = Object.entries(inputs.condaConfig);
         for (const [key, value] of configEntries) {
@@ -38276,6 +38315,20 @@ function writeCondaConfig(inputs, options) {
             const coerced = coerceConfigValue(key, value);
             config[key] = coerced;
             info(`${key}: ${coerced}`);
+        }
+        // --- Plugins (nested condarc section) ---
+        // conda-libmamba-solver's sharded repodata is configured under the nested
+        // `plugins.use_sharded_repodata` key, not a flat top-level key, so it needs
+        // dedicated handling (#503). deepMerge preserves any sibling plugin settings
+        // already present from an existing .condarc or condarc-file. An empty input
+        // leaves conda's own default in place.
+        const useShardedRepodata = inputs.condaConfig.use_sharded_repodata;
+        if (useShardedRepodata.trim().length > 0) {
+            const coerced = coerceConfigValue("use_sharded_repodata", useShardedRepodata);
+            config = deepMerge(config, {
+                plugins: { use_sharded_repodata: coerced },
+            });
+            info(`plugins.use_sharded_repodata: ${coerced}`);
         }
         // Strip 'defaults' from prefix-level condarc files too
         if (removeDefaults && !userExplicitlyAddedDefaults) {

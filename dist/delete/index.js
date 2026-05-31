@@ -33849,6 +33849,7 @@ function parseInputs() {
                 default_activation_env: "", // Needed for type definition
                 show_channel_urls: getInput("show-channel-urls"),
                 use_only_tar_bz2: getInput("use-only-tar-bz2"),
+                use_sharded_repodata: getInput("use-sharded-repodata"),
                 solver: getInput("conda-solver"),
                 pkgs_dirs: getInput("pkgs-dirs"),
                 // These are always set to avoid terminal issues

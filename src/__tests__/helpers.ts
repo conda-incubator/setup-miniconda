@@ -40,6 +40,7 @@ export function makeCondaConfig(
     default_activation_env: "",
     show_channel_urls: "",
     use_only_tar_bz2: "",
+    use_sharded_repodata: "",
     always_yes: "true",
     changeps1: "false",
     solver: "",
