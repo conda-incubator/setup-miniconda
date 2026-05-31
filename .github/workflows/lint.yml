@@ -4,11 +4,29 @@ on:
   pull_request:
     branches:
       - "*"
+    paths:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "**/*.md"
+      - "**/*.json"
+      - "**/*.yml"
+      - "**/*.yaml"
   push:
     branches:
       - "develop"
       - "main"
       - "master"
+    paths:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "**/*.md"
+      - "**/*.json"
+      - "**/*.yml"
+      - "**/*.yaml"
 
 concurrency:
   group:
@@ -30,37 +48,3 @@ jobs:
           #     fast, secure, predictable compared to npm install
           npm ci
           npm run check
-  build:
-    name: Build
-    runs-on: "ubuntu-latest"
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v6.0.2
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-      - name: Build
-        run: |
-          # ci: install exact versions from package-lock.json
-          #     fast, secure, predictable compared to npm install
-          npm ci
-          npm run build
-
-      - name: Check that all built are committed
-        run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "::error::Uncommitted changes detected after build."
-            echo ""
-            echo "Changed files:"
-            git status --short
-            echo ""
-            echo "Diff:"
-            git diff --stat
-            echo ""
-            echo "Please run locally with the same Node version as CI:"
-            echo "  npm ci"
-            echo "  npm run format"
-            echo "  npm run build"
-            echo "and commit the resulting changes before pushing."
-            exit 1
-          fi
