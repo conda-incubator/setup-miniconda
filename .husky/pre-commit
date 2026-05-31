@@ -1,7 +1,7 @@
 npm run format && npm run check && npm run build && npm run docs || exit 1
 
 # Lint GitHub Actions workflows with zizmor when any workflow/config is staged.
-if git diff --cached --name-only --diff-filter=ACM | grep -qE '^\.github/(workflows/|zizmor\.yml)'; then
+if git diff --cached --name-only --diff-filter=ACM | grep -qE '^\.github/(workflows/|zizmor\.yml$)'; then
   if command -v uvx >/dev/null 2>&1; then
     uvx zizmor@1.25.2 --offline .github/workflows/ || exit 1
   elif command -v zizmor >/dev/null 2>&1; then

@@ -3,7 +3,7 @@ name: "Zizmor"
 on:
   pull_request:
     branches:
-      - "*"
+      - "**"
   push:
     branches:
       - "develop"
