@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as yaml from "js-yaml";
 
 import type * as types from "../types";
+import { makeActionInputs } from "./helpers";
 import { ensureYaml } from "../env/yaml";
 
 // Mock @actions/core
@@ -53,43 +54,10 @@ vi.mock("../outputs", () => ({
 function makeInputs(
   overrides: Partial<{ pythonVersion: string; environmentFile: string }> = {},
 ): types.IActionInputs {
-  return Object.freeze({
-    activateEnvironment: "test",
-    architecture: "x64",
-    condaBuildVersion: "",
-    condaConfigFile: "",
-    condaVersion: "",
+  return makeActionInputs({
     environmentFile: overrides.environmentFile ?? "environment.yml",
-    installerUrl: "",
-    installationDir: "",
-    mambaVersion: "",
-    minicondaVersion: "",
-    miniforgeVariant: "",
-    miniforgeVersion: "",
-    condaRemoveDefaults: "false",
     pythonVersion: overrides.pythonVersion ?? "",
-    removeProfiles: "true",
-    runInit: "true",
-    useMamba: "",
-    cleanPatchedEnvironmentFile: "true",
-    runPost: "true",
-    condaConfig: Object.freeze({
-      add_anaconda_token: "",
-      add_pip_as_python_dependency: "",
-      allow_softlinks: "",
-      auto_activate: "false",
-      auto_update_conda: "false",
-      channel_alias: "",
-      channel_priority: "",
-      channels: "conda-forge",
-      default_activation_env: "",
-      show_channel_urls: "",
-      use_only_tar_bz2: "",
-      always_yes: "true",
-      changeps1: "false",
-      solver: "",
-      pkgs_dirs: "",
-    }),
+    condaConfig: { channels: "conda-forge" },
   });
 }
 
