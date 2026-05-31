@@ -70,6 +70,7 @@ export interface ICondaConfig {
   default_activation_env: string;
   show_channel_urls: string;
   use_only_tar_bz2: string;
+  use_sharded_repodata: string;
   always_yes: string;
   changeps1: string;
   solver: string;
