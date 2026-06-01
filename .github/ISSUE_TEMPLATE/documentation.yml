@@ -1,0 +1,41 @@
+name: Documentation issue
+description: Report missing, unclear, or incorrect documentation
+labels: ["task:documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve the docs!
+  - type: checkboxes
+    id: prechecks
+    attributes:
+      label: Before you start
+      options:
+        - label:
+            I have read the relevant parts of the
+            [README](https://github.com/conda-incubator/setup-miniconda#readme),
+            including the
+            [IMPORTANT](https://github.com/conda-incubator/setup-miniconda#important)
+            section, and the information is still missing, unclear, or wrong.
+          required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: Which docs are affected?
+      description:
+        Link to the section or file (for example a README anchor) that is
+        missing, unclear, or incorrect.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is missing, unclear, or incorrect?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested improvement
+    validations:
+      required: false
