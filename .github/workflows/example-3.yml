@@ -31,7 +31,7 @@ jobs:
         shell: bash -el {0}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.0.3
       - uses: ./
         with:
           activate-environment: anaconda-client-env
@@ -59,7 +59,7 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.0.3
       - uses: ./
         with:
           activate-environment: test-python-pinned
@@ -80,7 +80,7 @@ jobs:
         shell: bash -el {0}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.0.3
       - uses: ./
         with:
           activate-environment: anaconda-client-env

@@ -36,7 +36,7 @@ jobs:
           - os: macos-15-intel
             variant: empty-with
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.0.3
       - uses: ./
         if: matrix.variant == 'Miniforge3'
         id: setup-miniforge
