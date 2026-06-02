@@ -34,17 +34,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Miniconda for installer builds
-        uses: ./
+      - name: Download conda-standalone
+        id: download-conda-standalone
+        uses: conda-incubator/setup-conda-standalone@00a34805e93a8b640aee5f8a20e8f481ad77e3b4 # v0.1.0
         with:
-          activate-environment: ""
-          auto-activate: false
+          channel: main
+          destination-directory: ${{ runner.temp }}/conda_standalone
+          set-env: false
 
       - name: Create installer
         uses: conda-incubator/installer@fd291852cafc4f4d69b20bd6a676b10edb0896de # v0.1.1
         id: create-installer
         with:
-          conda-root: ${{ env.CONDA }}
           environment-yaml-string: |
             channels:
               - conda-forge
@@ -54,6 +55,8 @@ jobs:
               ADD_ACTIVATION_ENV: '${{ matrix.add-activation-env }}'
               EXT: ${{ matrix.os == 'windows' && 'exe' || 'sh' }}
           input-directory: etc/example-installers/default-environment/
+          standalone-location:
+            ${{ steps.download-conda-standalone.outputs.conda-standalone-path }}
 
       - name: Upload installer to Github artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
