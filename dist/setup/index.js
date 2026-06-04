@@ -33357,7 +33357,7 @@ function exportVariable(name, val) {
  * ```
  */
 function core_setSecret(secret) {
-    issueCommand('add-mask', {}, secret);
+    command_issueCommand('add-mask', {}, secret);
 }
 /**
  * Prepends inputPath to the PATH (for this action and future actions)
@@ -37939,6 +37939,52 @@ function makeSpec(pkg, spec) {
     }
 }
 
+;// CONCATENATED MODULE: ./src/redact.ts
+/**
+ * @module redact
+ * Helpers for masking anaconda.org channel tokens so they never leak into
+ * build logs or action outputs.
+ *
+ * Channel URLs may carry a token, e.g.
+ * `https://conda.anaconda.org/t/<token>/<channel>`. These helpers live in a
+ * dedicated module used only by the setup-side code, so they are not bundled
+ * into the post/delete action where they would be unused.
+ *
+ * @category Utilities
+ */
+/**
+ * Find anaconda.org channel tokens embedded in a string.
+ *
+ * The returned raw tokens should be registered with `core.setSecret` before
+ * anything is logged so the runner masks them everywhere.
+ *
+ * @param text - Arbitrary text that may contain `/t/<token>/` channel URLs.
+ * @returns The token values found (may contain duplicates).
+ */
+function findTokens(text) {
+    const tokens = [];
+    for (const match of text.matchAll(/\/t\/([^/\s'"]+)/g)) {
+        const token = match[1];
+        if (token) {
+            tokens.push(token);
+        }
+    }
+    return tokens;
+}
+/**
+ * Redact anaconda.org channel tokens so a string is safe to log.
+ *
+ * Replaces the `<token>` in `/t/<token>/` with `***`, leaving the rest of the
+ * URL intact. The value written to disk should keep the real token; only
+ * logged output should be redacted.
+ *
+ * @param text - Arbitrary text that may contain `/t/<token>/` channel URLs.
+ * @returns The text with any channel tokens replaced by `***`.
+ */
+function redactTokens(text) {
+    return text.replace(/(\/t\/)[^/\s'"]+/g, "$1***");
+}
+
 ;// CONCATENATED MODULE: ./src/conda.ts
 /**
  * @module conda
@@ -37959,6 +38005,7 @@ var conda_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _ar
 //-----------------------------------------------------------------------
 // Conda helpers
 //-----------------------------------------------------------------------
+
 
 
 
@@ -38190,6 +38237,14 @@ function writeCondaConfig(inputs, options) {
             }
         }
         config["notify_outdated_conda"] = false;
+        // Register any anaconda.org tokens in user-provided config as secrets up
+        // front, before anything is logged, so the runner masks them everywhere
+        // (e.g. token-bearing values like `channel_alias`).
+        for (const value of Object.values(inputs.condaConfig)) {
+            for (const token of findTokens(value)) {
+                core_setSecret(token);
+            }
+        }
         // --- Channels ---
         let channels = inputs.condaConfig.channels
             .trim()
@@ -38236,7 +38291,11 @@ function writeCondaConfig(inputs, options) {
                 "Otherwise, consider setting 'conda-remove-defaults' to 'true'.");
         }
         for (const ch of config["channels"] || []) {
-            info(`Channel: '${ch}'`);
+            // Mask any anaconda.org channel tokens before logging so they never leak.
+            for (const token of findTokens(ch)) {
+                core_setSecret(token);
+            }
+            info(`Channel: '${redactTokens(ch)}'`);
         }
         // --- Package directories ---
         const inputPkgsDirs = parsePkgsDirs(inputs.condaConfig.pkgs_dirs);
@@ -38275,7 +38334,7 @@ function writeCondaConfig(inputs, options) {
             }
             const coerced = coerceConfigValue(key, value);
             config[key] = coerced;
-            info(`${key}: ${coerced}`);
+            info(`${key}: ${redactTokens(String(coerced))}`);
         }
         // Strip 'defaults' from prefix-level condarc files too
         if (removeDefaults && !userExplicitlyAddedDefaults) {
@@ -38310,9 +38369,28 @@ function writeCondaConfig(inputs, options) {
             }
         }
         const configYaml = dump(config, { lineWidth: -1 });
-        info(`Writing condarc to ${CONDARC_PATH}:\n${configYaml}`);
+        // Register any embedded anaconda.org tokens as secrets and redact them from
+        // the log; the file on disk keeps the real values so conda can use them.
+        for (const token of findTokens(configYaml)) {
+            core_setSecret(token);
+        }
+        info(`Writing condarc to ${CONDARC_PATH}:\n${redactTokens(configYaml)}`);
         external_fs_namespaceObject.writeFileSync(CONDARC_PATH, configYaml, "utf8");
         if (isDebug()) {
+            // `conda config --show` streams the *effective* config, which merges
+            // prefix-level condarc files we did not generate. Register any tokens they
+            // carry as secrets first so they are masked in the debug output too.
+            const basePath = condaBasePath(inputs, options);
+            for (const condarcPath of [
+                external_path_namespaceObject.join(basePath, ".condarc"),
+                external_path_namespaceObject.join(basePath, "condarc"),
+            ]) {
+                if (!external_fs_namespaceObject.existsSync(condarcPath))
+                    continue;
+                for (const token of findTokens(external_fs_namespaceObject.readFileSync(condarcPath, "utf8"))) {
+                    core_setSecret(token);
+                }
+            }
             yield condaCommand(["config", "--show"], inputs, options);
         }
     });
@@ -39923,6 +40001,7 @@ var yaml_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arg
 
 
 
+
 /**
  * The current known providers of patches to `environment.yml`
  *
@@ -39992,13 +40071,27 @@ const ensureYaml = {
             const origParent = external_path_namespaceObject.dirname(origPath);
             envFile = external_path_namespaceObject.join(origParent, `setup-miniconda-patched-${external_path_namespaceObject.basename(origPath)}`);
             info(`Making patched copy of 'environment-file: ${inputs.environmentFile}'`);
-            info(`Using: ${envFile}\n${patchedYaml}`);
+            // Mask any anaconda.org channel tokens before logging the patched env.
+            for (const token of findTokens(patchedYaml)) {
+                core_setSecret(token);
+            }
+            info(`Using: ${envFile}\n${redactTokens(patchedYaml)}`);
             external_fs_namespaceObject.writeFileSync(envFile, patchedYaml, "utf8");
-            setEnvironmentFileOutputs(envFile, dump(patchedYaml), true);
+            // Redact the output value too: setSecret only masks logs, not the
+            // action output that downstream steps can read. patchedYaml is already
+            // YAML, so it must not be dumped again.
+            setEnvironmentFileOutputs(envFile, redactTokens(patchedYaml), true);
         }
         else {
             info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
-            setEnvironmentFileOutputs(envFile, external_fs_namespaceObject.readFileSync(inputs.environmentFile, "utf-8"));
+            const originalContent = external_fs_namespaceObject.readFileSync(inputs.environmentFile, "utf8");
+            // Mask any anaconda.org channel tokens carried by the environment file,
+            // and redact the output value so the token is not exposed via the
+            // environment-file-content output (setSecret only masks logs).
+            for (const token of findTokens(originalContent)) {
+                core_setSecret(token);
+            }
+            setEnvironmentFileOutputs(envFile, redactTokens(originalContent));
         }
         const [flag, nameOrPath] = envCommandFlag(inputs);
         let subcommand;
