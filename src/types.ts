@@ -31,6 +31,8 @@ export interface ILocalInstallerOpts {
   tool?: string;
   version?: string;
   arch?: string;
+  /** Optional expected SHA-256 (hex) used to verify the downloaded installer. */
+  sha256?: string;
 }
 
 /**
@@ -88,6 +90,7 @@ export interface IActionInputs {
   readonly condaVersion: string;
   readonly environmentFile: string;
   readonly installerUrl: string;
+  readonly installerSha256: string;
   readonly installationDir: string;
   readonly mambaVersion: string;
   readonly minicondaVersion: string;
