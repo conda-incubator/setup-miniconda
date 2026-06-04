@@ -69,6 +69,7 @@ function makeInputs(
     condaVersion: "",
     environmentFile: overrides.environmentFile ?? "",
     installerUrl: "",
+    installerSha256: "",
     installationDir: "",
     mambaVersion: "",
     minicondaVersion: "",

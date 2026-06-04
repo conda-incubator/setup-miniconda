@@ -95,6 +95,14 @@ const RULES: IRule[] = [
     `'installer-url' extension '${urlExt(i.installerUrl)}' must be one of: ${
       constants.KNOWN_EXTENSIONS
     }`,
+  (i) =>
+    !!(i.installerSha256 && !i.installerUrl) &&
+    `'installer-sha256' requires 'installer-url' to be set`,
+  (i) =>
+    !!(
+      i.installerSha256 && !/^[0-9a-f]{64}$/i.test(i.installerSha256.trim())
+    ) &&
+    `'installer-sha256: ${i.installerSha256}' must be a 64-character hex SHA-256 digest`,
   (
     i, // Miniconda x86 is only published for Windows lately (last Linux was 2019, last MacOS 2015)
   ) =>
@@ -148,6 +156,7 @@ export async function parseInputs(): Promise<types.IActionInputs> {
     condaVersion: core.getInput("conda-version"),
     environmentFile: core.getInput("environment-file"),
     installerUrl: core.getInput("installer-url"),
+    installerSha256: core.getInput("installer-sha256"),
     installationDir: core.getInput("installation-dir"),
     mambaVersion: core.getInput("mamba-version"),
     useMamba: core.getInput("use-mamba"),

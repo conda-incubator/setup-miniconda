@@ -537,6 +537,39 @@ describe("parseInputs", () => {
       await expect(parseInputs()).resolves.toBeDefined();
     });
 
+    it("throws when installer-sha256 is set without installer-url", async () => {
+      setInput("installer-sha256", "a".repeat(64));
+      const parseInputs = await loadParseInputs();
+
+      await expect(parseInputs()).rejects.toThrow(
+        "errors found in action inputs",
+      );
+      expect(core.error).toHaveBeenCalledWith(
+        expect.stringContaining("'installer-sha256' requires 'installer-url'"),
+      );
+    });
+
+    it("throws when installer-sha256 is not a 64-char hex digest", async () => {
+      setInput("installer-url", "https://example.com/installer.sh");
+      setInput("installer-sha256", "not-a-valid-sha");
+      const parseInputs = await loadParseInputs();
+
+      await expect(parseInputs()).rejects.toThrow(
+        "errors found in action inputs",
+      );
+      expect(core.error).toHaveBeenCalledWith(
+        expect.stringContaining("must be a 64-character hex"),
+      );
+    });
+
+    it("does NOT throw for a valid installer-sha256 with installer-url", async () => {
+      setInput("installer-url", "https://example.com/installer.sh");
+      setInput("installer-sha256", "A".repeat(64));
+      const parseInputs = await loadParseInputs();
+
+      await expect(parseInputs()).resolves.toBeDefined();
+    });
+
     it("throws when architecture=x86 on non-Windows", async () => {
       // Default mock: IS_WINDOWS=false
       setInput("architecture", "x86");

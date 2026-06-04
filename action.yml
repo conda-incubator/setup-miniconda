@@ -29,6 +29,15 @@ inputs:
       installers"
     required: false
     default: ""
+  installer-sha256:
+    description:
+      "Optional expected SHA-256 (hex) of the 'installer-url' file. When
+      provided, the downloaded installer is verified against this digest and the
+      run aborts on mismatch. When omitted, a warning is emitted that the
+      installer is not integrity-verified. Plain 'http' installer URLs are
+      deprecated; prefer 'https' and/or this checksum."
+    required: false
+    default: ""
   installation-dir:
     description:
       "If provided, the installer will be installed in the given directory."

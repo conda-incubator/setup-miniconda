@@ -33829,6 +33829,10 @@ const RULES = [
     (i) => !!(i.installerUrl &&
         !KNOWN_EXTENSIONS.includes(urlExt(i.installerUrl))) &&
         `'installer-url' extension '${urlExt(i.installerUrl)}' must be one of: ${KNOWN_EXTENSIONS}`,
+    (i) => !!(i.installerSha256 && !i.installerUrl) &&
+        `'installer-sha256' requires 'installer-url' to be set`,
+    (i) => !!(i.installerSha256 && !/^[0-9a-f]{64}$/i.test(i.installerSha256.trim())) &&
+        `'installer-sha256: ${i.installerSha256}' must be a 64-character hex SHA-256 digest`,
     (i) => !!(i.architecture === "x86" && !constants_IS_WINDOWS) &&
         `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
     (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
@@ -33868,6 +33872,7 @@ function parseInputs() {
             condaVersion: getInput("conda-version"),
             environmentFile: getInput("environment-file"),
             installerUrl: getInput("installer-url"),
+            installerSha256: getInput("installer-sha256"),
             installationDir: getInput("installation-dir"),
             mambaVersion: getInput("mamba-version"),
             useMamba: getInput("use-mamba"),
@@ -39428,6 +39433,7 @@ var base_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arg
 
 
 
+
 /**
  * Get the path for a locally-executable installer from cache, or as downloaded.
  *
@@ -39455,31 +39461,51 @@ function ensureLocalInstaller(options) {
     return base_awaiter(this, void 0, void 0, function* () {
         info("Ensuring Installer...");
         const url = new external_url_namespaceObject.URL(options.url);
+        if (url.protocol === "http:") {
+            warning(`'installer-url' uses insecure 'http:'. This is deprecated and will be ` +
+                `rejected in a future major version; use 'https:' and/or set ` +
+                `'installer-sha256'. A network attacker could otherwise replace the installer.`);
+        }
         const installerName = external_path_namespaceObject.basename(url.pathname);
         // As a URL, we assume posix paths
         const installerExtension = external_path_namespaceObject.posix.extname(installerName);
         const tool = options.tool != null ? options.tool : installerName;
         // Create a fake version if neccessary
-        const version = options.version != null
+        let version = options.version != null
             ? options.version
             : "0.0.0-" +
                 external_crypto_namespaceObject.createHash("sha256").update(options.url).digest("hex");
+        // Fold the expected checksum into the cache version so that changing
+        // `installer-sha256` for the same URL misses any stale cache entry and
+        // re-downloads, instead of verifying the old cached file and failing.
+        if (options.sha256) {
+            version = `${version}-sha256.${options.sha256.trim().toLowerCase()}`;
+        }
         let executablePath = "";
         if (url.protocol === "file:") {
             info(`Local file specified, using in-place...`);
             executablePath = (0,external_url_namespaceObject.fileURLToPath)(options.url);
+            if (options.sha256) {
+                yield verifyChecksum(executablePath, options.sha256);
+            }
         }
         if (executablePath === "") {
             info(`Checking for cached ${tool}@${version}...`);
             // tc.find returns the name of the directory in which
             // the cached file is located.
-            const cacheDirectoryPath = find(installerName, version, ...(options.arch ? [options.arch] : []));
+            // Look up the cache by the same key used to write it (`tool`, not the
+            // installer filename); otherwise callers that set `options.tool` never get
+            // a cache hit (re-downloading every run and skipping cache verification).
+            const cacheDirectoryPath = find(tool, version, ...(options.arch ? [options.arch] : []));
             if (cacheDirectoryPath !== "") {
                 info(`Found ${installerName} cache at ${cacheDirectoryPath}!`);
                 // Append the basename of the cached file to the directory
                 // returned by tc.find
                 executablePath = external_path_namespaceObject.join(cacheDirectoryPath, installerName);
                 info(`executablePath is ${executablePath}`);
+                if (options.sha256) {
+                    yield verifyChecksum(executablePath, options.sha256);
+                }
             }
             else {
                 info(`Did not find ${installerName} ${version} in cache`);
@@ -39491,11 +39517,42 @@ function ensureLocalInstaller(options) {
             // Always ensure the installer ends with a known path
             executablePath = rawDownloadPath + installerExtension;
             yield mv(rawDownloadPath, executablePath);
+            // Verify before caching so a tampered installer is never written into the
+            // tool cache (which persists across runs on self-hosted runners).
+            if (options.sha256) {
+                yield verifyChecksum(executablePath, options.sha256);
+            }
             info(`Caching ${tool}@${version}...`);
             const cacheResult = yield cacheFile(executablePath, installerName, tool, version, ...(options.arch ? [options.arch] : []));
             info(`Cached ${tool}@${version}: ${cacheResult}!`);
         }
         return executablePath;
+    });
+}
+/**
+ * Verify a file's SHA-256 against an expected hex digest, failing closed.
+ *
+ * @param filePath - Path to the file to hash.
+ * @param expected - Expected SHA-256 as a hex string (case-insensitive).
+ * @throws {Error} If the computed digest does not match `expected`.
+ */
+function verifyChecksum(filePath, expected) {
+    return base_awaiter(this, void 0, void 0, function* () {
+        const hash = external_crypto_namespaceObject.createHash("sha256");
+        yield new Promise((resolve, reject) => {
+            const stream = external_fs_namespaceObject.createReadStream(filePath);
+            stream.on("error", reject);
+            stream.on("data", (chunk) => hash.update(chunk));
+            stream.on("end", () => resolve());
+        });
+        const actual = hash.digest("hex");
+        const normalizedExpected = expected.trim().toLowerCase();
+        if (actual !== normalizedExpected) {
+            throw new Error(`Installer checksum mismatch: expected sha256 '${normalizedExpected}' ` +
+                `but the file hashed to '${actual}'. The installer may be corrupted ` +
+                `or tampered with; aborting.`);
+        }
+        info(`Verified installer sha256: ${actual}`);
     });
 }
 
@@ -39679,6 +39736,7 @@ var download_url_awaiter = (undefined && undefined.__awaiter) || function (thisA
     });
 };
 
+
 /**
  * Provide a path to a `constructor`-compatible installer downloaded from
  * any URL, including `file://` URLs.
@@ -39690,10 +39748,13 @@ const urlDownloader = {
     label: "download a custom installer by URL",
     provides: (inputs, _options) => download_url_awaiter(void 0, void 0, void 0, function* () { return !!inputs.installerUrl; }),
     installerPath: (inputs, options) => download_url_awaiter(void 0, void 0, void 0, function* () {
+        if (!inputs.installerSha256) {
+            warning(`'installer-url' was provided without 'installer-sha256'. The installer ` +
+                `will be executed without integrity verification; set 'installer-sha256' ` +
+                `to the expected SHA-256 to verify it.`);
+        }
         return {
-            localInstallerPath: yield ensureLocalInstaller({
-                url: inputs.installerUrl,
-            }),
+            localInstallerPath: yield ensureLocalInstaller(Object.assign({ url: inputs.installerUrl }, (inputs.installerSha256 ? { sha256: inputs.installerSha256 } : {}))),
             options: Object.assign(Object.assign({}, options), { useBundled: false }),
         };
     }),

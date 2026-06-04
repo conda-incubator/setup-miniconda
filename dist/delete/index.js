@@ -33786,6 +33786,10 @@ const RULES = [
     (i) => !!(i.installerUrl &&
         !KNOWN_EXTENSIONS.includes(urlExt(i.installerUrl))) &&
         `'installer-url' extension '${urlExt(i.installerUrl)}' must be one of: ${KNOWN_EXTENSIONS}`,
+    (i) => !!(i.installerSha256 && !i.installerUrl) &&
+        `'installer-sha256' requires 'installer-url' to be set`,
+    (i) => !!(i.installerSha256 && !/^[0-9a-f]{64}$/i.test(i.installerSha256.trim())) &&
+        `'installer-sha256: ${i.installerSha256}' must be a 64-character hex SHA-256 digest`,
     (i) => !!(i.architecture === "x86" && !constants_IS_WINDOWS) &&
         `'architecture: ${i.architecture}' is only available for recent versions on Windows`,
     (i) => !!(!["latest", ""].includes(i.minicondaVersion) &&
@@ -33825,6 +33829,7 @@ function parseInputs() {
             condaVersion: getInput("conda-version"),
             environmentFile: getInput("environment-file"),
             installerUrl: getInput("installer-url"),
+            installerSha256: getInput("installer-sha256"),
             installationDir: getInput("installation-dir"),
             mambaVersion: getInput("mamba-version"),
             useMamba: getInput("use-mamba"),

@@ -37,6 +37,7 @@ function makeInputs(
     condaVersion: "",
     environmentFile: overrides.environmentFile ?? "environment.lock",
     installerUrl: "",
+    installerSha256: "",
     installationDir: "",
     mambaVersion: "",
     minicondaVersion: "",
