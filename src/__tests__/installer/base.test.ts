@@ -76,6 +76,20 @@ describe("ensureLocalInstaller", () => {
     expect(mockDownloadTool).not.toHaveBeenCalled();
   });
 
+  it("looks up the cache by tool name (the cache key), not the filename (#197)", async () => {
+    mockFind.mockReturnValue("/tmp/cache-dir");
+    const { ensureLocalInstaller } = await import("../../installer/base");
+    await ensureLocalInstaller({
+      url: "https://example.com/installer.sh",
+      tool: "Miniconda3",
+      version: "1.2.3",
+    });
+    // Must look up by `tool` (matching tc.cacheFile), so the built-in
+    // downloaders actually hit the cache instead of re-downloading every run.
+    expect(mockFind).toHaveBeenCalledWith("Miniconda3", "1.2.3");
+    expect(mockDownloadTool).not.toHaveBeenCalled();
+  });
+
   it("downloads, renames, and caches when cache misses", async () => {
     mockFind.mockReturnValue("");
     mockDownloadTool.mockResolvedValue("/tmp/raw-download");
@@ -155,7 +169,7 @@ describe("ensureLocalInstaller", () => {
     });
 
     // tc.find is called with arch as the extra spread arg
-    expect(mockFind).toHaveBeenCalledWith("installer.sh", "1.0.0", "x86_64");
+    expect(mockFind).toHaveBeenCalledWith("MyTool", "1.0.0", "x86_64");
     // tc.cacheFile is called with arch as the extra spread arg
     expect(mockCacheFile).toHaveBeenCalledWith(
       "/tmp/raw.sh",
@@ -178,8 +192,8 @@ describe("ensureLocalInstaller", () => {
       version: "1.0.0",
     });
 
-    // tc.find called without arch
-    expect(mockFind).toHaveBeenCalledWith("installer.sh", "1.0.0");
+    // tc.find called with the tool name (cache key), without arch
+    expect(mockFind).toHaveBeenCalledWith("MyTool", "1.0.0");
   });
 
   it("handles .exe extension correctly", async () => {
