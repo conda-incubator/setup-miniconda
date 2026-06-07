@@ -68,8 +68,12 @@ export async function ensureLocalInstaller(
     core.info(`Checking for cached ${tool}@${version}...`);
     // tc.find returns the name of the directory in which
     // the cached file is located.
+    // Look up the cache by the same key it is written under (`tool`), not the
+    // installer filename. Otherwise callers that set `options.tool` (the
+    // built-in Miniconda/Miniforge downloaders) never get a cache hit and
+    // re-download on every run (#197).
     const cacheDirectoryPath = tc.find(
-      installerName,
+      tool,
       version,
       ...(options.arch ? [options.arch] : []),
     );
