@@ -77,14 +77,29 @@ function makeInputs(
     condaRemoveDefaults: string;
     runInit: string;
     removeProfiles: string;
+    add_anaconda_token: string;
+    channel_alias: string;
+    use_only_tar_bz2: string;
   }> = {},
 ): types.IActionInputs {
   return makeCondaForgeActionInputs({
     condaRemoveDefaults: overrides.condaRemoveDefaults ?? "false",
     removeProfiles: overrides.removeProfiles ?? "true",
     runInit: overrides.runInit ?? "true",
-    condaConfig:
-      overrides.channels === undefined ? {} : { channels: overrides.channels },
+    condaConfig: {
+      ...(overrides.channels === undefined
+        ? {}
+        : { channels: overrides.channels }),
+      ...(overrides.add_anaconda_token === undefined
+        ? {}
+        : { add_anaconda_token: overrides.add_anaconda_token }),
+      ...(overrides.channel_alias === undefined
+        ? {}
+        : { channel_alias: overrides.channel_alias }),
+      ...(overrides.use_only_tar_bz2 === undefined
+        ? {}
+        : { use_only_tar_bz2: overrides.use_only_tar_bz2 }),
+    },
   });
 }
 
@@ -126,6 +141,40 @@ describe("writeCondaConfig", () => {
 
     const config = getWrittenConfig();
     expect(config["channels"]).toContain("conda-forge");
+  });
+
+  it("writes add-anaconda-token to condarc as a boolean (#525)", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ add_anaconda_token: "true" });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    expect(getWrittenConfig()["add_anaconda_token"]).toBe(true);
+  });
+
+  it("writes channel-alias to condarc as a string (#525)", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const alias = "https://conda.example.com";
+    const inputs = makeInputs({ channel_alias: alias });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    expect(getWrittenConfig()["channel_alias"]).toBe(alias);
+  });
+
+  it("writes use-only-tar-bz2 to condarc as a boolean (#525)", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ use_only_tar_bz2: "true" });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    expect(getWrittenConfig()["use_only_tar_bz2"]).toBe(true);
   });
 
   it("uses channels from envSpec.yaml when input channels are empty", async () => {
