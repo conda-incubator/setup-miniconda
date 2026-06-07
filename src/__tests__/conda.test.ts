@@ -76,6 +76,9 @@ function makeInputs(
     condaRemoveDefaults: string;
     runInit: string;
     removeProfiles: string;
+    add_anaconda_token: string;
+    channel_alias: string;
+    use_only_tar_bz2: string;
   }> = {},
 ): types.IActionInputs {
   return Object.freeze({
@@ -99,17 +102,17 @@ function makeInputs(
     cleanPatchedEnvironmentFile: "true",
     runPost: "true",
     condaConfig: Object.freeze({
-      add_anaconda_token: "",
+      add_anaconda_token: overrides.add_anaconda_token ?? "",
       add_pip_as_python_dependency: "",
       allow_softlinks: "",
       auto_activate: "false",
       auto_update_conda: "false",
-      channel_alias: "",
+      channel_alias: overrides.channel_alias ?? "",
       channel_priority: "",
       channels: overrides.channels ?? "conda-forge",
       default_activation_env: "",
       show_channel_urls: "",
-      use_only_tar_bz2: "",
+      use_only_tar_bz2: overrides.use_only_tar_bz2 ?? "",
       always_yes: "true",
       changeps1: "false",
       solver: "",
@@ -156,6 +159,34 @@ describe("writeCondaConfig", () => {
 
     const config = getWrittenConfig();
     expect(config["channels"]).toContain("conda-forge");
+  });
+
+  it("writes add-anaconda-token to condarc as a boolean (#525)", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ add_anaconda_token: "true" });
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    expect(getWrittenConfig()["add_anaconda_token"]).toBe(true);
+  });
+
+  it("writes channel-alias to condarc as a string (#525)", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const alias = "https://conda.example.com";
+    const inputs = makeInputs({ channel_alias: alias });
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    expect(getWrittenConfig()["channel_alias"]).toBe(alias);
+  });
+
+  it("writes use-only-tar-bz2 to condarc as a boolean (#525)", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ use_only_tar_bz2: "true" });
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    expect(getWrittenConfig()["use_only_tar_bz2"]).toBe(true);
   });
 
   it("uses channels from envSpec.yaml when input channels are empty", async () => {
