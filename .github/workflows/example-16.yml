@@ -14,6 +14,9 @@ concurrency:
     ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   example-16-build:
     # prevent cronjobs from running on forks
@@ -30,7 +33,7 @@ jobs:
         add-activation-env: ["false", "true"]
         os: ["ubuntu", "windows"]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -77,7 +80,7 @@ jobs:
         add-activation-env: ["false", "true"]
         os: ["ubuntu", "windows"]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 

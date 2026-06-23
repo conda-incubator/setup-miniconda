@@ -1,0 +1,14 @@
+# Configuration for zizmor — GitHub Actions static analysis.
+# https://docs.zizmor.sh/configuration/
+rules:
+  misfeature:
+    ignore:
+      # setup-miniconda intentionally supports and demonstrates conda activation
+      # in the Windows `cmd` shell — a core feature of the action. The
+      # `shell: cmd /C CALL {0}` steps below are deliberate, so zizmor's
+      # suggestion to switch to bash/pwsh is a false positive here.
+      - example-2.yml
+      - example-6.yml
+      - example-16.yml
+      - example-17.yml
+      - regression-checks.yml

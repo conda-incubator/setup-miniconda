@@ -18,6 +18,9 @@ concurrency:
     ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   caching-example:
     name: Caching-Env
@@ -34,7 +37,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Setup Miniforge
         uses: ./
@@ -49,7 +54,7 @@ jobs:
         shell: bash
 
       - name: Cache Conda env
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ${{ env.CONDA }}/envs
           key:
