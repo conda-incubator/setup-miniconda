@@ -5,11 +5,18 @@ updates:
     target-branch: "main"
     schedule:
       interval: "weekly"
+    cooldown:
+      # Let new releases settle before opening update PRs, giving a
+      # compromised release time to be caught. Security updates are exempt
+      # from cooldown and still open immediately.
+      default-days: 7
   - package-ecosystem: "npm"
     directory: "/"
     target-branch: "main"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
     versioning-strategy: "increase"
     allow:
       - dependency-type: "production"

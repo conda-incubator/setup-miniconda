@@ -18,6 +18,9 @@ concurrency:
     ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   example-2-linux:
     # prevent cronjobs from running on forks
@@ -28,7 +31,9 @@ jobs:
     runs-on: "ubuntu-latest"
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./
         with:
           miniconda-version: "latest"
@@ -51,7 +56,9 @@ jobs:
     runs-on: "macos-latest"
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./
         with:
           miniconda-version: "latest"
@@ -80,7 +87,9 @@ jobs:
     runs-on: "windows-latest"
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./
         with:
           auto-update-conda: true

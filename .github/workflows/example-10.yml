@@ -18,6 +18,9 @@ concurrency:
     ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   example-10-miniforge:
     # prevent cronjobs from running on forks
@@ -34,7 +37,9 @@ jobs:
       matrix:
         os: ["ubuntu", "macos", "windows"]
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./
         id: setup-miniconda
         with:
@@ -61,7 +66,9 @@ jobs:
       matrix:
         os: ["ubuntu", "macos", "windows"]
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./
         id: setup-miniconda
         with:
