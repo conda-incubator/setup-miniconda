@@ -1,0 +1,66 @@
+name: Feature request
+description: Suggest an idea or enhancement for the action
+labels: ["type:enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement! Please describe the problem you
+        are trying to solve and how the change could be validated.
+  - type: checkboxes
+    id: prechecks
+    attributes:
+      label: Before you start
+      options:
+        - label:
+            I have read the
+            [README](https://github.com/conda-incubator/setup-miniconda#readme)
+            and this is not already supported.
+          required: true
+        - label:
+            I have searched [existing
+            issues](https://github.com/conda-incubator/setup-miniconda/issues)
+            and this has not been requested yet.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What are you trying to do, and what is getting in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description:
+        What would you like the action to do? A new input, behavior, or docs?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Would you be willing to contribute this?
+      description:
+        Is this a request, or are you planning to open a pull request?
+      options:
+        - This is a request for the maintainers to consider
+        - I am planning to open a pull request
+        - I could help with guidance
+    validations:
+      required: true
+  - type: textarea
+    id: testing
+    attributes:
+      label: How could this be tested?
+      description:
+        How would we verify the feature works, e.g. a new example workflow under
+        `.github/workflows/example-*.yml`?
+    validations:
+      required: false
