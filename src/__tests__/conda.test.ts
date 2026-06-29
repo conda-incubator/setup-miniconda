@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as yaml from "js-yaml";
 
 import type * as types from "../types";
+import { makeActionInputs } from "./helpers";
 
 // Mock @actions/core
 vi.mock("@actions/core", () => ({
@@ -78,43 +79,11 @@ function makeInputs(
     removeProfiles: string;
   }> = {},
 ): types.IActionInputs {
-  return Object.freeze({
-    activateEnvironment: "test",
-    architecture: "x64",
-    condaBuildVersion: "",
-    condaConfigFile: "",
-    condaVersion: "",
-    environmentFile: "",
-    installerUrl: "",
-    installationDir: "",
-    mambaVersion: "",
-    minicondaVersion: "",
-    miniforgeVariant: "",
-    miniforgeVersion: "",
+  return makeActionInputs({
     condaRemoveDefaults: overrides.condaRemoveDefaults ?? "false",
-    pythonVersion: "",
     removeProfiles: overrides.removeProfiles ?? "true",
     runInit: overrides.runInit ?? "true",
-    useMamba: "",
-    cleanPatchedEnvironmentFile: "true",
-    runPost: "true",
-    condaConfig: Object.freeze({
-      add_anaconda_token: "",
-      add_pip_as_python_dependency: "",
-      allow_softlinks: "",
-      auto_activate: "false",
-      auto_update_conda: "false",
-      channel_alias: "",
-      channel_priority: "",
-      channels: overrides.channels ?? "conda-forge",
-      default_activation_env: "",
-      show_channel_urls: "",
-      use_only_tar_bz2: "",
-      always_yes: "true",
-      changeps1: "false",
-      solver: "",
-      pkgs_dirs: "",
-    }),
+    condaConfig: { channels: overrides.channels ?? "conda-forge" },
   });
 }
 
@@ -419,6 +388,105 @@ describe("writeCondaConfig", () => {
 
     const config = getWrittenConfig();
     expect(config["channels"]).toContain("conda-forge");
+  });
+
+  it("writes use_sharded_repodata as a nested plugins key, not a flat one", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeActionInputs({
+      condaConfig: { channels: "conda-forge", use_sharded_repodata: "false" },
+    });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["plugins"]).toEqual({ use_sharded_repodata: false });
+    // conda ignores a flat top-level use_sharded_repodata, so it must not appear.
+    expect(config).not.toHaveProperty("use_sharded_repodata");
+  });
+
+  it("coerces use_sharded_repodata 'true' to a boolean", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeActionInputs({
+      condaConfig: { channels: "conda-forge", use_sharded_repodata: "true" },
+    });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["plugins"]).toEqual({ use_sharded_repodata: true });
+  });
+
+  it("omits the plugins section when use_sharded_repodata is empty", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeActionInputs({
+      condaConfig: { channels: "conda-forge" },
+    });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config).not.toHaveProperty("plugins");
+  });
+
+  it("merges into an existing plugins section without clobbering siblings", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeActionInputs({
+      condaConfig: { channels: "conda-forge", use_sharded_repodata: "false" },
+    });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(
+      yaml.dump({ plugins: { some_other_plugin: true } }),
+    );
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    expect(config["plugins"]).toEqual({
+      some_other_plugin: true,
+      use_sharded_repodata: false,
+    });
+  });
+
+  it("deep-merges nested plugins from condaConfigFile and existing condarc", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeActionInputs({
+      condaConfig: { channels: "conda-forge", use_sharded_repodata: "false" },
+      condaConfigFile: "my-condarc.yml",
+    });
+
+    const originalWorkspace = process.env["GITHUB_WORKSPACE"];
+    process.env["GITHUB_WORKSPACE"] = "/workspace";
+
+    vi.mocked(fsMod.readFileSync).mockImplementation((p: unknown) => {
+      const pStr = p as string;
+      if (pStr.includes("my-condarc.yml")) {
+        return yaml.dump({ plugins: { foo: 1, use_sharded_repodata: true } });
+      }
+      return yaml.dump({ plugins: { bar: 2 } });
+    });
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    const config = getWrittenConfig();
+    // Existing condarc + condarc-file plugins deep-merge, and the action input
+    // wins for use_sharded_repodata. No sibling keys are lost.
+    expect(config["plugins"]).toEqual({
+      bar: 2,
+      foo: 1,
+      use_sharded_repodata: false,
+    });
+
+    if (originalWorkspace !== undefined) {
+      process.env["GITHUB_WORKSPACE"] = originalWorkspace;
+    } else {
+      delete process.env["GITHUB_WORKSPACE"];
+    }
   });
 });
 

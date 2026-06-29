@@ -39,6 +39,7 @@ function setDefaults() {
     channels: "conda-forge",
     "show-channel-urls": "",
     "use-only-tar-bz2": "",
+    "use-sharded-repodata": "",
     "conda-solver": "",
     "pkgs-dirs": "",
     "clean-patched-environment-file": "true",
@@ -151,6 +152,14 @@ describe("parseInputs", () => {
       const result = await parseInputs();
 
       expect(result.condaConfig.solver).toBe("libmamba");
+    });
+
+    it("reads use-sharded-repodata from input", async () => {
+      setInput("use-sharded-repodata", "false");
+      const parseInputs = await loadParseInputs();
+      const result = await parseInputs();
+
+      expect(result.condaConfig.use_sharded_repodata).toBe("false");
     });
 
     it("reads channel-priority from input", async () => {
