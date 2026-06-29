@@ -5,8 +5,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ---------------------------------------------------------------------------
 
 const mockInfo = vi.fn();
+const mockWarning = vi.fn();
 vi.mock("@actions/core", () => ({
   info: (...args: any[]) => mockInfo(...args),
+  warning: (...args: any[]) => mockWarning(...args),
 }));
 
 const mockMv = vi.fn();
@@ -22,6 +24,16 @@ vi.mock("@actions/tool-cache", () => ({
   downloadTool: (...args: any[]) => mockDownloadTool(...args),
   cacheFile: (...args: any[]) => mockCacheFile(...args),
 }));
+
+const streamState = vi.hoisted(() => ({ bytes: Buffer.from("") }));
+vi.mock("fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("fs")>();
+  const { Readable } = await import("node:stream");
+  return {
+    ...actual,
+    createReadStream: () => Readable.from([streamState.bytes]),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -76,6 +88,40 @@ describe("ensureLocalInstaller", () => {
     expect(mockDownloadTool).not.toHaveBeenCalled();
   });
 
+  it("looks up the cache by tool name (the cache key), not the filename (#536)", async () => {
+    mockFind.mockReturnValue("/tmp/cache-dir");
+    const { ensureLocalInstaller } = await import("../../installer/base");
+    await ensureLocalInstaller({
+      url: "https://example.com/installer.sh",
+      tool: "Miniconda3",
+      version: "1.2.3",
+    });
+    // Must look up by `tool` (matching tc.cacheFile), not the installer filename.
+    expect(mockFind).toHaveBeenCalledWith("Miniconda3", "1.2.3");
+    expect(mockDownloadTool).not.toHaveBeenCalled();
+  });
+
+  it("includes installer-sha256 in the cache version so a changed checksum re-downloads (#536)", async () => {
+    const crypto = await import("crypto");
+    const bytes = Buffer.from("x");
+    streamState.bytes = bytes;
+    const sha256 = crypto.createHash("sha256").update(bytes).digest("hex");
+    mockFind.mockReturnValue(""); // cache miss
+
+    const { ensureLocalInstaller } = await import("../../installer/base");
+    await ensureLocalInstaller({
+      url: "https://example.com/installer.sh",
+      sha256,
+    });
+
+    // The cache key (version) must incorporate the sha, so updating
+    // installer-sha256 misses a stale URL-only cache entry and re-downloads.
+    expect(mockFind).toHaveBeenCalledWith(
+      "installer.sh",
+      expect.stringContaining(`sha256.${sha256}`),
+    );
+  });
+
   it("downloads, renames, and caches when cache misses", async () => {
     mockFind.mockReturnValue("");
     mockDownloadTool.mockResolvedValue("/tmp/raw-download");
@@ -104,6 +150,39 @@ describe("ensureLocalInstaller", () => {
     );
     // The result is the renamed path
     expect(result).toBe("/tmp/raw-download.sh");
+  });
+
+  it("verifies a matching installer sha256 (#518)", async () => {
+    const crypto = await import("crypto");
+    const bytes = Buffer.from("installer-contents");
+    streamState.bytes = bytes;
+    const sha256 = crypto.createHash("sha256").update(bytes).digest("hex");
+
+    const { ensureLocalInstaller } = await import("../../installer/base");
+    const result = await ensureLocalInstaller({
+      url: "https://example.com/Installer.sh",
+      sha256,
+    });
+    expect(result).toBe("/tmp/raw-download.sh");
+  });
+
+  it("throws on a mismatched installer sha256 (#518)", async () => {
+    streamState.bytes = Buffer.from("installer-contents");
+    const { ensureLocalInstaller } = await import("../../installer/base");
+    await expect(
+      ensureLocalInstaller({
+        url: "https://example.com/Installer.sh",
+        sha256: "0".repeat(64),
+      }),
+    ).rejects.toThrow(/checksum mismatch/i);
+  });
+
+  it("warns when the installer URL uses insecure http (#518)", async () => {
+    const { ensureLocalInstaller } = await import("../../installer/base");
+    await ensureLocalInstaller({ url: "http://example.com/Installer.sh" });
+    expect(mockWarning).toHaveBeenCalledWith(
+      expect.stringContaining("insecure 'http:'"),
+    );
   });
 
   it("uses provided tool and version for caching", async () => {
@@ -154,8 +233,8 @@ describe("ensureLocalInstaller", () => {
       arch: "x86_64",
     });
 
-    // tc.find is called with arch as the extra spread arg
-    expect(mockFind).toHaveBeenCalledWith("installer.sh", "1.0.0", "x86_64");
+    // tc.find is called with the tool name (cache key) and arch spread arg
+    expect(mockFind).toHaveBeenCalledWith("MyTool", "1.0.0", "x86_64");
     // tc.cacheFile is called with arch as the extra spread arg
     expect(mockCacheFile).toHaveBeenCalledWith(
       "/tmp/raw.sh",
@@ -178,8 +257,8 @@ describe("ensureLocalInstaller", () => {
       version: "1.0.0",
     });
 
-    // tc.find called without arch
-    expect(mockFind).toHaveBeenCalledWith("installer.sh", "1.0.0");
+    // tc.find called with the tool name (cache key), without arch
+    expect(mockFind).toHaveBeenCalledWith("MyTool", "1.0.0");
   });
 
   it("handles .exe extension correctly", async () => {

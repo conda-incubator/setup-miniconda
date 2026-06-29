@@ -41,6 +41,7 @@ function makeInputs(
     condaVersion: "",
     environmentFile: "",
     installerUrl: "",
+    installerSha256: "",
     installationDir: "",
     mambaVersion: "",
     minicondaVersion: "",
@@ -147,6 +148,36 @@ describe("urlDownloader", () => {
       expect(result.options.useMamba).toBe(true);
       expect(result.options.mambaInInstaller).toBe(true);
       expect(result.options.useBundled).toBe(false);
+    });
+
+    it("warns when installer-url has no installer-sha256 (#518)", async () => {
+      mockEnsureLocalInstaller.mockResolvedValue("/tmp/installer.sh");
+      const core = await import("@actions/core");
+      const { urlDownloader } = await import("../../installer/download-url");
+      const inputs = makeInputs({
+        installerUrl: "https://example.com/installer.sh",
+      });
+      await urlDownloader.installerPath(inputs, makeOptions());
+      expect(vi.mocked(core.warning)).toHaveBeenCalledWith(
+        expect.stringContaining("without 'installer-sha256'"),
+      );
+    });
+
+    it("passes installer-sha256 through to ensureLocalInstaller (#518)", async () => {
+      mockEnsureLocalInstaller.mockResolvedValue("/tmp/installer.sh");
+      const core = await import("@actions/core");
+      const { urlDownloader } = await import("../../installer/download-url");
+      const sha256 = "a".repeat(64);
+      const inputs = makeInputs({
+        installerUrl: "https://example.com/installer.sh",
+        installerSha256: sha256,
+      });
+      await urlDownloader.installerPath(inputs, makeOptions());
+      expect(mockEnsureLocalInstaller).toHaveBeenCalledWith({
+        url: "https://example.com/installer.sh",
+        sha256,
+      });
+      expect(vi.mocked(core.warning)).not.toHaveBeenCalled();
     });
   });
 });

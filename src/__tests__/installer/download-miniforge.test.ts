@@ -53,6 +53,7 @@ function makeInputs(
     condaVersion: "",
     environmentFile: "",
     installerUrl: "",
+    installerSha256: "",
     installationDir: "",
     mambaVersion: "",
     minicondaVersion: "",

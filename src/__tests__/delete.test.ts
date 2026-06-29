@@ -61,6 +61,7 @@ function makeInputs(pkgsDirs: string = "") {
     condaVersion: "",
     environmentFile: "",
     installerUrl: "",
+    installerSha256: "",
     installationDir: "",
     mambaVersion: "",
     minicondaVersion: "",

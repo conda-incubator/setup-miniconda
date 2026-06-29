@@ -6,6 +6,8 @@
  * @category Installers
  */
 
+import * as core from "@actions/core";
+
 import * as types from "../types";
 
 import * as base from "./base";
@@ -21,9 +23,17 @@ export const urlDownloader: types.IInstallerProvider = {
   label: "download a custom installer by URL",
   provides: async (inputs, _options) => !!inputs.installerUrl,
   installerPath: async (inputs, options) => {
+    if (!inputs.installerSha256) {
+      core.warning(
+        `'installer-url' was provided without 'installer-sha256'. The installer ` +
+          `will be executed without integrity verification; set 'installer-sha256' ` +
+          `to the expected SHA-256 to verify it.`,
+      );
+    }
     return {
       localInstallerPath: await base.ensureLocalInstaller({
         url: inputs.installerUrl,
+        ...(inputs.installerSha256 ? { sha256: inputs.installerSha256 } : {}),
       }),
       options: {
         ...options,
