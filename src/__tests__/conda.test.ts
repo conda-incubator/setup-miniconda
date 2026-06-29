@@ -8,6 +8,7 @@ vi.mock("@actions/core", () => ({
   info: vi.fn(),
   warning: vi.fn(),
   isDebug: vi.fn(() => false),
+  setSecret: vi.fn(),
 }));
 
 // Mock @actions/io
@@ -156,6 +157,40 @@ describe("writeCondaConfig", () => {
 
     const config = getWrittenConfig();
     expect(config["channels"]).toContain("conda-forge");
+  });
+
+  it("masks and redacts anaconda.org channel tokens (#519)", async () => {
+    const core = await import("@actions/core");
+    vi.mocked(core.setSecret).mockClear();
+    vi.mocked(core.info).mockClear();
+
+    const { writeCondaConfig } = await import("../conda");
+    const token = "tk-secret-abc123";
+    const channel = `https://conda.anaconda.org/t/${token}/my-private-channel`;
+    const inputs = makeInputs({ channels: channel });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    // The token must be registered as a secret before logging.
+    expect(vi.mocked(core.setSecret)).toHaveBeenCalledWith(token);
+
+    // The raw token must never appear in any logged output...
+    const logged = vi
+      .mocked(core.info)
+      .mock.calls.map((c) => String(c[0]))
+      .join("\n");
+    expect(logged).not.toContain(token);
+    // ...but the redacted channel is still logged.
+    expect(logged).toContain("/t/***/my-private-channel");
+
+    // The real token is still written to the condarc on disk so conda can use it.
+    const written = vi
+      .mocked(fsMod.writeFileSync)
+      .mock.calls.map((c) => String(c[1]))
+      .join("\n");
+    expect(written).toContain(token);
   });
 
   it("uses channels from envSpec.yaml when input channels are empty", async () => {

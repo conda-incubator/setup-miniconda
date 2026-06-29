@@ -9,6 +9,7 @@ import { ensureYaml } from "../env/yaml";
 vi.mock("@actions/core", () => ({
   info: vi.fn(),
   warning: vi.fn(),
+  setSecret: vi.fn(),
 }));
 
 // Mock @actions/io
@@ -135,6 +136,76 @@ describe("ensureYaml python-version patching", () => {
     );
     expect(pythonSpecs).toEqual(["python=3.11"]);
     expect(parsed.dependencies).not.toContain("python=3.9");
+  });
+
+  it("masks and redacts anaconda.org tokens in the patched env dump (#519)", async () => {
+    const core = await import("@actions/core");
+    const token = "tk-secret-xyz789";
+    const yamlData: types.IEnvironment = {
+      name: "test",
+      channels: [`https://conda.anaconda.org/t/${token}/private`],
+      dependencies: ["python=3.9", "numpy"],
+    };
+
+    const inputs = makeInputs({ pythonVersion: "3.11" });
+    await ensureYaml.condaArgs(inputs, makeOptions(yamlData));
+
+    // The token must be registered as a secret before logging.
+    expect(vi.mocked(core.setSecret)).toHaveBeenCalledWith(token);
+
+    // The raw token must never appear in any logged output...
+    const logged = vi
+      .mocked(core.info)
+      .mock.calls.map((c) => String(c[0]))
+      .join("\n");
+    expect(logged).not.toContain(token);
+    // ...but the redacted channel is still logged.
+    expect(logged).toContain("/t/***/private");
+
+    // The patched file on disk keeps the real token so conda can use it.
+    const fs = await import("fs");
+    const written = vi
+      .mocked(fs.writeFileSync)
+      .mock.calls.map((c) => String(c[1]))
+      .join("\n");
+    expect(written).toContain(token);
+
+    // The environment-file-content output must also be redacted: setSecret
+    // masks logs, not the output value downstream steps can read.
+    const outputs = await import("../outputs");
+    const outArgs = vi
+      .mocked(outputs.setEnvironmentFileOutputs)
+      .mock.calls.map((c) => String(c[1]))
+      .join("\n");
+    expect(outArgs).not.toContain(token);
+    expect(outArgs).toContain("/t/***/private");
+  });
+
+  it("masks tokens from an unpatched environment file (#519)", async () => {
+    const core = await import("@actions/core");
+    const fs = await import("fs");
+    const token = "tk-asis-456";
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      `channels:\n  - https://conda.anaconda.org/t/${token}/private\n`,
+    );
+
+    // No pythonVersion => no patch => the "as-is" branch runs.
+    const yamlData: types.IEnvironment = {
+      name: "test",
+      channels: [`https://conda.anaconda.org/t/${token}/private`],
+      dependencies: ["numpy"],
+    };
+    await ensureYaml.condaArgs(makeInputs({}), makeOptions(yamlData));
+
+    expect(vi.mocked(core.setSecret)).toHaveBeenCalledWith(token);
+
+    // The action output must be redacted, not just masked in logs.
+    const outputs = await import("../outputs");
+    const outArgs = vi
+      .mocked(outputs.setEnvironmentFileOutputs)
+      .mock.calls.map((c) => String(c[1]))
+      .join("\n");
+    expect(outArgs).not.toContain(token);
   });
 
   it("preserves name=version=build specs without corruption (#286)", async () => {

@@ -21,6 +21,7 @@ import * as io from "@actions/io";
 import * as types from "./types";
 import * as constants from "./constants";
 import * as utils from "./utils";
+import * as redact from "./redact";
 
 /**
  * Return the base path of the conda installation, determined by whether
@@ -297,6 +298,15 @@ export async function writeCondaConfig(
 
   config["notify_outdated_conda"] = false;
 
+  // Register any anaconda.org tokens in user-provided config as secrets up
+  // front, before anything is logged, so the runner masks them everywhere
+  // (e.g. token-bearing values like `channel_alias`).
+  for (const value of Object.values(inputs.condaConfig)) {
+    for (const token of redact.findTokens(value)) {
+      core.setSecret(token);
+    }
+  }
+
   // --- Channels ---
   let channels = inputs.condaConfig.channels
     .trim()
@@ -350,7 +360,11 @@ export async function writeCondaConfig(
   }
 
   for (const ch of (config["channels"] as string[]) || []) {
-    core.info(`Channel: '${ch}'`);
+    // Mask any anaconda.org channel tokens before logging so they never leak.
+    for (const token of redact.findTokens(ch)) {
+      core.setSecret(token);
+    }
+    core.info(`Channel: '${redact.redactTokens(ch)}'`);
   }
 
   // --- Package directories ---
@@ -400,7 +414,7 @@ export async function writeCondaConfig(
     }
     const coerced = coerceConfigValue(key, value);
     config[key] = coerced;
-    core.info(`${key}: ${coerced}`);
+    core.info(`${key}: ${redact.redactTokens(String(coerced))}`);
   }
 
   // Strip 'defaults' from prefix-level condarc files too
@@ -448,10 +462,32 @@ export async function writeCondaConfig(
   }
 
   const configYaml = yaml.dump(config, { lineWidth: -1 });
-  core.info(`Writing condarc to ${constants.CONDARC_PATH}:\n${configYaml}`);
+  // Register any embedded anaconda.org tokens as secrets and redact them from
+  // the log; the file on disk keeps the real values so conda can use them.
+  for (const token of redact.findTokens(configYaml)) {
+    core.setSecret(token);
+  }
+  core.info(
+    `Writing condarc to ${constants.CONDARC_PATH}:\n${redact.redactTokens(configYaml)}`,
+  );
   fs.writeFileSync(constants.CONDARC_PATH, configYaml, "utf8");
 
   if (core.isDebug()) {
+    // `conda config --show` streams the *effective* config, which merges
+    // prefix-level condarc files we did not generate. Register any tokens they
+    // carry as secrets first so they are masked in the debug output too.
+    const basePath = condaBasePath(inputs, options);
+    for (const condarcPath of [
+      path.join(basePath, ".condarc"),
+      path.join(basePath, "condarc"),
+    ]) {
+      if (!fs.existsSync(condarcPath)) continue;
+      for (const token of redact.findTokens(
+        fs.readFileSync(condarcPath, "utf8"),
+      )) {
+        core.setSecret(token);
+      }
+    }
     await condaCommand(["config", "--show"], inputs, options);
   }
 }
