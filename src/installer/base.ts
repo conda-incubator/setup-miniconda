@@ -71,7 +71,9 @@ export async function ensureLocalInstaller(
     // Look up the cache by the same key it is written under (`tool`), not the
     // installer filename. Otherwise callers that set `options.tool` (the
     // built-in Miniconda/Miniforge downloaders) never get a cache hit and
-    // re-download on every run (#197).
+    // re-download semver-compatible versions on every run (#197). Non-semver
+    // labels such as "latest" are passed through unchanged; @actions/tool-cache
+    // owns those restore semantics and will treat moving pointers as misses.
     const cacheDirectoryPath = tc.find(
       tool,
       version,

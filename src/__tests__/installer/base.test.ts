@@ -90,6 +90,30 @@ describe("ensureLocalInstaller", () => {
     expect(mockDownloadTool).not.toHaveBeenCalled();
   });
 
+  it('passes "latest" through to tool-cache so semver restore rules decide the miss', async () => {
+    mockFind.mockReturnValue("");
+    const { ensureLocalInstaller } = await import("../../installer/base");
+    await ensureLocalInstaller({
+      url: "https://example.com/installer.sh",
+      tool: "Miniconda3",
+      version: "latest",
+      arch: "x86_64",
+    });
+    // `latest` is a moving pointer, not a semver version. This helper keeps it
+    // unchanged and lets @actions/tool-cache decide that it is not restorable.
+    expect(mockFind).toHaveBeenCalledWith("Miniconda3", "latest", "x86_64");
+    expect(mockDownloadTool).toHaveBeenCalledWith(
+      "https://example.com/installer.sh",
+    );
+    expect(mockCacheFile).toHaveBeenCalledWith(
+      "/tmp/raw-download.sh",
+      "installer.sh",
+      "Miniconda3",
+      "latest",
+      "x86_64",
+    );
+  });
+
   it("downloads, renames, and caches when cache misses", async () => {
     mockFind.mockReturnValue("");
     mockDownloadTool.mockResolvedValue("/tmp/raw-download");
