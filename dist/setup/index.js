@@ -39032,7 +39032,13 @@ function ensureLocalInstaller(options) {
             info(`Checking for cached ${tool}@${version}...`);
             // tc.find returns the name of the directory in which
             // the cached file is located.
-            const cacheDirectoryPath = find(installerName, version, ...(options.arch ? [options.arch] : []));
+            // Look up the cache by the same key it is written under (`tool`), not the
+            // installer filename. Otherwise callers that set `options.tool` (the
+            // built-in Miniconda/Miniforge downloaders) never get a cache hit and
+            // re-download semver-compatible versions on every run (#197). Non-semver
+            // labels such as "latest" are passed through unchanged; @actions/tool-cache
+            // owns those restore semantics and will treat moving pointers as misses.
+            const cacheDirectoryPath = find(tool, version, ...(options.arch ? [options.arch] : []));
             if (cacheDirectoryPath !== "") {
                 info(`Found ${installerName} cache at ${cacheDirectoryPath}!`);
                 // Append the basename of the cached file to the directory
