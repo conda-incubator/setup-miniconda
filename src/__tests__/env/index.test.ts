@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type * as types from "../../types";
-import { makeActionInputs } from "../helpers";
+import { makeCondaForgeActionInputs } from "../helpers";
 
 // Mock @actions/core
 const mockInfo = vi.fn();
@@ -62,11 +62,10 @@ function makeInputs(
     pythonVersion: string;
   }> = {},
 ): types.IActionInputs {
-  return makeActionInputs({
+  return makeCondaForgeActionInputs({
     activateEnvironment: overrides.activateEnvironment ?? "test",
     environmentFile: overrides.environmentFile ?? "",
     pythonVersion: overrides.pythonVersion ?? "",
-    condaConfig: { channels: "conda-forge" },
   });
 }
 

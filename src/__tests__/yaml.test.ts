@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as yaml from "js-yaml";
 
 import type * as types from "../types";
-import { makeActionInputs } from "./helpers";
+import { makeCondaForgeActionInputs } from "./helpers";
 import { ensureYaml } from "../env/yaml";
 
 // Mock @actions/core
@@ -54,10 +54,9 @@ vi.mock("../outputs", () => ({
 function makeInputs(
   overrides: Partial<{ pythonVersion: string; environmentFile: string }> = {},
 ): types.IActionInputs {
-  return makeActionInputs({
+  return makeCondaForgeActionInputs({
     environmentFile: overrides.environmentFile ?? "environment.yml",
     pythonVersion: overrides.pythonVersion ?? "",
-    condaConfig: { channels: "conda-forge" },
   });
 }
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type * as types from "../types";
-import { makeActionInputs } from "./helpers";
+import { makeCondaForgeActionInputs } from "./helpers";
 
 // ---------------------------------------------------------------------------
 // Mocks — vi.mock() calls are hoisted above imports by vitest, so these
@@ -96,10 +96,7 @@ vi.mock("../constants", () => ({
 function makeInputs(
   overrides: Partial<types.IActionInputs> = {},
 ): types.IActionInputs {
-  return makeActionInputs({
-    ...overrides,
-    condaConfig: { channels: "conda-forge", ...overrides.condaConfig },
-  });
+  return makeCondaForgeActionInputs(overrides);
 }
 
 function defaultInstallerInfo(

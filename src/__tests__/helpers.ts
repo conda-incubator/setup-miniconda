@@ -9,6 +9,10 @@
 
 import type * as types from "../types";
 
+function freeze<T>(value: T): T {
+  return Object.freeze(value) as T;
+}
+
 /**
  * Overrides accepted by {@link makeActionInputs}: any top-level input field,
  * plus a *partial* `condaConfig` that is shallow-merged onto the defaults.
@@ -28,7 +32,7 @@ export type ActionInputsOverrides = Partial<
 export function makeCondaConfig(
   overrides: Partial<types.ICondaConfig> = {},
 ): types.ICondaConfig {
-  return Object.freeze({
+  return freeze({
     add_anaconda_token: "",
     add_pip_as_python_dependency: "",
     allow_softlinks: "",
@@ -61,7 +65,7 @@ export function makeActionInputs(
   overrides: ActionInputsOverrides = {},
 ): types.IActionInputs {
   const { condaConfig: condaConfigOverrides, ...rest } = overrides;
-  return Object.freeze({
+  return freeze({
     activateEnvironment: "test",
     architecture: "x64",
     condaBuildVersion: "",
@@ -83,5 +87,18 @@ export function makeActionInputs(
     runPost: "true",
     ...rest,
     condaConfig: makeCondaConfig(condaConfigOverrides),
+  });
+}
+
+/**
+ * Build action inputs for tests that use `conda-forge` as the channel default.
+ */
+export function makeCondaForgeActionInputs(
+  overrides: ActionInputsOverrides = {},
+): types.IActionInputs {
+  const { condaConfig: condaConfigOverrides, ...rest } = overrides;
+  return makeActionInputs({
+    ...rest,
+    condaConfig: { channels: "conda-forge", ...condaConfigOverrides },
   });
 }

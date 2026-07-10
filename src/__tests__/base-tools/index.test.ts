@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type * as types from "../../types";
-import { makeActionInputs } from "../helpers";
+import { makeCondaForgeActionInputs } from "../helpers";
 
 // Mock @actions/core
 const mockInfo = vi.fn();
@@ -54,10 +54,7 @@ vi.mock("../../conda", async () => ({
 function makeInputs(
   overrides: Partial<types.IActionInputs> = {},
 ): types.IActionInputs {
-  return makeActionInputs({
-    ...overrides,
-    condaConfig: { channels: "conda-forge", ...overrides.condaConfig },
-  });
+  return makeCondaForgeActionInputs(overrides);
 }
 
 function makeOptions(

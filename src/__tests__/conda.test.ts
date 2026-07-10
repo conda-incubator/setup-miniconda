@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as yaml from "js-yaml";
 
 import type * as types from "../types";
-import { makeActionInputs } from "./helpers";
+import { makeCondaForgeActionInputs } from "./helpers";
 
 // Mock @actions/core
 vi.mock("@actions/core", () => ({
@@ -79,11 +79,12 @@ function makeInputs(
     removeProfiles: string;
   }> = {},
 ): types.IActionInputs {
-  return makeActionInputs({
+  return makeCondaForgeActionInputs({
     condaRemoveDefaults: overrides.condaRemoveDefaults ?? "false",
     removeProfiles: overrides.removeProfiles ?? "true",
     runInit: overrides.runInit ?? "true",
-    condaConfig: { channels: overrides.channels ?? "conda-forge" },
+    condaConfig:
+      overrides.channels === undefined ? {} : { channels: overrides.channels },
   });
 }
 

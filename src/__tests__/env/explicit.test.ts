@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type * as types from "../../types";
-import { makeActionInputs } from "../helpers";
+import { makeCondaForgeActionInputs } from "../helpers";
 import { ensureExplicit } from "../../env/explicit";
 
 // Mock @actions/core
@@ -30,11 +30,10 @@ function makeInputs(
     activateEnvironment: string;
   }> = {},
 ): types.IActionInputs {
-  return makeActionInputs({
+  return makeCondaForgeActionInputs({
     activateEnvironment: overrides.activateEnvironment ?? "test",
     environmentFile: overrides.environmentFile ?? "environment.lock",
     pythonVersion: overrides.pythonVersion ?? "",
-    condaConfig: { channels: "conda-forge" },
   });
 }
 
