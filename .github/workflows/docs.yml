@@ -7,7 +7,9 @@ on:
     paths:
       - "src/**"
       - "!src/__tests__/**"
+      - "dist/**"
       - "action.yml"
+      - "etc/**"
       - "tsconfig.json"
       - "typedoc.json"
       - "package.json"
@@ -21,7 +23,9 @@ on:
     paths:
       - "src/**"
       - "!src/__tests__/**"
+      - "dist/**"
       - "action.yml"
+      - "etc/**"
       - "tsconfig.json"
       - "typedoc.json"
       - "package.json"
