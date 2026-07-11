@@ -16,6 +16,10 @@ on:
       - ".eslintrc.cjs"
       - ".eslintignore"
       - ".prettierrc"
+      - ".prettierignore"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
   push:
     branches:
       - "develop"
@@ -33,6 +37,10 @@ on:
       - ".eslintrc.cjs"
       - ".eslintignore"
       - ".prettierrc"
+      - ".prettierignore"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
 
 concurrency:
   group:

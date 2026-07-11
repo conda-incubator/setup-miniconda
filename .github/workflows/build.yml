@@ -4,11 +4,12 @@ on:
   pull_request:
     branches:
       - "*"
-    paths:
+    paths: &build_paths
       - "src/**"
       - "!src/__tests__/**"
       - "dist/**"
       - "action.yml"
+      - "etc/**"
       - "package.json"
       - "package-lock.json"
       - "tsconfig.json"
@@ -18,19 +19,11 @@ on:
       - "develop"
       - "main"
       - "master"
-    paths:
-      - "src/**"
-      - "!src/__tests__/**"
-      - "dist/**"
-      - "action.yml"
-      - "package.json"
-      - "package-lock.json"
-      - "tsconfig.json"
-      - ".github/workflows/build.yml"
+    paths: *build_paths
 
 concurrency:
   group:
-    ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+    ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:

@@ -6,7 +6,9 @@ on:
       - "*"
     paths:
       - "src/**"
+      - "dist/**"
       - "action.yml"
+      - "etc/**"
       - "package.json"
       - "package-lock.json"
       - "tsconfig.json"
@@ -19,7 +21,9 @@ on:
       - "master"
     paths:
       - "src/**"
+      - "dist/**"
       - "action.yml"
+      - "etc/**"
       - "package.json"
       - "package-lock.json"
       - "tsconfig.json"
