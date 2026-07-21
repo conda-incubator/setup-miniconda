@@ -4,11 +4,17 @@ on:
   pull_request:
     branches:
       - "**"
+    paths:
+      - ".github/workflows/**"
+      - "action.yml"
   push:
     branches:
       - "develop"
       - "main"
       - "master"
+    paths:
+      - ".github/workflows/**"
+      - "action.yml"
 
 concurrency:
   group:

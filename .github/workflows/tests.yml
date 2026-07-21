@@ -4,11 +4,31 @@ on:
   pull_request:
     branches:
       - "*"
+    paths:
+      - "src/**"
+      - "dist/**"
+      - "action.yml"
+      - "etc/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
+      - "vitest.config.ts"
+      - ".github/workflows/tests.yml"
   push:
     branches:
       - "develop"
       - "main"
       - "master"
+    paths:
+      - "src/**"
+      - "dist/**"
+      - "action.yml"
+      - "etc/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
+      - "vitest.config.ts"
+      - ".github/workflows/tests.yml"
 
 concurrency:
   group:

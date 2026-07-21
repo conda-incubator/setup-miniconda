@@ -4,11 +4,33 @@ on:
   pull_request:
     branches:
       - "*"
+    paths:
+      - "src/**"
+      - "!src/__tests__/**"
+      - "dist/**"
+      - "action.yml"
+      - "etc/**"
+      - "tsconfig.json"
+      - "typedoc.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/docs.yml"
   push:
     branches:
       - "develop"
       - "main"
       - "master"
+    paths:
+      - "src/**"
+      - "!src/__tests__/**"
+      - "dist/**"
+      - "action.yml"
+      - "etc/**"
+      - "tsconfig.json"
+      - "typedoc.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/docs.yml"
 
 concurrency:
   group:
