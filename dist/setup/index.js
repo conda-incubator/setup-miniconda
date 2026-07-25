@@ -34181,6 +34181,7 @@ function parseInputs() {
                 default_activation_env: "", // Needed for type definition
                 show_channel_urls: getInput("show-channel-urls"),
                 use_only_tar_bz2: getInput("use-only-tar-bz2"),
+                use_sharded_repodata: getInput("use-sharded-repodata"),
                 solver: getInput("conda-solver"),
                 pkgs_dirs: getInput("pkgs-dirs"),
                 // These are always set to avoid terminal issues
@@ -34218,7 +34219,7 @@ function parseInputs() {
 }
 
 ;// CONCATENATED MODULE: ./node_modules/js-yaml/dist/js-yaml.mjs
-/*! js-yaml 5.2.1 https://github.com/nodeca/js-yaml @license MIT */
+/*! js-yaml 5.1.0 https://github.com/nodeca/js-yaml @license MIT */
 //#region src/tag.ts
 var NOT_RESOLVED = Symbol("NOT_RESOLVED");
 var MERGE_KEY = Symbol("MERGE_KEY");
@@ -34460,7 +34461,7 @@ var intCoreTag = defineScalarTag("tag:yaml.org,2002:int", {
 		..."0123456789"
 	],
 	resolve: resolveYamlInteger$2,
-	identify: (object) => Number.isInteger(object) && !Object.is(object, -0) && object.toString(10).indexOf("e") < 0,
+	identify: (object) => Object.prototype.toString.call(object) === "[object Number]" && object % 1 === 0 && !Object.is(object, -0),
 	represent: (object) => object.toString(10)
 });
 //#endregion
@@ -34490,7 +34491,7 @@ var intJsonTag = defineScalarTag("tag:yaml.org,2002:int", {
 	implicit: true,
 	implicitFirstChars: ["-", ..."0123456789"],
 	resolve: resolveYamlInteger$1,
-	identify: (object) => Number.isInteger(object) && !Object.is(object, -0) && object.toString(10).indexOf("e") < 0,
+	identify: (object) => Object.prototype.toString.call(object) === "[object Number]" && object % 1 === 0 && !Object.is(object, -0),
 	represent: (object) => object.toString(10)
 });
 //#endregion
@@ -34526,7 +34527,7 @@ var intYaml11Tag = defineScalarTag("tag:yaml.org,2002:int", {
 		..."0123456789"
 	],
 	resolve: resolveYamlInteger,
-	identify: (object) => Number.isInteger(object) && !Object.is(object, -0) && object.toString(10).indexOf("e") < 0,
+	identify: (object) => Object.prototype.toString.call(object) === "[object Number]" && object % 1 === 0 && !Object.is(object, -0),
 	represent: (object) => object.toString(10)
 });
 //#endregion
@@ -34561,7 +34562,7 @@ var floatCoreTag = defineScalarTag("tag:yaml.org,2002:float", {
 		..."0123456789"
 	],
 	resolve: resolveYamlFloat$2,
-	identify: (object) => typeof object === "number" && (!Number.isInteger(object) || Object.is(object, -0) || object.toString(10).indexOf("e") >= 0),
+	identify: (object) => Object.prototype.toString.call(object) === "[object Number]" && (object % 1 !== 0 || Object.is(object, -0)),
 	represent: representYamlFloat$2
 });
 //#endregion
@@ -34596,7 +34597,7 @@ var floatJsonTag = defineScalarTag("tag:yaml.org,2002:float", {
 	implicit: true,
 	implicitFirstChars: ["-", ..."0123456789"],
 	resolve: resolveYamlFloat$1,
-	identify: (object) => typeof object === "number" && (!Number.isInteger(object) || Object.is(object, -0) || object.toString(10).indexOf("e") >= 0),
+	identify: (object) => Object.prototype.toString.call(object) === "[object Number]" && (object % 1 !== 0 || Object.is(object, -0)),
 	represent: representYamlFloat$1
 });
 //#endregion
@@ -34635,7 +34636,7 @@ var floatYaml11Tag = defineScalarTag("tag:yaml.org,2002:float", {
 		..."0123456789"
 	],
 	resolve: resolveYamlFloat,
-	identify: (object) => typeof object === "number" && (!Number.isInteger(object) || Object.is(object, -0) || object.toString(10).indexOf("e") >= 0),
+	identify: (object) => Object.prototype.toString.call(object) === "[object Number]" && (object % 1 !== 0 || Object.is(object, -0)),
 	represent: representYamlFloat
 });
 //#endregion
@@ -34723,40 +34724,18 @@ var seqTag = defineSequenceTag("tag:yaml.org,2002:seq", {
 	identify: Array.isArray
 });
 //#endregion
-//#region src/common/object.ts
-function isPlainObject(data) {
-	if (data === null || typeof data !== "object" || Array.isArray(data)) return false;
-	const prototype = Object.getPrototypeOf(data);
-	return prototype === null || prototype === Object.prototype;
-}
-function pick(object, keys) {
-	const result = {};
-	for (const key of keys) if (object[key] !== void 0) result[key] = object[key];
-	return result;
-}
-//#endregion
 //#region src/tag/sequence/omap.ts
 var omapTag = defineSequenceTag("tag:yaml.org,2002:omap", {
-	create: () => ({
-		list: [],
-		seen: /* @__PURE__ */ new Set()
-	}),
-	addItem: (carrier, item) => {
-		let key;
-		if (item instanceof Map) {
-			if (item.size !== 1) return "cannot resolve an ordered map item";
-			key = item.keys().next().value;
-		} else if (isPlainObject(item)) {
-			const itemKeys = Object.keys(item);
-			if (itemKeys.length !== 1) return "cannot resolve an ordered map item";
-			key = itemKeys[0];
-		} else return "cannot resolve an ordered map item";
-		if (carrier.seen.has(key)) return "duplicate key in ordered map";
-		carrier.seen.add(key);
-		carrier.list.push(item);
+	create: () => [],
+	addItem: (container, item) => {
+		if (Object.prototype.toString.call(item) !== "[object Object]") return "cannot resolve an ordered map item";
+		const object = item;
+		const itemKeys = Object.keys(object);
+		if (itemKeys.length !== 1) return "cannot resolve an ordered map item";
+		for (const existing of container) if (Object.prototype.hasOwnProperty.call(existing, itemKeys[0])) return "cannot resolve an ordered map item";
+		container.push(object);
 		return "";
-	},
-	finalize: (carrier) => carrier.list
+	}
 });
 //#endregion
 //#region src/tag/sequence/pairs.ts
@@ -34776,6 +34755,18 @@ var pairsTag = defineSequenceTag("tag:yaml.org,2002:pairs", {
 		return "";
 	}
 });
+//#endregion
+//#region src/common/object.ts
+function isPlainObject(data) {
+	if (data === null || typeof data !== "object" || Array.isArray(data)) return false;
+	const prototype = Object.getPrototypeOf(data);
+	return prototype === null || prototype === Object.prototype;
+}
+function pick(object, keys) {
+	const result = {};
+	for (const key of keys) if (object[key] !== void 0) result[key] = object[key];
+	return result;
+}
 //#endregion
 //#region src/tag/mapping/map.ts
 var mapTag = defineMappingTag("tag:yaml.org,2002:map", {
@@ -35366,8 +35357,7 @@ var DEFAULT_CONSTRUCTOR_OPTIONS = {
 	filename: "",
 	schema: CORE_SCHEMA,
 	json: false,
-	maxTotalMergeKeys: 1e4,
-	maxAliases: -1
+	maxMergeSeqLength: 20
 };
 function eventPosition$1(event) {
 	if ("tagStart" in event && event.tagStart !== NO_RANGE$2) return event.tagStart;
@@ -35455,7 +35445,6 @@ function isMappingTag(tag) {
 }
 function mergeKeys(state, frame, source, sourceTag) {
 	for (const sourceKey of sourceTag.keys(source)) {
-		if (state.maxTotalMergeKeys !== -1 && ++state.totalMergeKeys > state.maxTotalMergeKeys) throwError$1(state, `merge keys exceeded maxTotalMergeKeys (${state.maxTotalMergeKeys})`);
 		if (frame.tag.has(frame.value, sourceKey)) continue;
 		const err = frame.tag.addPair(frame.value, sourceKey, sourceTag.get(source, sourceKey));
 		if (err) throwError$1(state, err);
@@ -35465,8 +35454,14 @@ function mergeKeys(state, frame, source, sourceTag) {
 function mergeSource(state, frame, source, sourceTag) {
 	state.position = frame.keyPosition;
 	if (isMappingTag(sourceTag)) mergeKeys(state, frame, source, sourceTag);
-	else if (sourceTag.nodeKind === "sequence" && Array.isArray(source)) for (const element of source) mergeKeys(state, frame, element, frame.tag);
-	else throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
+	else if (sourceTag.nodeKind === "sequence" && Array.isArray(source)) {
+		const seen = /* @__PURE__ */ new Set();
+		for (const element of source) {
+			if (seen.has(element)) continue;
+			seen.add(element);
+			mergeKeys(state, frame, element, frame.tag);
+		}
+	} else throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
 }
 function addMappingValue(state, frame, key, value, tag) {
 	state.position = frame.keyPosition;
@@ -35487,6 +35482,7 @@ function addValue(state, value, tag) {
 	} else if (frame.kind === "sequence") {
 		if (frame.merge) {
 			if (!isMappingTag(tag)) throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
+			if (frame.index >= state.maxMergeSeqLength) throwError$1(state, `merge sequence length exceeded maxMergeSeqLength (${state.maxMergeSeqLength})`);
 		}
 		const err = frame.tag.addItem(frame.value, value, frame.index++);
 		if (err) throwError$1(state, err);
@@ -35523,9 +35519,7 @@ function constructFromEvents(events, options) {
 		position: 0,
 		frames: [],
 		anchors: /* @__PURE__ */ new Map(),
-		tagHandlers: Object.create(null),
-		totalMergeKeys: 0,
-		aliasCount: 0
+		tagHandlers: Object.create(null)
 	};
 	while (state.eventIndex < state.events.length) {
 		const event = state.events[state.eventIndex++];
@@ -35533,7 +35527,6 @@ function constructFromEvents(events, options) {
 		switch (event.type) {
 			case 1:
 				state.anchors = /* @__PURE__ */ new Map();
-				state.aliasCount = 0;
 				state.tagHandlers = Object.create(null);
 				for (const directive of event.directives) if (directive.kind === "tag") state.tagHandlers[directive.handle] = directive.prefix;
 				state.frames.push({
@@ -35584,7 +35577,6 @@ function constructFromEvents(events, options) {
 				break;
 			}
 			case 5: {
-				if (state.maxAliases !== -1 && ++state.aliasCount > state.maxAliases) throwError$1(state, `aliases exceeded maxAliases (${state.maxAliases})`);
 				const name = state.source.slice(event.anchorStart, event.anchorEnd);
 				const anchor = state.anchors.get(name);
 				if (!anchor) throwError$1(state, `unidentified alias "${name}"`);
@@ -37680,6 +37672,7 @@ const BOOLEAN_CONDARC_KEYS = new Set([
     "auto_update_conda",
     "show_channel_urls",
     "use_only_tar_bz2",
+    "use_sharded_repodata",
     "always_yes",
     "changeps1",
     "notify_outdated_conda",
@@ -37700,6 +37693,7 @@ const KNOWN_CONDARC_KEYS = new Set([
     "envs_dirs",
     "override_channels_enabled",
     "pkgs_dirs",
+    "plugins",
     "proxy_servers",
     "local_repodata_ttl",
     "repodata_threads",
@@ -37730,6 +37724,40 @@ function coerceConfigValue(key, value) {
     return value;
 }
 /**
+ * Type guard for a plain (non-array, non-null) object suitable for deep merging.
+ *
+ * @param value - The value to test.
+ * @returns `true` if `value` is a non-null, non-array object.
+ */
+function conda_isPlainObject(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+/**
+ * Recursively merge `source` over `target`, returning a new object.
+ *
+ * Nested plain objects such as condarc's `plugins:` section are merged key by
+ * key so that setting one nested value does not clobber its siblings. Arrays
+ * and scalars from `source` replace those in `target` without element-wise
+ * array merging, matching conda's last-writer-wins semantics for list keys.
+ *
+ * @param target - The base configuration.
+ * @param source - Values to layer on top of `target`.
+ * @returns A new object with `source` deeply merged over `target`.
+ */
+function deepMerge(target, source) {
+    const result = Object.assign({}, target);
+    for (const [key, sourceValue] of Object.entries(source)) {
+        const targetValue = result[key];
+        if (conda_isPlainObject(targetValue) && conda_isPlainObject(sourceValue)) {
+            result[key] = deepMerge(targetValue, sourceValue);
+        }
+        else {
+            result[key] = sourceValue;
+        }
+    }
+    return result;
+}
+/**
  * Build the complete conda configuration and write it directly to ~/.condarc.
  *
  * This replaces the old approach of spawning N `conda config --set/--add`
@@ -37754,7 +37782,7 @@ function writeCondaConfig(inputs, options) {
             info(`Reading user condarc from "${sourcePath}"...`);
             const userConfig = load(external_fs_namespaceObject.readFileSync(sourcePath, "utf8"));
             if (userConfig) {
-                config = Object.assign(Object.assign({}, config), userConfig);
+                config = deepMerge(config, userConfig);
             }
         }
         config["notify_outdated_conda"] = false;
@@ -37835,6 +37863,8 @@ function writeCondaConfig(inputs, options) {
             "pkgs_dirs",
             "auto_activate",
             "default_activation_env",
+            // Written as the nested `plugins.use_sharded_repodata` key below.
+            "use_sharded_repodata",
         ]);
         const configEntries = Object.entries(inputs.condaConfig);
         for (const [key, value] of configEntries) {
@@ -37844,6 +37874,20 @@ function writeCondaConfig(inputs, options) {
             const coerced = coerceConfigValue(key, value);
             config[key] = coerced;
             info(`${key}: ${coerced}`);
+        }
+        // --- Plugins (nested condarc section) ---
+        // conda-libmamba-solver's sharded repodata is configured under the nested
+        // `plugins.use_sharded_repodata` key, not a flat top-level key, so it needs
+        // dedicated handling (#503). deepMerge preserves any sibling plugin settings
+        // already present from an existing .condarc or condarc-file. An empty input
+        // leaves conda's own default in place.
+        const useShardedRepodata = inputs.condaConfig.use_sharded_repodata;
+        if (useShardedRepodata.trim().length > 0) {
+            const coerced = coerceConfigValue("use_sharded_repodata", useShardedRepodata);
+            config = deepMerge(config, {
+                plugins: { use_sharded_repodata: coerced },
+            });
+            info(`plugins.use_sharded_repodata: ${coerced}`);
         }
         // Strip 'defaults' from prefix-level condarc files too
         if (removeDefaults && !userExplicitlyAddedDefaults) {

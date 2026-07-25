@@ -244,6 +244,17 @@ inputs:
       for more information.'
     required: false
     default: ""
+  use-sharded-repodata:
+    description:
+      'Conda configuration. Whether conda-libmamba-solver should fetch sharded
+      repodata. Set to "false" to disable sharded repodata, for example when a
+      channel mirror or proxy does not serve it. This is written to the nested
+      "plugins.use_sharded_repodata" key in .condarc; leaving it empty keeps
+      conda''s own default. See
+      https://conda.github.io/conda-libmamba-solver/user-guide/configuration/
+      for more information.'
+    required: false
+    default: ""
   remove-profiles:
     description:
       'Advanced. Prior to runnning "conda init" all shell profiles will be
