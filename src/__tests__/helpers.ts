@@ -73,6 +73,7 @@ export function makeActionInputs(
     condaVersion: "",
     environmentFile: "",
     installerUrl: "",
+    installerSha256: "",
     installationDir: "",
     mambaVersion: "",
     minicondaVersion: "",

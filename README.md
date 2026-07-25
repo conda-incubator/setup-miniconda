@@ -424,6 +424,14 @@ jobs:
           conda config --show
 ```
 
+> [!NOTE]
+>
+> A custom `installer-url` is downloaded and executed on the runner. To verify
+> its integrity, set `installer-sha256` to the installer's expected SHA-256; the
+> run aborts on mismatch. If it is omitted, a warning is emitted that the
+> installer is unverified. Plain `http` URLs are deprecated, since a network
+> attacker could swap the installer; prefer `https` and/or `installer-sha256`.
+
 ### Example 6: Mamba
 
 > Note: `conda` 23.10+ uses `conda-libmamba-solver` by default, which provides
