@@ -143,12 +143,87 @@ describe("execute", () => {
     expect(result).toBe("captured line 1\ncaptured line 2\n");
   });
 
-  it("throws on non-zero exit code", async () => {
+  it("throws a descriptive error on non-zero exit code", async () => {
     mockedExec.mockResolvedValue(1);
 
     await expect(execute(["conda", "bad-command"])).rejects.toThrow(
-      "conda return error code 1",
+      /conda bad-command failed with exit code 1/,
     );
+  });
+
+  it("passes ignoreReturnCode so exec returns the code instead of throwing", async () => {
+    mockedExec.mockResolvedValue(0);
+
+    await execute(["conda", "info"]);
+
+    const options = mockedExec.mock.calls[0][2] as exec.ExecOptions;
+    expect(options.ignoreReturnCode).toBe(true);
+  });
+
+  it("adds an out-of-memory hint when the process is killed (exit code null) (#116)", async () => {
+    mockedExec.mockResolvedValue(null as unknown as number);
+
+    await expect(execute(["conda", "env", "create"])).rejects.toThrow(
+      /out-of-memory/i,
+    );
+  });
+
+  it("includes recent command output in the failure message (#116)", async () => {
+    mockedExec.mockImplementation(async (_cmd, _args, options) => {
+      const listeners = (options as exec.ExecOptions).listeners;
+      listeners?.stdout?.(Buffer.from("Solving environment: failed\n"));
+      listeners?.stderr?.(Buffer.from("ResolvePackageNotFound: foo\n"));
+      return 1;
+    });
+
+    await expect(execute(["conda", "env", "create"])).rejects.toThrow(
+      /ResolvePackageNotFound: foo/,
+    );
+  });
+
+  it("quotes an argument containing whitespace in the failure message", async () => {
+    mockedExec.mockResolvedValue(1);
+
+    await expect(
+      execute(["conda", "create", "--prefix", "/my path/env"]),
+    ).rejects.toThrow('conda create --prefix "/my path/env"');
+  });
+
+  it("preserves backslashes in quoted Windows-style paths", async () => {
+    mockedExec.mockResolvedValue(1);
+
+    await expect(
+      execute(["conda", "create", "--prefix", "C:\\Program Files\\env"]),
+    ).rejects.toThrow('"C:\\Program Files\\env"');
+  });
+
+  it("keeps args with embedded double quotes balanced via single quotes", async () => {
+    mockedExec.mockResolvedValue(1);
+
+    await expect(execute(["conda", "create", '--flag="x y"'])).rejects.toThrow(
+      `'--flag="x y"'`,
+    );
+  });
+
+  it("uses a balanced representation for args containing both quote types", async () => {
+    mockedExec.mockResolvedValue(1);
+
+    await expect(execute(["conda", "create", `a"b'c`])).rejects.toThrow(
+      JSON.stringify(`a"b'c`),
+    );
+  });
+
+  it("excludes ignored stderr warnings from the failure output", async () => {
+    mockedExec.mockImplementation(async (_cmd, _args, options) => {
+      const listeners = (options as exec.ExecOptions).listeners;
+      listeners?.stderr?.(Buffer.from("menuinst_win32 noise\n"));
+      listeners?.stderr?.(Buffer.from("ResolvePackageNotFound: bar\n"));
+      return 1;
+    });
+
+    const err = (await execute(["conda", "x"]).catch((e) => e)) as Error;
+    expect(err.message).toContain("ResolvePackageNotFound: bar");
+    expect(err.message).not.toContain("menuinst_win32");
   });
 
   it("throws when stdout contains a FORCED_ERROR", async () => {
