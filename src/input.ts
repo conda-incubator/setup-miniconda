@@ -175,6 +175,7 @@ export async function parseInputs(): Promise<types.IActionInputs> {
       default_activation_env: "", // Needed for type definition
       show_channel_urls: core.getInput("show-channel-urls"),
       use_only_tar_bz2: core.getInput("use-only-tar-bz2"),
+      use_sharded_repodata: core.getInput("use-sharded-repodata"),
       solver: core.getInput("conda-solver"),
       pkgs_dirs: core.getInput("pkgs-dirs"),
       // These are always set to avoid terminal issues

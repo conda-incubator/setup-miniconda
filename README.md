@@ -887,6 +887,29 @@ jobs:
           python my_script.py
 ```
 
+### Example 18: Disable sharded repodata
+
+Recent versions of `conda` (through `conda-libmamba-solver`) fetch
+[sharded repodata](https://conda.github.io/conda-libmamba-solver/user-guide/configuration/)
+by default. If your channels are served by a mirror or proxy that does not yet
+provide the sharded layout, set `use-sharded-repodata: "false"` to fall back to
+the classic `repodata.json`. The value is written to the nested
+`plugins.use_sharded_repodata` key in `.condarc`.
+
+```yaml
+jobs:
+  no-sharded-repodata:
+    name: Disable sharded repodata
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
+        with:
+          activate-environment: myenv
+          environment-file: environment.yml
+          use-sharded-repodata: "false"
+```
+
 ## IMPORTANT
 
 - Conda activation does not correctly work on `sh`. Please use `bash`.
