@@ -82,6 +82,23 @@ export async function execute(
   captureOutput: boolean = false,
 ): Promise<void | string> {
   let capturedOutput = "";
+  // First detected FORCED_ERROR marker. Thrown after exec resolves rather than
+  // from inside the stream listener, where an exception could escape as an
+  // uncaught error and bypass the controlled-failure path (#116 review).
+  let forcedError = "";
+  // Keep a bounded tail of recent output so a failure can surface *why* the
+  // underlying conda/mamba command failed (see #116).
+  const MAX_OUTPUT_TAIL = 4000;
+  let outputTail = "";
+  const appendTail = (tail: string, chunk: string): string => {
+    // If a single chunk already exceeds the cap, keep only its tail to avoid
+    // building a large `tail + chunk` intermediate string.
+    if (chunk.length >= MAX_OUTPUT_TAIL) {
+      return chunk.slice(-MAX_OUTPUT_TAIL);
+    }
+    const next = tail + chunk;
+    return next.length > MAX_OUTPUT_TAIL ? next.slice(-MAX_OUTPUT_TAIL) : next;
+  };
 
   const options: exec.ExecOptions = {
     errStream: new stream.Writable(),
@@ -91,9 +108,13 @@ export async function execute(
         if (captureOutput) {
           capturedOutput += stringData;
         }
-        for (const forced_error of constants.FORCED_ERRORS) {
-          if (stringData.includes(forced_error)) {
-            throw new Error(`"${command}" failed with "${forced_error}"`);
+        outputTail = appendTail(outputTail, stringData);
+        if (!forcedError) {
+          for (const forced_error of constants.FORCED_ERRORS) {
+            if (stringData.includes(forced_error)) {
+              forcedError = forced_error;
+              break;
+            }
           }
         }
         return data;
@@ -105,19 +126,63 @@ export async function execute(
             return;
           }
         }
+        // Only keep non-ignored stderr in the failure tail so suppressed,
+        // known-spurious warnings don't pollute the error message.
+        outputTail = appendTail(outputTail, stringData);
         core.warning(stringData);
       },
     },
     env: { ...process.env, ...env },
+    // Handle the exit code ourselves so we can attach a descriptive message
+    // instead of @actions/exec's generic "failed with exit code N" (#116).
+    ignoreReturnCode: true,
   };
 
   const exe = command[0];
   if (!exe) {
     throw new Error("execute() called with empty command array");
   }
-  const rc = await exec.exec(exe, command.slice(1), options);
+  const rc: number | null = await exec.exec(exe, command.slice(1), options);
+  // Display-only: quote args containing whitespace or quotes so the failed
+  // command reads clearly and stays balanced. We select a quote style rather
+  // than escaping (this string is never executed; args go to exec separately),
+  // which keeps embedded quotes and Windows paths (C:\...) intact and avoids
+  // the incomplete-escaping pattern.
+  const quoteArg = (arg: string): string => {
+    if (!/[\s"']/.test(arg)) {
+      return arg;
+    }
+    // Choose a quote style that needs no escaping, so backslashes (Windows
+    // paths) stay intact and there is no incomplete-escaping pattern.
+    if (!arg.includes('"')) {
+      return `"${arg}"`;
+    }
+    if (!arg.includes("'")) {
+      return `'${arg}'`;
+    }
+    // Rare: the arg contains both quote types. JSON.stringify keeps it balanced
+    // (a complete encoder, not an incomplete-escaping sink).
+    return JSON.stringify(arg);
+  };
+  const displayCommand = command.map(quoteArg).join(" ");
+  if (forcedError) {
+    throw new Error(`${displayCommand} failed with "${forcedError}"`);
+  }
   if (rc !== 0) {
-    throw new Error(`${exe} return error code ${rc}`);
+    const oomHint =
+      rc === null
+        ? " A null exit code means the process was terminated by a signal, " +
+          "most commonly the OS out-of-memory killer while solving the " +
+          "environment. Consider using the libmamba solver, reducing the " +
+          "environment size, or a runner with more memory."
+        : "";
+    // Trim trailing whitespace/newlines only, so leading indentation of error
+    // blocks in the captured output is preserved.
+    const tail = outputTail.trimEnd();
+    throw new Error(
+      `${displayCommand} failed with exit code ${rc}.${oomHint}` +
+        (tail ? `\n\n--- last output before failure ---\n${tail}` : ""),
+    );
   }
   if (captureOutput) {
     return capturedOutput;
