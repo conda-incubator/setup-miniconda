@@ -1,0 +1,7 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation (README)
+    url: https://github.com/conda-incubator/setup-miniconda#readme
+    about:
+      Please read the README first, especially the IMPORTANT section on shell
+      activation. Many questions are answered there.
