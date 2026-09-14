@@ -54,16 +54,21 @@ jobs:
         id: pages
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
 
-      # Netlify preview — only on PRs (excluding Dependabot, which has no secrets access)
+      # Netlify preview — only on same-repository PRs with deployment secrets
       - if:
           github.event_name == 'pull_request' && github.actor !=
-          'dependabot[bot]'
+          'dependabot[bot]' && github.event.pull_request.head.repo.full_name ==
+          github.repository
         name: Deploy to Netlify
         id: netlify
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
+          if [[ -z "$NETLIFY_AUTH_TOKEN" || -z "$NETLIFY_SITE_ID" ]]; then
+            echo "Skipping Netlify preview: deployment secrets are unavailable."
+            exit 0
+          fi
           npm install -g netlify-cli
           netlify deploy \
             --dir=docs/api \
@@ -73,9 +78,7 @@ jobs:
           DEPLOY_URL=$(jq -r '.deploy_url' deploy_output.json)
           echo "deploy_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
 
-      - if:
-          github.event_name == 'pull_request' && github.actor !=
-          'dependabot[bot]'
+      - if: steps.netlify.outputs.deploy_url != ''
         name: Comment on PR
         uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
         with:
