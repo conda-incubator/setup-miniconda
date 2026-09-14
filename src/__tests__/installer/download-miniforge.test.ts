@@ -33,6 +33,7 @@ vi.mock("../../constants", () => ({
     aarch64: "aarch64",
     ppc64le: "ppc64le",
     arm64: "arm64",
+    riscv64: "riscv64",
   },
   MINIFORGE_URL_PREFIX: "https://github.com/conda-forge/miniforge/releases",
   MINIFORGE_DEFAULT_VARIANT: "Miniforge3",
