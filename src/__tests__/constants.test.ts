@@ -163,15 +163,18 @@ describe("MINIFORGE_ARCHITECTURES", () => {
     expect(keys).toContain("x86_64");
     expect(keys).toContain("aarch64");
     expect(keys).toContain("arm64");
+    expect(keys).toContain("riscv64");
   });
 
   it("maps x64 to x86_64", () => {
     expect(MINIFORGE_ARCHITECTURES["x64"]).toBe("x86_64");
   });
 
-  it("is a subset of MINICONDA_ARCHITECTURES keys (all keys exist there)", () => {
-    for (const key of Object.keys(MINIFORGE_ARCHITECTURES)) {
-      expect(MINICONDA_ARCHITECTURES).toHaveProperty(key);
+  it("uses the same mappings as Miniconda for shared architectures", () => {
+    for (const [key, value] of Object.entries(MINIFORGE_ARCHITECTURES)) {
+      if (key in MINICONDA_ARCHITECTURES) {
+        expect(value).toBe(MINICONDA_ARCHITECTURES[key]);
+      }
     }
   });
 });

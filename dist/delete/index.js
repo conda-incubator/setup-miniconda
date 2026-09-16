@@ -33885,6 +33885,7 @@ const MINIFORGE_ARCHITECTURES = {
     aarch64: "aarch64",
     ppc64le: "ppc64le", // To be supported by github runners
     arm64: "arm64",
+    riscv64: "riscv64",
 };
 /** Map from Node.js platform strings to OS names used in installer filenames. */
 const OS_NAMES = {
