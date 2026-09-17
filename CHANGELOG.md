@@ -1,5 +1,68 @@
 # CHANGELOG
 
+## [v4.1.0] (2026-09-16)
+
+### Features and Enhancements
+
+- [#567][567]: Add Miniforge support for `linux-riscv64`
+
+### Fixes
+
+- [#539][539]: Look up the tool cache by tool name to fix Miniconda3 cache
+  misses
+
+### Tasks and Maintenance
+
+- [#507][507]: Harden GitHub Actions workflows and add zizmor scanning
+- [#508][508]: Bump vite to 8.0.14 to resolve security advisories
+- [#513][513]: Centralize test action-input fixtures in a shared helper
+- [#541][541], [#551][551]: Bump codecov/codecov-action from 6 to 7
+- [#544][544]: Bump vite in the npm_and_yarn group
+- [#545][545], [#552][552], [#561][561]: Bump actions/checkout from 6.0.2 to
+  7.0.1
+- [#546][546], [#556][556], [#566][566]: Bump js-yaml from 4.1.1 to 5.2.3
+- [#547][547]: Bump semver from 7.7.4 to 7.8.5
+- [#549][549], [#558][558], [#572][572], [#575][575]: Bump the npm_and_yarn
+  group (linkify-it, postcss, undici, brace-expansion, @vitest/mocker,
+  @vitest/coverage-v8)
+- [#550][550], [#557][557]: Bump marocchino/sticky-pull-request-comment from
+  3.0.3 to 3.0.5
+- [#553][553]: Bump actions/cache from 5.0.5 to 6.1.0
+- [#554][554], [#560][560], [#565][565], [#574][574]: Bump
+  zizmorcore/zizmor-action from 0.5.6 to 0.6.3
+- [#562][562]: Bump actions/setup-node from 6.4.0 to 7.0.0
+- [#573][573]: Bump actions/deploy-pages from 5.0.0 to 5.0.1
+
+[v4.1.0]: https://github.com/conda-incubator/setup-miniconda/releases/tag/v4.1.0
+[507]: https://github.com/conda-incubator/setup-miniconda/pull/507
+[508]: https://github.com/conda-incubator/setup-miniconda/pull/508
+[513]: https://github.com/conda-incubator/setup-miniconda/pull/513
+[539]: https://github.com/conda-incubator/setup-miniconda/pull/539
+[541]: https://github.com/conda-incubator/setup-miniconda/pull/541
+[544]: https://github.com/conda-incubator/setup-miniconda/pull/544
+[545]: https://github.com/conda-incubator/setup-miniconda/pull/545
+[546]: https://github.com/conda-incubator/setup-miniconda/pull/546
+[547]: https://github.com/conda-incubator/setup-miniconda/pull/547
+[549]: https://github.com/conda-incubator/setup-miniconda/pull/549
+[550]: https://github.com/conda-incubator/setup-miniconda/pull/550
+[551]: https://github.com/conda-incubator/setup-miniconda/pull/551
+[552]: https://github.com/conda-incubator/setup-miniconda/pull/552
+[553]: https://github.com/conda-incubator/setup-miniconda/pull/553
+[554]: https://github.com/conda-incubator/setup-miniconda/pull/554
+[556]: https://github.com/conda-incubator/setup-miniconda/pull/556
+[557]: https://github.com/conda-incubator/setup-miniconda/pull/557
+[558]: https://github.com/conda-incubator/setup-miniconda/pull/558
+[560]: https://github.com/conda-incubator/setup-miniconda/pull/560
+[561]: https://github.com/conda-incubator/setup-miniconda/pull/561
+[562]: https://github.com/conda-incubator/setup-miniconda/pull/562
+[565]: https://github.com/conda-incubator/setup-miniconda/pull/565
+[566]: https://github.com/conda-incubator/setup-miniconda/pull/566
+[567]: https://github.com/conda-incubator/setup-miniconda/pull/567
+[572]: https://github.com/conda-incubator/setup-miniconda/pull/572
+[573]: https://github.com/conda-incubator/setup-miniconda/pull/573
+[574]: https://github.com/conda-incubator/setup-miniconda/pull/574
+[575]: https://github.com/conda-incubator/setup-miniconda/pull/575
+
 ## [v4.0.1] (2026-04-24)
 
 ### Fixes
