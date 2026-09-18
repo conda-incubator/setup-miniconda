@@ -1,0 +1,113 @@
+name: Bug report
+description: Report a problem with the setup-miniconda action
+labels: ["type:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report!
+
+        To help us reproduce and fix the issue quickly, please fill in as much
+        detail as you can. The **exact YAML** you call the action with and the
+        **runner OS** are the most important pieces of information.
+  - type: checkboxes
+    id: prechecks
+    attributes:
+      label: Before you start
+      options:
+        - label:
+            I have read the
+            [README](https://github.com/conda-incubator/setup-miniconda#readme),
+            including the
+            [IMPORTANT](https://github.com/conda-incubator/setup-miniconda#important)
+            section on shell activation.
+          required: true
+        - label:
+            I have searched [existing
+            issues](https://github.com/conda-incubator/setup-miniconda/issues)
+            and this has not been reported yet.
+          required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Exact action configuration (YAML)
+      description:
+        The exact step and `with:` block you are calling the action with.
+        Without this we usually cannot help.
+      render: yaml
+      placeholder: |
+        - uses: conda-incubator/setup-miniconda@v4
+          with:
+            miniforge-version: latest
+            environment-file: environment.yml
+            python-version: "3.11"
+    validations:
+      required: true
+  - type: input
+    id: action-version
+    attributes:
+      label: Action version
+      description:
+        Which version or ref of `conda-incubator/setup-miniconda` are you using?
+      placeholder: v4.0.1
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Runner operating system
+      multiple: true
+      options:
+        - Ubuntu / Linux
+        - macOS
+        - Windows
+        - Self-hosted
+    validations:
+      required: true
+  - type: input
+    id: runner
+    attributes:
+      label: Runner image / label
+      description:
+        e.g. `ubuntu-latest`, `windows-2022`, `macos-14`, or your self-hosted
+        runner labels.
+      placeholder: ubuntu-latest
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened?
+      description:
+        Include the relevant error output. For private repositories or
+        self-hosted runners, please provide a public reproducer or redacted
+        logs.
+    validations:
+      required: true
+  - type: input
+    id: reproducer
+    attributes:
+      label: Link to a failing run or minimal reproducer
+      description:
+        A link to a public workflow run or a small demo repository makes this
+        much easier to debug.
+      placeholder: https://github.com/<you>/<repo>/actions/runs/<id>
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description:
+        Paste relevant (redacted) logs here. Enabling [step debug
+        logging](https://docs.github.com/en/actions/monitoring-and-troubleshooting-workflows/enabling-debug-logging)
+        gives more detail.
+      render: shell
+    validations:
+      required: false
