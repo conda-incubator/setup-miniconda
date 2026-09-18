@@ -16,6 +16,7 @@ import * as types from "../types";
 import * as constants from "../constants";
 import * as conda from "../conda";
 import * as utils from "../utils";
+import * as redact from "../redact";
 import * as outputs from "../outputs";
 
 /**
@@ -124,14 +125,32 @@ export const ensureYaml: types.IEnvProvider = {
       core.info(
         `Making patched copy of 'environment-file: ${inputs.environmentFile}'`,
       );
-      core.info(`Using: ${envFile}\n${patchedYaml}`);
+      // Mask any anaconda.org channel tokens before logging the patched env.
+      for (const token of redact.findTokens(patchedYaml)) {
+        core.setSecret(token);
+      }
+      core.info(`Using: ${envFile}\n${redact.redactTokens(patchedYaml)}`);
       fs.writeFileSync(envFile, patchedYaml, "utf8");
-      outputs.setEnvironmentFileOutputs(envFile, yaml.dump(patchedYaml), true);
-    } else {
-      core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
+      // Redact the output value too: setSecret only masks logs, not the
+      // action output that downstream steps can read. patchedYaml is already
+      // YAML, so it must not be dumped again.
       outputs.setEnvironmentFileOutputs(
         envFile,
-        fs.readFileSync(inputs.environmentFile, "utf-8"),
+        redact.redactTokens(patchedYaml),
+        true,
+      );
+    } else {
+      core.info(`Using 'environment-file: ${inputs.environmentFile}' as-is`);
+      const originalContent = fs.readFileSync(inputs.environmentFile, "utf8");
+      // Mask any anaconda.org channel tokens carried by the environment file,
+      // and redact the output value so the token is not exposed via the
+      // environment-file-content output (setSecret only masks logs).
+      for (const token of redact.findTokens(originalContent)) {
+        core.setSecret(token);
+      }
+      outputs.setEnvironmentFileOutputs(
+        envFile,
+        redact.redactTokens(originalContent),
       );
     }
     const [flag, nameOrPath] = conda.envCommandFlag(inputs);
