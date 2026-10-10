@@ -313,12 +313,14 @@ export async function writeCondaConfig(
   const filteredChannels: string[] = [];
   for (const channel of channels) {
     if (channel === "nodefaults") {
-      core.warning(
-        "'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
-          "In the future, 'nodefaults' to remove 'defaults' won't be supported. " +
-          "Please set 'conda-remove-defaults' = 'true' in setup-miniconda to remove this warning.",
-      );
-      removeDefaults = true;
+      if (!removeDefaults) {
+        core.warning(
+          "'nodefaults' channel detected: will remove 'defaults' if added implicitly. " +
+            "In the future, 'nodefaults' to remove 'defaults' won't be supported. " +
+            "Please set 'conda-remove-defaults' = 'true' in setup-miniconda to remove this warning.",
+        );
+        removeDefaults = true;
+      }
       continue;
     }
     filteredChannels.push(channel);
