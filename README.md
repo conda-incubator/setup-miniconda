@@ -753,10 +753,11 @@ jobs:
 
 > [!NOTE]
 >
-> - GitHub hosted Windows runners are currently faster during cache
->   decompression when configuring the package directories on the `D:` drive as
->   shown above. Make sure to use the `enableCrossOsArchive` cache config option
->   as well.
+> - Placing the package directories on the `D:` drive (as shown above) is
+>   sometimes faster during cache decompression on GitHub-hosted Windows
+>   runners, but this has been inconsistent in practice and the speedup is not
+>   guaranteed. If you use this layout, also set the `enableCrossOsArchive`
+>   cache config option.
 
 If you are using pip to resolve any dependencies in your conda environment then
 you may want to
@@ -824,6 +825,16 @@ not exist.
     etc/example-environment-caching.yml
   if: steps.cache.outputs.cache-hit != 'true'
 ```
+
+> [!IMPORTANT]
+>
+> If the environment file passed to `conda env update` / `mamba env update`
+> constrains `python` (for example `python>=3.10` instead of an exact
+> `python=3.10.4`), that step installs the newest `python` allowed by the range,
+> which can override the `python-version` requested on the `setup-miniconda`
+> step. To keep a specific version, pin an exact `python` in the file, omit
+> `python` from it, or restore the cached environment without re-running
+> `env update`.
 
 ### Use a default shell
 
