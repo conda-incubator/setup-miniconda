@@ -167,6 +167,23 @@ describe("execute", () => {
     );
   });
 
+  it("throws when stderr contains a FORCED_ERROR", async () => {
+    mockedExec.mockImplementation(async (_cmd, _args, options) => {
+      const listeners = (options as exec.ExecOptions).listeners;
+      if (listeners?.stderr) {
+        listeners.stderr!(
+          Buffer.from("EnvironmentSectionNotValid: invalid section"),
+        );
+      }
+      return 0;
+    });
+
+    await expect(execute(["conda", "env", "create"])).rejects.toThrow(
+      /EnvironmentSectionNotValid/,
+    );
+    expect(mockedWarning).not.toHaveBeenCalled();
+  });
+
   it("calls core.warning for unrecognized stderr output", async () => {
     mockedExec.mockImplementation(async (_cmd, _args, options) => {
       const listeners = (options as exec.ExecOptions).listeners;
