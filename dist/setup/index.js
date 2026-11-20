@@ -38180,6 +38180,11 @@ function execute(command_1) {
                 },
                 stderr: (data) => {
                     const stringData = data.toString();
+                    for (const forced_error of FORCED_ERRORS) {
+                        if (stringData.includes(forced_error)) {
+                            throw new Error(`"${command}" failed with "${forced_error}"`);
+                        }
+                    }
                     for (const ignore of IGNORED_WARNINGS) {
                         if (stringData.includes(ignore)) {
                             return;

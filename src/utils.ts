@@ -100,6 +100,11 @@ export async function execute(
       },
       stderr: (data: Buffer) => {
         const stringData = data.toString();
+        for (const forced_error of constants.FORCED_ERRORS) {
+          if (stringData.includes(forced_error)) {
+            throw new Error(`"${command}" failed with "${forced_error}"`);
+          }
+        }
         for (const ignore of constants.IGNORED_WARNINGS) {
           if (stringData.includes(ignore)) {
             return;
