@@ -426,13 +426,16 @@ jobs:
 
 ### Example 6: Mamba
 
-> Note: `conda` 23.10+ uses `conda-libmamba-solver` by default, which provides
+> Note: `conda` 23.10 through 26.9 use `conda-libmamba-solver` by default, and
+> `conda` 26.10 and later use `conda-rattler-solver`, both of which provide
 > comparable performance to `mamba`. Most users won't need this setting with
 > recent conda versions.
 
-Experimental! Use `mamba` to enable much faster conda installs. `mamba-version`
-accepts a version string `x.y` (including `"*"`). It requires you specify
-`conda-forge` as part of the channels, ideally with the highest priority.
+`mamba-version` accepts a version string `x.y` (including `"*"`). Mamba uses the
+libmamba solver that conda used by default from 23.10 to 26.9, and downloads
+packages in parallel, so installs can be faster. It requires `conda-forge` in
+the channels, ideally with the highest priority, because that is where the
+`mamba` package comes from.
 
 > Notes:
 >
@@ -573,10 +576,16 @@ jobs:
 
 ### Example 12: Configure conda solver
 
-Set the conda solver plugin to use. Only applies to the `conda` client, not
-`mamba`. Starting with Miniconda 23.5.2 and Miniforge 23.3.1, you can choose
-between `classic` and `libmamba`. Best when combined with
-`auto-update-conda: true`.
+Set the conda solver to use. This is written to the `solver` key of the conda
+configuration and only applies to the `conda` client, not `mamba`. Known values
+include `classic` (also `pycosat` on conda 26.10+), `libmamba`, and `rattler`.
+
+If `conda-solver` is not set, no `solver` key is written and conda's own default
+applies, which depends on the installed conda version: `classic` before 23.10,
+`libmamba` from 23.10 to 26.9, and `rattler` from 26.10 onwards. The `rattler`
+solver requires conda 26.7 or later with `conda-rattler-solver` installed in
+`base`; it is bundled with conda 26.10 and later, so pair it with
+`auto-update-conda: true` or a recent `conda-version`.
 
 ```yaml
 jobs:
@@ -586,7 +595,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        solver: ["classic", "libmamba"]
+        solver: ["classic", "libmamba", "rattler"]
         os: ["ubuntu-latest", "windows-latest"]
     steps:
       - uses: actions/checkout@v6

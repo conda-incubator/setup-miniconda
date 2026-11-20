@@ -260,9 +260,9 @@ inputs:
     default: "true"
   mamba-version:
     description:
-      'Use mamba (https://github.com/QuantStack/mamba) as a faster drop-in
-      replacement for conda installs. Disabled by default. To enable, use "*" or
-      a "x.y" version string.'
+      'Use mamba (https://github.com/QuantStack/mamba) instead of conda for
+      installs. Disabled by default. To enable, use "*" or a "x.y" version
+      string.'
     required: false
     default: ""
   use-mamba:
@@ -273,11 +273,15 @@ inputs:
     default: ""
   conda-solver:
     description:
-      "Which conda solver plugin to use. Only applies to the `conda` client, not
-      `mamba`. Starting with Miniconda 23.5.2 and Miniforge 23.3.1, you can
-      choose between `classic` and `libmamba`."
+      "Which conda solver plugin to use. Sets the `solver` key in the conda
+      configuration; the `mamba` client ignores it. Leave empty to use conda's
+      default, which depends on the conda version (`classic` before 23.10,
+      `libmamba` through 26.9, `rattler` from 26.10). Known values are `classic`
+      (`pycosat` on conda 26.10+), `libmamba`, and `rattler`. `rattler` needs
+      conda 26.7 or later with `conda-rattler-solver` installed in `base`; conda
+      26.10 bundles it."
     required: false
-    default: "libmamba"
+    default: ""
   architecture:
     description:
       'Architecture of Miniconda that should be installed. This is automatically
