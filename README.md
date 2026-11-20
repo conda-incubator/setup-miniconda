@@ -582,10 +582,19 @@ include `classic` (also `pycosat` on conda 26.10+), `libmamba`, and `rattler`.
 
 If `conda-solver` is not set, no `solver` key is written and conda's own default
 applies, which depends on the installed conda version: `classic` before 23.10,
-`libmamba` from 23.10 to 26.9, and `rattler` from 26.10 onwards. The `rattler`
-solver requires conda 26.7 or later with `conda-rattler-solver` installed in
-`base`; it is bundled with conda 26.10 and later, so pair it with
-`auto-update-conda: true` or a recent `conda-version`.
+`libmamba` from 23.10 to 26.9, and `rattler` from 26.10 onwards.
+
+The `rattler` solver requires conda 26.7 or later with `conda-rattler-solver`
+installed in `base`. If the plugin is missing, conda stops with an error that
+lists the available solvers. Miniconda 26.9 and later include the plugin. On
+runners without a pre-installed conda, the action downloads the latest
+Miniconda. When an image already has conda, the action uses that installation.
+If that conda predates 26.9, pass `miniconda-version: latest` to download an
+installer that includes the plugin. On a self-hosted runner with an existing
+installation, install the plugin in `base` before this action runs, for example
+`conda install --solver libmamba -n base conda-rattler-solver`.
+`auto-update-conda` and `conda-version` cannot supply the plugin, because the
+solver is configured before those updates run.
 
 ```yaml
 jobs:

@@ -278,8 +278,11 @@ inputs:
       default, which depends on the conda version (`classic` before 23.10,
       `libmamba` through 26.9, `rattler` from 26.10). Known values are `classic`
       (`pycosat` on conda 26.10+), `libmamba`, and `rattler`. `rattler` needs
-      conda 26.7 or later with `conda-rattler-solver` installed in `base`; conda
-      26.10 bundles it."
+      conda 26.7 or later with `conda-rattler-solver` installed in `base`;
+      Miniconda 26.9 and later include it. When an image already has conda, the
+      action uses that installation, so pass `miniconda-version: latest` if that
+      conda predates 26.9. `auto-update-conda` and `conda-version` run after the
+      solver is configured, so they cannot install a missing solver plugin."
     required: false
     default: ""
   architecture:
