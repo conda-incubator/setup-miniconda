@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        solver: ["classic", "libmamba"]
+        solver: ["classic", "libmamba", "rattler"]
         os: ["ubuntu-latest", "windows-latest"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -40,11 +40,18 @@ jobs:
           persist-credentials: false
       - uses: ./
         id: setup-miniconda
-        continue-on-error: true
         with:
-          auto-update-conda: true
+          miniconda-version: latest
           conda-solver: ${{ matrix.solver }}
           python-version: "3.9"
+      - name: Check the configured solver
+        shell: bash -el {0}
+        env:
+          EXPECTED_SOLVER: ${{ matrix.solver }}
+        run: |
+          actual="$(conda config --show solver | tr -d '\r')"
+          echo "${actual}"
+          test "${actual}" = "solver: ${EXPECTED_SOLVER}"
       - name: Conda info
         shell: bash -el {0}
         run: conda info

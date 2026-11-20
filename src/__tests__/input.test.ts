@@ -1,4 +1,7 @@
+import { readFileSync } from "fs";
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as yaml from "js-yaml";
 
 // ---------------------------------------------------------------------------
 // Helpers to drive core.getInput() per-test
@@ -656,6 +659,19 @@ describe("parseInputs", () => {
       expect(result.condaConfig.use_only_tar_bz2).toBe("true");
       expect(result.condaConfig.solver).toBe("classic");
       expect(result.condaConfig.pkgs_dirs).toBe("/custom/pkgs");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Defaults declared in action.yml
+  // -----------------------------------------------------------------------
+  describe("action.yml defaults", () => {
+    it("leaves conda-solver without a default", () => {
+      const action = yaml.load(
+        readFileSync(new URL("../../action.yml", import.meta.url), "utf8"),
+      ) as { inputs: Record<string, { default?: string }> };
+
+      expect(action.inputs["conda-solver"].default ?? "").toBe("");
     });
   });
 
