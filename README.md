@@ -610,11 +610,18 @@ jobs:
       - uses: actions/checkout@v6
       - uses: conda-incubator/setup-miniconda@v4
         id: setup-miniconda
-        continue-on-error: true
         with:
-          auto-update-conda: true
+          miniconda-version: latest
           conda-solver: ${{ matrix.solver }}
           python-version: "3.9"
+      - name: Check the configured solver
+        shell: bash -el {0}
+        env:
+          EXPECTED_SOLVER: ${{ matrix.solver }}
+        run: |
+          actual="$(conda config --show solver | tr -d '\r')"
+          echo "${actual}"
+          test "${actual}" = "solver: ${EXPECTED_SOLVER}"
 ```
 
 ### Example 13: Apple Silicon
