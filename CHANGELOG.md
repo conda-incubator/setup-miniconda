@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [Unreleased]
+
+### Breaking Changes
+
+- `conda-solver` no longer defaults to `libmamba`. When the input is not set, no
+  `solver` key is written and the installed conda's default solver applies
+  (`libmamba` from conda 23.10 to 26.9, `rattler` from 26.10 onwards). Set
+  `conda-solver: libmamba` to keep the previous behavior. A `solver` value from
+  an existing `.condarc` or `condarc-file` is left untouched.
+
 ## [v4.1.0] (2026-09-16)
 
 ### Features and Enhancements

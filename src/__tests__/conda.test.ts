@@ -348,6 +348,30 @@ describe("writeCondaConfig", () => {
     expect(config["channels"]).toContain("conda-forge");
   });
 
+  it("does not write solver when conda-solver input is empty", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeInputs({ channels: "conda-forge" });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    expect(getWrittenConfig()).not.toHaveProperty("solver");
+  });
+
+  it("writes solver from conda-solver input", async () => {
+    const { writeCondaConfig } = await import("../conda");
+    const inputs = makeCondaForgeActionInputs({
+      condaConfig: { solver: "rattler" },
+    });
+
+    vi.mocked(fsMod.readFileSync).mockReturnValue(yaml.dump({}));
+
+    await writeCondaConfig(inputs, makeOptions());
+
+    expect(getWrittenConfig()["solver"]).toBe("rattler");
+  });
+
   it("reads condaConfigFile and merges it over existing condarc", async () => {
     const { writeCondaConfig } = await import("../conda");
     const inputs = {
